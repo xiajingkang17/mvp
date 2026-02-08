@@ -1,0 +1,23 @@
+object_types:
+  - TextBlock
+  - BulletPanel
+  - Formula
+
+layout_types:
+  - hero_side
+  - left_right
+  - grid_2x2
+  - grid_3x3
+
+action_ops:
+  - play
+  - wait
+
+anims:
+  - fade_in
+  - fade_out
+  - write
+  - create
+  - indicate
+  - transform
+

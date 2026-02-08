@@ -1,0 +1,317 @@
+{
+  "version": "0.1",
+  "meta": {
+    "manim_version": "0.19.1"
+  },
+  "objects": {
+    "equation": {
+      "type": "Formula",
+      "params": {
+        "content": "x + 2 = 5"
+      },
+      "style": {
+        "fontSize": 24,
+        "color": "#FFFFFF"
+      },
+      "priority": 1,
+      "anchor": null,
+      "z_index": null
+    },
+    "goal": {
+      "type": "TextBlock",
+      "params": {
+        "content": "目标：求解变量 x 的值"
+      },
+      "style": {
+        "fontSize": 20,
+        "color": "#FFFF00"
+      },
+      "priority": 1,
+      "anchor": null,
+      "z_index": null
+    },
+    "plan": {
+      "type": "BulletPanel",
+      "params": {
+        "items": [
+          "将方程两边同时减去 2",
+          "简化方程得到 x 的值",
+          "验证结果是否正确"
+        ]
+      },
+      "style": {
+        "fontSize": 18,
+        "color": "#FFFFFF"
+      },
+      "priority": 1,
+      "anchor": null,
+      "z_index": null
+    },
+    "operation": {
+      "type": "TextBlock",
+      "params": {
+        "content": "两边同时减去 2"
+      },
+      "style": {
+        "fontSize": 20,
+        "color": "#FFFF00"
+      },
+      "priority": 2,
+      "anchor": null,
+      "z_index": null
+    },
+    "simplified": {
+      "type": "Formula",
+      "params": {
+        "content": "x = 3"
+      },
+      "style": {
+        "fontSize": 24,
+        "color": "#009900"
+      },
+      "priority": 2,
+      "anchor": null,
+      "z_index": null
+    },
+    "verification": {
+      "type": "Formula",
+      "params": {
+        "content": "3 + 2 = 5"
+      },
+      "style": {
+        "fontSize": 24,
+        "color": "#009900"
+      },
+      "priority": 1,
+      "anchor": null,
+      "z_index": null
+    },
+    "result": {
+      "type": "TextBlock",
+      "params": {
+        "content": "验证正确"
+      },
+      "style": {
+        "fontSize": 20,
+        "color": "#FFFF00"
+      },
+      "priority": 2,
+      "anchor": null,
+      "z_index": null
+    }
+  },
+  "scenes": [
+    {
+      "id": "scene1",
+      "intent": "展示方程 x + 2 = 5",
+      "layout": {
+        "type": "hero_side",
+        "slots": {
+          "hero": "equation"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "equation"
+          ],
+          "src": null,
+          "dst": null,
+          "duration": null,
+          "kwargs": {}
+        }
+      ],
+      "keep": [
+        "equation"
+      ],
+      "notes": "这是我们需要求解的方程"
+    },
+    {
+      "id": "scene2",
+      "intent": "解释目标：求解变量 x 的值",
+      "layout": {
+        "type": "hero_side",
+        "slots": {
+          "hero": "goal"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "goal"
+          ],
+          "src": null,
+          "dst": null,
+          "duration": null,
+          "kwargs": {}
+        }
+      ],
+      "keep": [
+        "equation",
+        "goal"
+      ],
+      "notes": "明确我们的解题目标"
+    },
+    {
+      "id": "scene3",
+      "intent": "展示解题计划",
+      "layout": {
+        "type": "hero_side",
+        "slots": {
+          "hero": "plan"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "plan"
+          ],
+          "src": null,
+          "dst": null,
+          "duration": null,
+          "kwargs": {}
+        }
+      ],
+      "keep": [
+        "equation",
+        "goal",
+        "plan"
+      ],
+      "notes": "列出解题的三个步骤"
+    },
+    {
+      "id": "scene4",
+      "intent": "第一步：将方程两边同时减去 2",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "equation",
+          "right": "operation"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "operation"
+          ],
+          "src": null,
+          "dst": null,
+          "duration": null,
+          "kwargs": {}
+        },
+        {
+          "op": "play",
+          "anim": "indicate",
+          "targets": [
+            "equation"
+          ],
+          "src": null,
+          "dst": null,
+          "duration": null,
+          "kwargs": {}
+        }
+      ],
+      "keep": [
+        "equation",
+        "goal",
+        "plan",
+        "operation"
+      ],
+      "notes": "解释第一步的操作"
+    },
+    {
+      "id": "scene5",
+      "intent": "第二步：简化方程得到 x = 3",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "equation",
+          "right": "simplified"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "simplified"
+          ],
+          "src": null,
+          "dst": null,
+          "duration": null,
+          "kwargs": {}
+        },
+        {
+          "op": "play",
+          "anim": "transform",
+          "targets": [],
+          "src": "equation",
+          "dst": "simplified",
+          "duration": null,
+          "kwargs": {}
+        }
+      ],
+      "keep": [
+        "equation",
+        "goal",
+        "plan",
+        "operation",
+        "simplified"
+      ],
+      "notes": "展示简化后的结果"
+    },
+    {
+      "id": "scene6",
+      "intent": "第三步：验证结果是否正确",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "verification",
+          "right": "result"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "verification"
+          ],
+          "src": null,
+          "dst": null,
+          "duration": null,
+          "kwargs": {}
+        },
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "result"
+          ],
+          "src": null,
+          "dst": null,
+          "duration": null,
+          "kwargs": {}
+        }
+      ],
+      "keep": [
+        "equation",
+        "goal",
+        "plan",
+        "operation",
+        "simplified",
+        "verification",
+        "result"
+      ],
+      "notes": "确认解的正确性"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+manim==0.19.1
+pydantic>=2.0,<3.0
+pyyaml>=6.0
+

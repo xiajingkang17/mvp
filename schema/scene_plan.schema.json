@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ScenePlan",
+  "type": "object",
+  "required": ["version", "objects", "scenes"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "type": "string", "minLength": 1 },
+    "meta": { "type": "object" },
+    "objects": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/ObjectSpec" }
+    },
+    "scenes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/SceneSpec" }
+    }
+  },
+  "$defs": {
+    "ObjectSpec": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "params": { "type": "object" },
+        "style": { "type": "object" },
+        "priority": { "type": "integer", "minimum": 1, "maximum": 9, "default": 2 },
+        "anchor": { "type": ["string", "null"] },
+        "z_index": { "type": ["integer", "null"] }
+      }
+    },
+    "LayoutSpec": {
+      "type": "object",
+      "required": ["type", "slots"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "slots": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "PlayAction": {
+      "type": "object",
+      "required": ["op", "anim"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "const": "play" },
+        "anim": { "type": "string", "minLength": 1 },
+        "targets": { "type": "array", "items": { "type": "string" } },
+        "src": { "type": ["string", "null"] },
+        "dst": { "type": ["string", "null"] },
+        "duration": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "kwargs": { "type": "object" }
+      }
+    },
+    "WaitAction": {
+      "type": "object",
+      "required": ["op", "duration"],
+      "additionalProperties": false,
+      "properties": {
+        "op": { "const": "wait" },
+        "duration": { "type": "number", "minimum": 0 }
+      }
+    },
+    "ActionSpec": {
+      "oneOf": [{ "$ref": "#/$defs/PlayAction" }, { "$ref": "#/$defs/WaitAction" }]
+    },
+    "SceneSpec": {
+      "type": "object",
+      "required": ["id", "layout", "actions"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "intent": { "type": ["string", "null"] },
+        "layout": { "$ref": "#/$defs/LayoutSpec" },
+        "actions": { "type": "array", "items": { "$ref": "#/$defs/ActionSpec" } },
+        "keep": { "type": "array", "items": { "type": "string" } },
+        "notes": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
+

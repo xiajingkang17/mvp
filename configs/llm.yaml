@@ -1,0 +1,14 @@
+provider: zhipu
+
+zhipu:
+  # 默认模型（可用 .env 的 ZHIPU_MODEL 覆盖）
+  model: glm-4.7
+
+  # 采样参数（可用 .env 覆盖）
+  temperature: 0.3
+  top_p: 0.95
+  max_tokens: 2048
+
+  # 超时（秒）
+  timeout_s: 120
+

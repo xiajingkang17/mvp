@@ -1,0 +1,175 @@
+{
+  "scenes": [
+    {
+      "intent": "展示方程 x + 2 = 5",
+      "layout": {
+        "type": "hero_side",
+        "slots": {
+          "hero": "equation"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "equation"
+          ]
+        }
+      ],
+      "keep": [
+        "equation"
+      ],
+      "id": "scene1"
+    },
+    {
+      "intent": "解释目标：求解变量 x 的值",
+      "layout": {
+        "type": "hero_side",
+        "slots": {
+          "hero": "goal"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "goal"
+          ]
+        }
+      ],
+      "keep": [
+        "equation",
+        "goal"
+      ],
+      "id": "scene2"
+    },
+    {
+      "intent": "展示解题计划",
+      "layout": {
+        "type": "hero_side",
+        "slots": {
+          "hero": "plan"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "plan"
+          ]
+        }
+      ],
+      "keep": [
+        "equation",
+        "goal",
+        "plan"
+      ],
+      "id": "scene3"
+    },
+    {
+      "intent": "第一步：将方程两边同时减去 2",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "equation",
+          "right": "operation"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "operation"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "indicate",
+          "targets": [
+            "equation"
+          ]
+        }
+      ],
+      "keep": [
+        "equation",
+        "goal",
+        "plan",
+        "operation"
+      ],
+      "id": "scene4"
+    },
+    {
+      "intent": "第二步：简化方程得到 x = 3",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "equation",
+          "right": "simplified"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "simplified"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "transform",
+          "src": "equation",
+          "dst": "simplified"
+        }
+      ],
+      "keep": [
+        "equation",
+        "goal",
+        "plan",
+        "operation",
+        "simplified"
+      ],
+      "id": "scene5"
+    },
+    {
+      "intent": "第三步：验证结果是否正确",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "verification",
+          "right": "result"
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "verification"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "result"
+          ]
+        }
+      ],
+      "keep": [
+        "equation",
+        "goal",
+        "plan",
+        "operation",
+        "simplified",
+        "verification",
+        "result"
+      ],
+      "id": "scene6"
+    }
+  ]
+}

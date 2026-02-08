@@ -1,0 +1,23 @@
+render:
+  # 安全区边距：占整帧的比例（0..1）。
+  safe_area:
+    left: 0.05
+    right: 0.05
+    top: 0.05
+    bottom: 0.05
+
+  # 插槽内边距：占插槽尺寸的比例（建议 0..0.2）。
+  slot_padding: 0.05
+
+  # 当计划未指定时，组件/动作使用的默认值。
+  defaults:
+    font: "Arial"
+    text_font_size: 36
+    bullet_font_size: 34
+    formula_font_size: 48
+    action_duration: 1.0
+
+# 供布局测试/非 Manim 工具使用（Manim 运行时使用自身的画幅配置）。
+frame:
+  width: 14.222
+  height: 8.0

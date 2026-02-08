@@ -1,0 +1,158 @@
+{
+  "scenes": [
+    {
+      "intent": "展示方程 x + 2 = 5",
+      "objects": [
+        {
+          "id": "equation",
+          "type": "Formula",
+          "params": {
+            "content": "x + 2 = 5"
+          },
+          "priority": 1,
+          "style": {
+            "fontSize": 24,
+            "color": "#333333"
+          }
+        }
+      ],
+      "notes": "这是我们需要求解的方程",
+      "id": "scene1"
+    },
+    {
+      "intent": "解释目标：求解变量 x 的值",
+      "objects": [
+        {
+          "id": "goal",
+          "type": "TextBlock",
+          "params": {
+            "content": "目标：求解变量 x 的值"
+          },
+          "priority": 1,
+          "style": {
+            "fontSize": 20,
+            "color": "#0066cc"
+          }
+        }
+      ],
+      "notes": "明确我们的解题目标",
+      "id": "scene2"
+    },
+    {
+      "intent": "展示解题计划",
+      "objects": [
+        {
+          "id": "plan",
+          "type": "BulletPanel",
+          "params": {
+            "items": [
+              "将方程两边同时减去 2",
+              "简化方程得到 x 的值",
+              "验证结果是否正确"
+            ]
+          },
+          "priority": 1,
+          "style": {
+            "fontSize": 18,
+            "color": "#333333"
+          }
+        }
+      ],
+      "notes": "列出解题的三个步骤",
+      "id": "scene3"
+    },
+    {
+      "intent": "第一步：将方程两边同时减去 2",
+      "objects": [
+        {
+          "id": "equation",
+          "type": "Formula",
+          "params": {
+            "content": "x + 2 = 5"
+          },
+          "priority": 1,
+          "style": {
+            "fontSize": 24,
+            "color": "#333333"
+          }
+        },
+        {
+          "id": "operation",
+          "type": "TextBlock",
+          "params": {
+            "content": "两边同时减去 2"
+          },
+          "priority": 2,
+          "style": {
+            "fontSize": 20,
+            "color": "#0066cc"
+          }
+        }
+      ],
+      "notes": "解释第一步的操作",
+      "id": "scene4"
+    },
+    {
+      "intent": "第二步：简化方程得到 x = 3",
+      "objects": [
+        {
+          "id": "equation",
+          "type": "Formula",
+          "params": {
+            "content": "x + 2 - 2 = 5 - 2"
+          },
+          "priority": 1,
+          "style": {
+            "fontSize": 24,
+            "color": "#333333"
+          }
+        },
+        {
+          "id": "simplified",
+          "type": "Formula",
+          "params": {
+            "content": "x = 3"
+          },
+          "priority": 2,
+          "style": {
+            "fontSize": 24,
+            "color": "#009900"
+          }
+        }
+      ],
+      "notes": "展示简化后的结果",
+      "id": "scene5"
+    },
+    {
+      "intent": "第三步：验证结果是否正确",
+      "objects": [
+        {
+          "id": "verification",
+          "type": "Formula",
+          "params": {
+            "content": "3 + 2 = 5"
+          },
+          "priority": 1,
+          "style": {
+            "fontSize": 24,
+            "color": "#009900"
+          }
+        },
+        {
+          "id": "result",
+          "type": "TextBlock",
+          "params": {
+            "content": "验证正确"
+          },
+          "priority": 2,
+          "style": {
+            "fontSize": 20,
+            "color": "#0066cc"
+          }
+        }
+      ],
+      "notes": "确认解的正确性",
+      "id": "scene6"
+    }
+  ]
+}
