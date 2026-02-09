@@ -54,7 +54,11 @@ def main() -> int:
         notes = s.get("notes") or draft_scene.get("notes")
 
         layout_obj = s.get("layout") or {}
-        layout_spec = LayoutSpec(type=str(layout_obj.get("type", "")), slots=dict(layout_obj.get("slots") or {}))
+        layout_spec = LayoutSpec(
+            type=str(layout_obj.get("type", "")),
+            slots=dict(layout_obj.get("slots") or {}),
+            params=dict(layout_obj.get("params") or {}),
+        )
 
         scene_spec = SceneSpec(
             id=str(scene_id),

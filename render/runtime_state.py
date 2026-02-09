@@ -20,3 +20,4 @@ class RenderContext:
 class RuntimeState:
     objects: dict[str, object] = field(default_factory=dict)  # 对象 id -> Mobject
     visible: set[str] = field(default_factory=set)  # 当前屏幕可见的对象 id
+    base_sizes: dict[str, tuple[float, float]] = field(default_factory=dict)  # 对象初始宽高

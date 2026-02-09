@@ -48,6 +48,24 @@ python -m pipeline.build_plan --case cases/demo_001
 - LLM3：`scene_draft.json` → `scene_layout.json`
 - Build：`scene_draft.json + scene_layout.json` → `scene_plan.json`
 
+如果 LLM2/LLM3 输出不是严格 JSON（常见报错：未找到 `{`/`[`），脚本会把原始输出写入：
+
+- `cases/<case_id>/llm2_raw.txt`、`cases/<case_id>/llm2_repair_raw.txt`
+- `cases/<case_id>/llm3_raw.txt`、`cases/<case_id>/llm3_repair_raw.txt`
+
+可用 `--no-repair` 关闭二次修复（不推荐）：
+
+```powershell
+python -m pipeline.run_llm2 --case cases/demo_001 --no-repair
+python -m pipeline.run_llm3 --case cases/demo_001 --no-repair
+```
+
+布局说明：
+
+- LLM2 需在对象 `style` 中给出 `size_level`（S/M/L/XL）
+- LLM3 可在 `layout.params` 中给出模板参数（如 `left_ratio` / `row_weights`）
+- 渲染时采用“LLM 初稿 + 真实测量微调”混合策略（默认±10%微调，最小 slot 宽高 10% 屏幕）
+
 ## 校验（可自动修复）
 
 ```powershell

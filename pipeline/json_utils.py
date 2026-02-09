@@ -3,8 +3,26 @@ from __future__ import annotations
 import json
 
 
+_FULLWIDTH_TRANSLATION = str.maketrans(
+    {
+        "｛": "{",
+        "｝": "}",
+        "［": "[",
+        "］": "]",
+    }
+)
+
+
+def normalize_jsonish(text: str) -> str:
+    """
+    把常见“全角括号”替换成半角，减少模型偶发输出导致的解析失败。
+    """
+
+    return text.translate(_FULLWIDTH_TRANSLATION)
+
+
 def strip_code_fences(text: str) -> str:
-    s = text.strip()
+    s = normalize_jsonish(text).strip()
     if s.startswith("```") and s.endswith("```"):
         lines = s.splitlines()
         if len(lines) >= 3:
@@ -59,6 +77,7 @@ def load_json_from_llm(text: str):
     从 LLM 输出加载 JSON；失败时会尝试提取 JSON 片段再解析。
     """
 
+    text = normalize_jsonish(text)
     try:
         return json.loads(text)
     except json.JSONDecodeError:

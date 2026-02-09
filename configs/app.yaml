@@ -17,6 +17,15 @@ render:
     formula_font_size: 48
     action_duration: 1.0
 
+layout_refine:
+  # 是否启用“LLM 参数 + 真实测量微调”的混合策略
+  enabled: true
+  # 微调幅度上限（相对 LLM 初稿的比例）
+  max_adjust: 0.1
+  # 插槽最小宽高比例（相对屏幕）
+  min_slot_w_norm: 0.1
+  min_slot_h_norm: 0.1
+
 # 供布局测试/非 Manim 工具使用（Manim 运行时使用自身的画幅配置）。
 frame:
   width: 14.222

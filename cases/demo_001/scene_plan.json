@@ -4,203 +4,60 @@
     "manim_version": "0.19.1"
   },
   "objects": {
-    "equation": {
-      "type": "Formula",
-      "params": {
-        "content": "x + 2 = 5"
-      },
-      "style": {
-        "fontSize": 24,
-        "color": "#FFFFFF"
-      },
-      "priority": 1,
-      "anchor": null,
-      "z_index": null
-    },
-    "goal": {
+    "title": {
       "type": "TextBlock",
       "params": {
-        "content": "目标：求解变量 x 的值"
+        "text": "Solve: x + 2 = 5"
       },
-      "style": {
-        "fontSize": 20,
-        "color": "#FFFF00"
-      },
+      "style": {},
       "priority": 1,
       "anchor": null,
       "z_index": null
     },
-    "plan": {
+    "given": {
       "type": "BulletPanel",
       "params": {
         "items": [
-          "将方程两边同时减去 2",
-          "简化方程得到 x 的值",
-          "验证结果是否正确"
+          "Equation: x + 2 = 5",
+          "Goal: solve for x"
         ]
       },
-      "style": {
-        "fontSize": 18,
-        "color": "#FFFFFF"
-      },
-      "priority": 1,
-      "anchor": null,
-      "z_index": null
-    },
-    "operation": {
-      "type": "TextBlock",
-      "params": {
-        "content": "两边同时减去 2"
-      },
-      "style": {
-        "fontSize": 20,
-        "color": "#FFFF00"
-      },
+      "style": {},
       "priority": 2,
       "anchor": null,
       "z_index": null
     },
-    "simplified": {
+    "answer": {
       "type": "Formula",
       "params": {
-        "content": "x = 3"
+        "latex": "x = 3"
       },
-      "style": {
-        "fontSize": 24,
-        "color": "#009900"
-      },
-      "priority": 2,
-      "anchor": null,
-      "z_index": null
-    },
-    "verification": {
-      "type": "Formula",
-      "params": {
-        "content": "3 + 2 = 5"
-      },
-      "style": {
-        "fontSize": 24,
-        "color": "#009900"
-      },
+      "style": {},
       "priority": 1,
-      "anchor": null,
-      "z_index": null
-    },
-    "result": {
-      "type": "TextBlock",
-      "params": {
-        "content": "验证正确"
-      },
-      "style": {
-        "fontSize": 20,
-        "color": "#FFFF00"
-      },
-      "priority": 2,
       "anchor": null,
       "z_index": null
     }
   },
   "scenes": [
     {
-      "id": "scene1",
-      "intent": "展示方程 x + 2 = 5",
-      "layout": {
-        "type": "hero_side",
-        "slots": {
-          "hero": "equation"
-        }
-      },
-      "actions": [
-        {
-          "op": "play",
-          "anim": "create",
-          "targets": [
-            "equation"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
-        }
-      ],
-      "keep": [
-        "equation"
-      ],
-      "notes": "这是我们需要求解的方程"
-    },
-    {
-      "id": "scene2",
-      "intent": "解释目标：求解变量 x 的值",
-      "layout": {
-        "type": "hero_side",
-        "slots": {
-          "hero": "goal"
-        }
-      },
-      "actions": [
-        {
-          "op": "play",
-          "anim": "create",
-          "targets": [
-            "goal"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
-        }
-      ],
-      "keep": [
-        "equation",
-        "goal"
-      ],
-      "notes": "明确我们的解题目标"
-    },
-    {
-      "id": "scene3",
-      "intent": "展示解题计划",
-      "layout": {
-        "type": "hero_side",
-        "slots": {
-          "hero": "plan"
-        }
-      },
-      "actions": [
-        {
-          "op": "play",
-          "anim": "create",
-          "targets": [
-            "plan"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
-        }
-      ],
-      "keep": [
-        "equation",
-        "goal",
-        "plan"
-      ],
-      "notes": "列出解题的三个步骤"
-    },
-    {
-      "id": "scene4",
-      "intent": "第一步：将方程两边同时减去 2",
+      "id": "S1",
+      "intent": "Show the problem and goal.",
       "layout": {
         "type": "left_right",
         "slots": {
-          "left": "equation",
-          "right": "operation"
+          "left": "title",
+          "right": "given"
+        },
+        "params": {
+          "left_ratio": 0.3
         }
       },
       "actions": [
         {
           "op": "play",
-          "anim": "create",
+          "anim": "fade_in",
           "targets": [
-            "operation"
+            "title"
           ],
           "src": null,
           "dst": null,
@@ -208,41 +65,14 @@
           "kwargs": {}
         },
         {
-          "op": "play",
-          "anim": "indicate",
-          "targets": [
-            "equation"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
-        }
-      ],
-      "keep": [
-        "equation",
-        "goal",
-        "plan",
-        "operation"
-      ],
-      "notes": "解释第一步的操作"
-    },
-    {
-      "id": "scene5",
-      "intent": "第二步：简化方程得到 x = 3",
-      "layout": {
-        "type": "left_right",
-        "slots": {
-          "left": "equation",
-          "right": "simplified"
-        }
-      },
-      "actions": [
+          "op": "wait",
+          "duration": 0.2
+        },
         {
           "op": "play",
-          "anim": "create",
+          "anim": "fade_in",
           "targets": [
-            "simplified"
+            "given"
           ],
           "src": null,
           "dst": null,
@@ -250,40 +80,34 @@
           "kwargs": {}
         },
         {
-          "op": "play",
-          "anim": "transform",
-          "targets": [],
-          "src": "equation",
-          "dst": "simplified",
-          "duration": null,
-          "kwargs": {}
+          "op": "wait",
+          "duration": 0.5
         }
       ],
       "keep": [
-        "equation",
-        "goal",
-        "plan",
-        "operation",
-        "simplified"
+        "title"
       ],
-      "notes": "展示简化后的结果"
+      "notes": null
     },
     {
-      "id": "scene6",
-      "intent": "第三步：验证结果是否正确",
+      "id": "S2",
+      "intent": "Present the solution.",
       "layout": {
         "type": "left_right",
         "slots": {
-          "left": "verification",
-          "right": "result"
+          "left": "title",
+          "right": "answer"
+        },
+        "params": {
+          "left_ratio": 0.3
         }
       },
       "actions": [
         {
           "op": "play",
-          "anim": "create",
+          "anim": "write",
           "targets": [
-            "verification"
+            "answer"
           ],
           "src": null,
           "dst": null,
@@ -291,27 +115,12 @@
           "kwargs": {}
         },
         {
-          "op": "play",
-          "anim": "create",
-          "targets": [
-            "result"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
+          "op": "wait",
+          "duration": 1.0
         }
       ],
-      "keep": [
-        "equation",
-        "goal",
-        "plan",
-        "operation",
-        "simplified",
-        "verification",
-        "result"
-      ],
-      "notes": "确认解的正确性"
+      "keep": [],
+      "notes": null
     }
   ]
 }

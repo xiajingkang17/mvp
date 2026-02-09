@@ -39,7 +39,8 @@
         "slots": {
           "type": "object",
           "additionalProperties": { "type": "string" }
-        }
+        },
+        "params": { "type": "object" }
       }
     },
     "PlayAction": {

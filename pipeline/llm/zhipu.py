@@ -7,6 +7,7 @@ import urllib.request
 from dataclasses import dataclass
 
 from pipeline.config import CONFIG_DIR, load_yaml
+from pipeline.env import load_dotenv
 
 from .types import ChatMessage, ZhipuMessage
 
@@ -66,6 +67,7 @@ def chat_completion(messages: list[ChatMessage], *, cfg: ZhipuConfig | None = No
     文档参考：open.bigmodel.cn
     """
 
+    load_dotenv()
     cfg = cfg or load_zhipu_config()
     api_key = _get_api_key()
 

@@ -6,6 +6,8 @@ object_types:
 layout_types:
   - hero_side
   - left_right
+  - left3_right3
+  - left4_right4
   - grid_2x2
   - grid_3x3
 

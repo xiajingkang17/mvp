@@ -22,12 +22,6 @@ def _grid_slots(cols: int, rows: int) -> tuple[dict[str, SlotBBox], list[str]]:
     return slots, order
 
 
-def grid_2x2() -> Template:
+def grid_2x2(params: dict | None = None) -> Template:
     slots, order = _grid_slots(cols=2, rows=2)
     return Template(type="grid_2x2", slots=slots, slot_order=order)
-
-
-def grid_3x3() -> Template:
-    slots, order = _grid_slots(cols=3, rows=3)
-    return Template(type="grid_3x3", slots=slots, slot_order=order)
-

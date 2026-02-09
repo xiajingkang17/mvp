@@ -12,6 +12,7 @@ if str(ROOT_DIR) not in sys.path:
 from manim import Scene, config
 
 from layout.engine import Frame, SafeArea, compute_placements
+from layout.refine_params import refine_layout_params
 from pipeline.config import load_app_config
 from render.actions import ActionEngine
 from render.registry import DEFAULT_REGISTRY
@@ -136,15 +137,32 @@ class PlanScene(Scene):
                     continue
                 spec = plan.objects[object_id]
                 mobj = registry.build(spec, defaults=build_defaults)
+                state.base_sizes[object_id] = (float(getattr(mobj, "width", 0.0)), float(getattr(mobj, "height", 0.0)))
                 if spec.z_index is not None:
                     mobj.z_index = spec.z_index
                 state.objects[object_id] = mobj
+
+            refined_params = refine_layout_params(
+                scene.layout.type,
+                scene.layout.slots,
+                llm_params=scene.layout.params,
+                object_specs=plan.objects,
+                objects=state.objects,
+                base_sizes=state.base_sizes,
+                safe_area=safe,
+                frame=frame,
+                max_adjust=ctx.app.layout_refine.max_adjust,
+                min_slot_w_norm=ctx.app.layout_refine.min_slot_w_norm,
+                min_slot_h_norm=ctx.app.layout_refine.min_slot_h_norm,
+                enabled=ctx.app.layout_refine.enabled,
+            )
 
             placements = compute_placements(
                 scene.layout.type,
                 scene.layout.slots,
                 safe_area=safe,
                 frame=frame,
+                params=refined_params,
             )
             for object_id, placement in placements.items():
                 apply_placement(state.objects[object_id], placement, slot_padding=ctx.app.slot_padding)

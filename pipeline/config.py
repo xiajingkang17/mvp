@@ -34,10 +34,19 @@ class RenderDefaults:
 
 
 @dataclass(frozen=True)
+class LayoutRefineConfig:
+    enabled: bool
+    max_adjust: float
+    min_slot_w_norm: float
+    min_slot_h_norm: float
+
+
+@dataclass(frozen=True)
 class AppConfig:
     safe_area: SafeArea
     slot_padding: float
     defaults: RenderDefaults
+    layout_refine: LayoutRefineConfig
     frame_width: float
     frame_height: float
 
@@ -66,10 +75,19 @@ def load_app_config(path: Path | None = None) -> AppConfig:
         action_duration=float(defaults.get("action_duration", 1.0)),
     )
 
+    refine = raw.get("layout_refine", {}) or {}
+    layout_refine = LayoutRefineConfig(
+        enabled=bool(refine.get("enabled", True)),
+        max_adjust=float(refine.get("max_adjust", 0.1)),
+        min_slot_w_norm=float(refine.get("min_slot_w_norm", 0.1)),
+        min_slot_h_norm=float(refine.get("min_slot_h_norm", 0.1)),
+    )
+
     return AppConfig(
         safe_area=safe_area,
         slot_padding=float(render.get("slot_padding", 0.05)),
         defaults=render_defaults,
+        layout_refine=layout_refine,
         frame_width=float(frame.get("width", 14.222)),
         frame_height=float(frame.get("height", 8.0)),
     )

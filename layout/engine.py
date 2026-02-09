@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .templates import TEMPLATE_REGISTRY, SlotBBox
+from .templates import SlotBBox, build_template
 
 
 @dataclass(frozen=True)
@@ -54,10 +54,12 @@ def compute_placements(
     *,
     safe_area: SafeArea,
     frame: Frame,
+    params: dict | None = None,
 ) -> dict[str, Placement]:
-    template = TEMPLATE_REGISTRY.get(template_type)
-    if not template:
-        raise ValueError(f"Unknown template: {template_type}")
+    try:
+        template = build_template(template_type, params)
+    except KeyError as exc:
+        raise ValueError(f"Unknown template: {template_type}") from exc
 
     placements: dict[str, Placement] = {}
     for slot_id, object_id in slots.items():

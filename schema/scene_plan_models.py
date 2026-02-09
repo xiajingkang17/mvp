@@ -21,6 +21,7 @@ class LayoutSpec(BaseModel):
 
     type: str = Field(min_length=1)
     slots: dict[str, str] = Field(default_factory=dict)
+    params: dict[str, Any] = Field(default_factory=dict)
 
 
 class PlayAction(BaseModel):

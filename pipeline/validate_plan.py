@@ -6,6 +6,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from layout.params import sanitize_params
 from layout.templates import TEMPLATE_REGISTRY
 from schema.scene_plan_models import PlayAction, ScenePlan
 
@@ -36,6 +37,10 @@ def _choose_template_type(object_count: int) -> str:
         return "hero_side"
     if object_count <= 4:
         return "grid_2x2"
+    if object_count <= 6:
+        return "left3_right3"
+    if object_count <= 8:
+        return "left4_right4"
     return "grid_3x3"
 
 
@@ -52,6 +57,12 @@ def autofix_plan(plan: ScenePlan) -> bool:
     changed = False
 
     for scene_index, scene in enumerate(plan.scenes):
+        if scene.layout.params:
+            cleaned_params = sanitize_params(scene.layout.type, scene.layout.params)
+            if cleaned_params != scene.layout.params:
+                scene.layout.params = cleaned_params
+                changed = True
+
         object_ids = sorted(
             _collect_scene_object_ids(plan, scene_index),
             key=lambda oid: (plan.objects.get(oid).priority if oid in plan.objects else 999, oid),
@@ -109,6 +120,9 @@ def validate_plan(plan: ScenePlan) -> list[ValidationErrorItem]:
     for object_id, obj in plan.objects.items():
         if obj.type not in enums["object_types"]:
             errors.append(ValidationErrorItem(f"objects.{object_id}.type not allowed: {obj.type}"))
+        size_level = obj.style.get("size_level") if isinstance(obj.style, dict) else None
+        if size_level is not None and str(size_level).upper() not in {"S", "M", "L", "XL"}:
+            errors.append(ValidationErrorItem(f"objects.{object_id}.style.size_level must be S/M/L/XL"))
 
     for scene_index, scene in enumerate(plan.scenes):
         if scene.layout.type not in enums["layout_types"]:
@@ -129,6 +143,13 @@ def validate_plan(plan: ScenePlan) -> list[ValidationErrorItem]:
                 errors.append(
                     ValidationErrorItem(f"scenes[{scene_index}].layout.slots.{slot_id} unknown object id: {object_id}")
                 )
+
+        if scene.layout.params and not isinstance(scene.layout.params, dict):
+            errors.append(ValidationErrorItem(f"scenes[{scene_index}].layout.params must be an object"))
+        else:
+            cleaned = sanitize_params(scene.layout.type, scene.layout.params)
+            if scene.layout.params and cleaned != scene.layout.params:
+                errors.append(ValidationErrorItem(f"scenes[{scene_index}].layout.params invalid for template type"))
 
         referenced_ids = _collect_scene_object_ids(plan, scene_index)
         unknown = sorted([x for x in referenced_ids if x not in plan.objects])
