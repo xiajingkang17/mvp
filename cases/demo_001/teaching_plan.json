@@ -1,0 +1,477 @@
+{
+  "explanation_full": "1. 求碰前速度v_P0：P从A下滑到B，机械能守恒mgh=1/2 mv^2，得v_B=√(2gh)=√50≈7.07m/s。在粗糙段BC，受摩擦力f=μmg，做功W_f=-μmgL。动能定理：1/2 mv_B^2 - μmgL = 1/2 mv_P0^2。代入数据：25 - 0.25*10*4 = 0.5*v_P0^2，解得v_P0=√30≈5.48m/s。\n2. 碰撞分析：P与Q发生弹性碰撞。动量守恒：m1v_P0 = m1v_P1 + m2v_Q1。能量守恒：1/2 m1v_P0^2 = 1/2 m1v_P1^2 + 1/2 m2v_Q1^2。代入m1=1kg, m2=3kg, v_P0=√30。解得v_P1 = (m1-m2)v_P0/(m1+m2) = -0.5√30 (向左)，v_Q1 = 2m1v_P0/(m1+m2) = 0.5√30 (向右)。\n3. 弹簧最大压缩量：Q压缩弹簧，机械能守恒。1/2 m2 v_Q1^2 = 1/2 k x_max^2。代入：0.5*3*(0.5√30)^2 = 0.5*300*x_max^2。计算得 x_max = 0.15m。\n4. Q运动时间：Q从C出发压缩弹簧再返回C，经历半个周期。T = 2π√(m2/k) = 2π√(3/300) = 2π/10 ≈ 0.628s。Δt = T/2 = π/10 ≈ 0.314s。\n5. 追及判断：碰撞后P向左减速，加速度a_P = μg = 2.5m/s^2。t=0时P在C，速度v_P1=-√30/2。Q返回C时t=π/10，此时P的速度v_P(t) = v_P1 + a_P t = -√30/2 + 2.5*(π/10) ≈ -2.74 + 0.785 = -1.955m/s (仍向左)。P的位移x_P = v_P1 t + 0.5 a_P t^2 ≈ -0.86m。Q回到C后向左进入粗糙段，加速度a_Q = μg = 2.5m/s^2。相对运动：P在前(左)，Q在后(右)，同向运动。相对初速度Δv = v_Q - v_P = 0 - (-1.955) = 1.955m/s。相对加速度Δa = a_Q - a_P = 0。追及时间Δt' = |x_P| / Δv ≈ 0.86 / 1.955 ≈ 0.44s。此时Q运动距离x_Q = 0.5 a_Q (Δt')^2 ≈ 0.24m。故在距C点0.24m处相遇。相遇时速度v_P' = v_P + a_P Δt' ≈ -1.955 + 2.5*0.44 ≈ -0.86m/s，v_Q' = a_Q Δt' ≈ 1.1m/s。\n6. 最终停止位置：P从C点开始向左滑行，总动能E_P = 1/2 m1 v_P1^2 = 3.75J。克服摩擦做功W = μ m1 g s_P。s_P = E_P / (μ m1 g) = 3.75 / 2.5 = 1.5m。故P停在距B点L - s_P = 4.0 - 1.5 = 2.5m处。Q从C点开始向左滑行，总动能E_Q = 1/2 m2 v_Q1^2 = 11.25J。s_Q = E_Q / (μ m2 g) = 11.25 / 7.5 = 1.5m。故Q停在距B点L - s_Q = 4.0 - 1.5 = 2.5m处。",
+  "global_symbols": [
+    {
+      "name": "m1",
+      "meaning": "物块P质量",
+      "unit": "kg"
+    },
+    {
+      "name": "m2",
+      "meaning": "物块Q质量",
+      "unit": "kg"
+    },
+    {
+      "name": "theta",
+      "meaning": "斜面倾角",
+      "unit": "deg"
+    },
+    {
+      "name": "g",
+      "meaning": "重力加速度",
+      "unit": "m/s^2"
+    },
+    {
+      "name": "h",
+      "meaning": "斜面高度",
+      "unit": "m"
+    },
+    {
+      "name": "L",
+      "meaning": "粗糙段BC长度",
+      "unit": "m"
+    },
+    {
+      "name": "mu",
+      "meaning": "动摩擦因数",
+      "unit": "none"
+    },
+    {
+      "name": "k",
+      "meaning": "弹簧劲度系数",
+      "unit": "N/m"
+    }
+  ],
+  "sub_questions": [
+    {
+      "id": "Q1",
+      "question": "求物块P到达点C碰前瞬间的速度大小v_P0",
+      "goal": "计算P到达C点时的速度v_P0",
+      "device_scene_needed": true,
+      "variable_annotations": [
+        "m1",
+        "h",
+        "L",
+        "mu",
+        "g"
+      ],
+      "given_conditions": [
+        "斜面光滑",
+        "BC段粗糙",
+        "从A静止释放"
+      ],
+      "method_choice": {
+        "method": "energy_work",
+        "reason": "过程涉及重力做功和恒定摩擦力做功，利用动能定理或能量守恒最直接。"
+      },
+      "derivation_steps": [
+        {
+          "type": "equation",
+          "content": "m1gh = 1/2 m1 v_B^2"
+        },
+        {
+          "type": "compute",
+          "content": "v_B = sqrt(2gh) = sqrt(50) m/s"
+        },
+        {
+          "type": "equation",
+          "content": "1/2 m1 v_B^2 - mu m1 g L = 1/2 m1 v_P0^2"
+        },
+        {
+          "type": "compute",
+          "content": "v_P0 = sqrt(v_B^2 - 2mu g L) = sqrt(30) m/s"
+        }
+      ],
+      "result": {
+        "expression": "v_P0 = sqrt(30)",
+        "unit": "m/s",
+        "text": "碰前瞬间速度大小约为5.48m/s"
+      },
+      "sanity_checks": [
+        "单位正确",
+        "数值小于v_B，符合摩擦减速规律"
+      ],
+      "transition": "以此速度作为碰撞初速度进入下一问",
+      "scene_packets": [
+        {
+          "content_items": [
+            "diagram",
+            "goal",
+            "knowns"
+          ],
+          "primary_item": "diagram",
+          "emphasis": null
+        },
+        {
+          "content_items": [
+            "principle",
+            "core_equation",
+            "derive_step"
+          ],
+          "primary_item": "core_equation",
+          "emphasis": null
+        },
+        {
+          "content_items": [
+            "substitute_compute",
+            "intermediate_result",
+            "conclusion"
+          ],
+          "primary_item": "conclusion",
+          "emphasis": null
+        }
+      ]
+    },
+    {
+      "id": "Q2",
+      "question": "求第一次碰撞后瞬间，P与Q的速度大小与方向",
+      "goal": "求碰后速度v_P1, v_Q1",
+      "device_scene_needed": true,
+      "variable_annotations": [
+        "m1",
+        "m2",
+        "v_P0"
+      ],
+      "given_conditions": [
+        "完全弹性正碰",
+        "碰撞时间极短",
+        "忽略碰撞摩擦"
+      ],
+      "method_choice": {
+        "method": "momentum_energy",
+        "reason": "弹性碰撞系统动量守恒、机械能守恒，联立方程可解。"
+      },
+      "derivation_steps": [
+        {
+          "type": "equation",
+          "content": "m1 v_P0 = m1 v_P1 + m2 v_Q1"
+        },
+        {
+          "type": "equation",
+          "content": "1/2 m1 v_P0^2 = 1/2 m1 v_P1^2 + 1/2 m2 v_Q1^2"
+        },
+        {
+          "type": "reasoning",
+          "content": "利用弹性碰撞公式 v_P1 = (m1-m2)v_P0/(m1+m2), v_Q1 = 2m1v_P0/(m1+m2)"
+        },
+        {
+          "type": "compute",
+          "content": "v_P1 = -0.5 sqrt(30), v_Q1 = 0.5 sqrt(30)"
+        }
+      ],
+      "result": {
+        "expression": "v_P1 = -sqrt(30)/2, v_Q1 = sqrt(30)/2",
+        "unit": "m/s",
+        "text": "P向左反弹，Q向右运动"
+      },
+      "sanity_checks": [
+        "动量守恒验证：1*v0 = 1*(-0.5v0)+3*(0.5v0)",
+        "能量守恒验证"
+      ],
+      "transition": "P向左减速，Q向右压缩弹簧",
+      "scene_packets": [
+        {
+          "content_items": [
+            "diagram",
+            "assumption",
+            "principle"
+          ],
+          "primary_item": "diagram",
+          "emphasis": null
+        },
+        {
+          "content_items": [
+            "core_equation",
+            "derive_step",
+            "substitute_compute"
+          ],
+          "primary_item": "core_equation",
+          "emphasis": null
+        },
+        {
+          "content_items": [
+            "intermediate_result",
+            "conclusion",
+            "transition"
+          ],
+          "primary_item": "conclusion",
+          "emphasis": null
+        }
+      ]
+    },
+    {
+      "id": "Q3",
+      "question": "求弹簧的最大压缩量x_max",
+      "goal": "计算弹簧最大压缩长度",
+      "device_scene_needed": true,
+      "variable_annotations": [
+        "m2",
+        "k",
+        "v_Q1"
+      ],
+      "given_conditions": [
+        "右侧光滑",
+        "弹簧轻质"
+      ],
+      "method_choice": {
+        "method": "energy",
+        "reason": "只有弹簧弹力做功，系统机械能守恒，动能全部转化为弹性势能。"
+      },
+      "derivation_steps": [
+        {
+          "type": "equation",
+          "content": "1/2 m2 v_Q1^2 = 1/2 k x_max^2"
+        },
+        {
+          "type": "compute",
+          "content": "x_max = v_Q1 * sqrt(m2/k) = (sqrt(30)/2) * sqrt(3/300) = 0.15m"
+        }
+      ],
+      "result": {
+        "expression": "x_max = 0.15",
+        "unit": "m",
+        "text": "最大压缩量为15cm"
+      },
+      "sanity_checks": [
+        "单位为m",
+        "压缩量远小于弹簧自然长度假设合理"
+      ],
+      "transition": "Q将做简谐运动返回",
+      "scene_packets": [
+        {
+          "content_items": [
+            "diagram",
+            "goal",
+            "principle"
+          ],
+          "primary_item": "diagram",
+          "emphasis": null
+        },
+        {
+          "content_items": [
+            "core_equation",
+            "substitute_compute",
+            "conclusion"
+          ],
+          "primary_item": "core_equation",
+          "emphasis": null
+        }
+      ]
+    },
+    {
+      "id": "Q4",
+      "question": "求Q从开始压缩弹簧到再次回到C所用时间Δt",
+      "goal": "计算Q在弹簧区运动时间",
+      "device_scene_needed": false,
+      "variable_annotations": [
+        "m2",
+        "k"
+      ],
+      "given_conditions": [
+        "简谐运动"
+      ],
+      "method_choice": {
+        "method": "shm_formula",
+        "reason": "物体在弹簧作用下做简谐运动，利用周期公式求解。"
+      },
+      "derivation_steps": [
+        {
+          "type": "equation",
+          "content": "T = 2π sqrt(m2/k)"
+        },
+        {
+          "type": "reasoning",
+          "content": "从C出发再回到C经历半个周期"
+        },
+        {
+          "type": "compute",
+          "content": "Δt = T/2 = π sqrt(m2/k) = π/10 s"
+        }
+      ],
+      "result": {
+        "expression": "Δt = π/10",
+        "unit": "s",
+        "text": "时间约为0.314s"
+      },
+      "sanity_checks": [
+        "时间量级合理"
+      ],
+      "transition": "此时P已向左运动了一段距离，准备判断追及",
+      "scene_packets": [
+        {
+          "content_items": [
+            "principle",
+            "core_equation",
+            "derive_step"
+          ],
+          "primary_item": "core_equation",
+          "emphasis": null
+        },
+        {
+          "content_items": [
+            "substitute_compute",
+            "conclusion",
+            "transition"
+          ],
+          "primary_item": "conclusion",
+          "emphasis": null
+        }
+      ]
+    },
+    {
+      "id": "Q5",
+      "question": "判断Q回到C后是否会追上P",
+      "goal": "判断追及并求相遇位置",
+      "device_scene_needed": true,
+      "variable_annotations": [
+        "v_P1",
+        "v_Q1",
+        "mu",
+        "g"
+      ],
+      "given_conditions": [
+        "粗糙段BC",
+        "Q回到C时速度为0"
+      ],
+      "method_choice": {
+        "method": "kinematics_relative",
+        "reason": "两者均受恒定摩擦力做匀变速运动，通过相对运动分析相遇条件。"
+      },
+      "derivation_steps": [
+        {
+          "type": "reasoning",
+          "content": "计算t=π/10时P的速度v_P_t和位移x_P_t"
+        },
+        {
+          "type": "compute",
+          "content": "v_P_t = -sqrt(30)/2 + mu g (π/10) ≈ -1.96 m/s, x_P_t ≈ -0.86 m"
+        },
+        {
+          "type": "reasoning",
+          "content": "Q从C由静止向左加速，P在前向左减速"
+        },
+        {
+          "type": "reasoning",
+          "content": "相对初速度Δv = 0 - v_P_t, 相对距离Δx = |x_P_t|"
+        },
+        {
+          "type": "equation",
+          "content": "Δx = Δv * t_catch"
+        },
+        {
+          "type": "compute",
+          "content": "t_catch ≈ 0.44s, x_Q = 0.5 mu g t_catch^2 ≈ 0.24m"
+        }
+      ],
+      "result": {
+        "expression": "x_meet = 0.24",
+        "unit": "m",
+        "text": "在距C点0.24m处相遇，此时P速度-0.86m/s，Q速度1.1m/s"
+      },
+      "sanity_checks": [
+        "相遇点在粗糙段BC内(0.24<4)",
+        "P速度仍向左，未停下"
+      ],
+      "transition": "碰撞后两者最终停下",
+      "scene_packets": [
+        {
+          "content_items": [
+            "diagram",
+            "assumption",
+            "knowns"
+          ],
+          "primary_item": "diagram",
+          "emphasis": null
+        },
+        {
+          "content_items": [
+            "derive_step",
+            "substitute_compute",
+            "intermediate_result"
+          ],
+          "primary_item": "derive_step",
+          "emphasis": null
+        },
+        {
+          "content_items": [
+            "core_equation",
+            "conclusion",
+            "check_sanity"
+          ],
+          "primary_item": "conclusion",
+          "emphasis": null
+        }
+      ]
+    },
+    {
+      "id": "Q6",
+      "question": "求两个物块最终停止位置到点B的距离",
+      "goal": "计算停止位置",
+      "device_scene_needed": true,
+      "variable_annotations": [
+        "m1",
+        "m2",
+        "v_P1",
+        "v_Q1",
+        "mu",
+        "L"
+      ],
+      "given_conditions": [
+        "粗糙段BC",
+        "最终静止"
+      ],
+      "method_choice": {
+        "method": "energy_work",
+        "reason": "利用动能定理，初动能全部克服摩擦力做功。"
+      },
+      "derivation_steps": [
+        {
+          "type": "equation",
+          "content": "0 - 1/2 m v^2 = - mu m g s"
+        },
+        {
+          "type": "reasoning",
+          "content": "s = v^2 / (2 mu g)"
+        },
+        {
+          "type": "compute",
+          "content": "s_P = (sqrt(30)/2)^2 / 5 = 1.5m, s_Q = (sqrt(30)/2)^2 / 5 = 1.5m"
+        },
+        {
+          "type": "compute",
+          "content": "Dist_B = L - s = 4.0 - 1.5 = 2.5m"
+        }
+      ],
+      "result": {
+        "expression": "Dist_B = 2.5",
+        "unit": "m",
+        "text": "两者均停在距B点2.5m处"
+      },
+      "sanity_checks": [
+        "位置在BC段内",
+        "两者位置相同，符合弹性碰撞且质量比特定情况下的对称性"
+      ],
+      "transition": "解题结束",
+      "scene_packets": [
+        {
+          "content_items": [
+            "diagram",
+            "goal",
+            "principle"
+          ],
+          "primary_item": "diagram",
+          "emphasis": null
+        },
+        {
+          "content_items": [
+            "core_equation",
+            "substitute_compute",
+            "conclusion"
+          ],
+          "primary_item": "conclusion",
+          "emphasis": null
+        }
+      ]
+    }
+  ]
+}

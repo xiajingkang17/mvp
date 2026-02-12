@@ -18,6 +18,8 @@ class RenderContext:
 
 @dataclass
 class RuntimeState:
-    objects: dict[str, object] = field(default_factory=dict)  # 对象 id -> Mobject
-    visible: set[str] = field(default_factory=set)  # 当前屏幕可见的对象 id
-    base_sizes: dict[str, tuple[float, float]] = field(default_factory=dict)  # 对象初始宽高
+    objects: dict[str, object] = field(default_factory=dict)  # object id -> Mobject
+    visible: set[str] = field(default_factory=set)  # currently visible object ids
+    base_sizes: dict[str, tuple[float, float]] = field(default_factory=dict)  # object initial (w,h)
+    timeline_seconds: float = 0.0
+    timeline_clock: object | None = None

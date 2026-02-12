@@ -23,5 +23,6 @@ def _grid_slots(cols: int, rows: int) -> tuple[dict[str, SlotBBox], list[str]]:
 
 
 def grid_2x2(params: dict | None = None) -> Template:
+    _ = params  # Template geometry is fixed; only slot_scales is supported globally.
     slots, order = _grid_slots(cols=2, rows=2)
     return Template(type="grid_2x2", slots=slots, slot_order=order)

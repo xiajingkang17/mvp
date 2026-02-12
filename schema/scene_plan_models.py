@@ -24,6 +24,26 @@ class LayoutSpec(BaseModel):
     params: dict[str, Any] = Field(default_factory=dict)
 
 
+class CognitiveBudget(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    max_visible_objects: int = Field(default=4, ge=1, le=9)
+    max_new_formula: int = Field(default=4, ge=1, le=9)
+    max_new_symbols: int = Field(default=3, ge=0, le=20)
+    max_text_chars: int = Field(default=60, ge=8, le=200)
+
+
+class PedagogyPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    difficulty: Literal["simple", "medium", "hard"] = "medium"
+    need_single_goal: bool = False
+    need_check_scene: bool = False
+    check_types: list[Literal["unit", "boundary", "feasibility", "reasonableness"]] = Field(default_factory=list)
+    cognitive_budget: CognitiveBudget = Field(default_factory=CognitiveBudget)
+    module_order: list[str] = Field(default_factory=list)
+
+
 class PlayAction(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -55,6 +75,11 @@ class SceneSpec(BaseModel):
     actions: list[ActionSpec] = Field(default_factory=list)
     keep: list[str] = Field(default_factory=list)
     notes: str | None = None
+    goal: str | None = None
+    modules: list[str] = Field(default_factory=list)
+    roles: dict[str, str] = Field(default_factory=dict)
+    new_symbols: list[str] = Field(default_factory=list)
+    is_check_scene: bool = False
 
 
 class ScenePlan(BaseModel):
@@ -64,6 +89,7 @@ class ScenePlan(BaseModel):
     meta: dict[str, Any] = Field(default_factory=dict)
     objects: dict[str, ObjectSpec] = Field(default_factory=dict)
     scenes: list[SceneSpec] = Field(default_factory=list)
+    pedagogy_plan: PedagogyPlan | None = None
 
     @model_validator(mode="after")
     def _validate_unique_scene_ids(self) -> "ScenePlan":

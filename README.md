@@ -63,7 +63,7 @@ python -m pipeline.run_llm3 --case cases/demo_001 --no-repair
 布局说明：
 
 - LLM2 需在对象 `style` 中给出 `size_level`（S/M/L/XL）
-- LLM3 可在 `layout.params` 中给出模板参数（如 `left_ratio` / `row_weights`）
+- LLM3 仅可在 `layout.params` 中给出 `slot_scales`（按 slot 单独缩放宽高）
 - 渲染时采用“LLM 初稿 + 真实测量微调”混合策略（默认±10%微调，最小 slot 宽高 10% 屏幕）
 
 ## 校验（可自动修复）

@@ -25,10 +25,13 @@ wheels/
 venv/
 ENV/
 env/
+.venv/
+.envrc
 
 # IDE
 .vscode/
 .idea/
+*.iml
 *.swp
 *.swo
 *~
@@ -41,6 +44,14 @@ Thumbs.db
 media/
 partial_movie_files/
 *.log
+manim.cfg
+
+# Tooling caches / coverage
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.pytest_cache/
 
 # Environment
 .env

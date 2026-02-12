@@ -1,0 +1,31 @@
+{
+  "version": "0.1",
+  "meta": {
+    "name": "demo_title_pin"
+  },
+  "objects": {
+    "title": {
+      "type": "TextBlock",
+      "params": { "text": "Gradient Descent" },
+      "style": { "font_size": 64 }
+    }
+  },
+  "scenes": [
+    {
+      "id": "s1",
+      "intent": "Demo: title_pin (center pop -> UL pin)",
+      "layout": { "type": "hero_side", "slots": {}, "params": {} },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "pin_to_corner",
+          "targets": ["title"],
+          "duration": 2.0,
+          "kwargs": { "corner": "UL", "scale_to": 0.6, "buff": 0.35 }
+        },
+        { "op": "wait", "duration": 0.5 }
+      ],
+      "keep": ["title"]
+    }
+  ]
+}

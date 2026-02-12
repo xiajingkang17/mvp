@@ -58,3 +58,51 @@ def test_compute_placements_left3_right3():
     )
     assert len(placements) == 6
 
+
+def test_compute_placements_grid_2x2_ignores_template_level_weights():
+    safe = SafeArea(left=0.0, right=0.0, top=0.0, bottom=0.0)
+    frame = Frame(width=10.0, height=6.0)
+    base = compute_placements(
+        "grid_2x2",
+        {"a": "o1", "b": "o2", "c": "o3", "d": "o4"},
+        safe_area=safe,
+        frame=frame,
+    )
+    with_unused_params = compute_placements(
+        "grid_2x2",
+        {"a": "o1", "b": "o2", "c": "o3", "d": "o4"},
+        safe_area=safe,
+        frame=frame,
+        params={"col_weights": [0.7, 0.3], "row_weights": [0.6, 0.4]},
+    )
+
+    assert with_unused_params["o1"].width == base["o1"].width
+    assert with_unused_params["o2"].width == base["o2"].width
+    assert with_unused_params["o1"].height == base["o1"].height
+    assert with_unused_params["o3"].height == base["o3"].height
+
+
+def test_compute_placements_slot_scales_override_single_slot_size():
+    safe = SafeArea(left=0.0, right=0.0, top=0.0, bottom=0.0)
+    frame = Frame(width=10.0, height=6.0)
+
+    base = compute_placements(
+        "left_right",
+        {"left": "o1", "right": "o2"},
+        safe_area=safe,
+        frame=frame,
+        params={},
+    )
+    scaled = compute_placements(
+        "left_right",
+        {"left": "o1", "right": "o2"},
+        safe_area=safe,
+        frame=frame,
+        params={"slot_scales": {"left": {"w": 0.6, "h": 0.5}}},
+    )
+
+    assert scaled["o1"].width < base["o1"].width
+    assert scaled["o1"].height < base["o1"].height
+    assert scaled["o2"].width == base["o2"].width
+    assert scaled["o2"].height == base["o2"].height
+

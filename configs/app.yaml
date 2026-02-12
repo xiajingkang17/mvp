@@ -11,7 +11,7 @@ render:
 
   # 当计划未指定时，组件/动作使用的默认值。
   defaults:
-    font: "Arial"
+    font: "Microsoft YaHei"
     text_font_size: 36
     bullet_font_size: 34
     formula_font_size: 48

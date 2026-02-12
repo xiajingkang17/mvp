@@ -2,6 +2,41 @@ object_types:
   - TextBlock
   - BulletPanel
   - Formula
+  - CompositeObject
+  - InclinedPlaneGroup
+  - Wall
+  - InclinedPlane
+  - Block
+  - Cart
+  - Weight
+  - Pulley
+  - FixedPulley
+  - MovablePulley
+  - Rope
+  - Spring
+  - Rod
+  - Hinge
+  - CircularGroove
+  - SemicircleGroove
+  - QuarterCircleGroove
+  - SemicircleCart
+  - QuarterCart
+  - SpringScale
+  - Resistor
+  - Battery
+  - Bulb
+  - Switch
+  - Capacitor
+  - EMBattery
+  - EMSwitch
+  - Ammeter
+  - Voltmeter
+  - LightBulb
+  - EMCapacitor
+  - Rheostat
+  - Potentiometer
+  - Inductor
+  - LED
 
 layout_types:
   - hero_side
@@ -22,4 +57,6 @@ anims:
   - create
   - indicate
   - transform
+  - pin_to_corner
+  - title_pin
 

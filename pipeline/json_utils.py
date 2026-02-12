@@ -15,7 +15,7 @@ _FULLWIDTH_TRANSLATION = str.maketrans(
 
 def normalize_jsonish(text: str) -> str:
     """
-    把常见“全角括号”替换成半角，减少模型偶发输出导致的解析失败。
+    Normalize common full-width JSON brackets to ASCII.
     """
 
     return text.translate(_FULLWIDTH_TRANSLATION)
@@ -32,9 +32,7 @@ def strip_code_fences(text: str) -> str:
 
 def extract_first_json(text: str) -> str:
     """
-    从模型输出中尽量提取第一个 JSON 对象/数组字符串。
-
-    用于应对模型偶发输出解释文字或代码块。
+    Extract the first JSON object/array from model output.
     """
 
     s = strip_code_fences(text)
@@ -42,7 +40,7 @@ def extract_first_json(text: str) -> str:
     first_obj = s.find("{")
     first_arr = s.find("[")
     if first_obj == -1 and first_arr == -1:
-        raise ValueError("未找到 JSON 起始符号（{ 或 [）")
+        raise ValueError("No JSON start token found ('{' or '[').")
 
     if first_obj == -1:
         start = first_arr
@@ -67,20 +65,19 @@ def extract_first_json(text: str) -> str:
                 break
 
     if end is None:
-        raise ValueError("JSON 似乎不完整（未找到闭合括号）")
+        raise ValueError("JSON seems incomplete (missing closing bracket).")
 
     return s[start:end].strip()
 
 
 def load_json_from_llm(text: str):
     """
-    从 LLM 输出加载 JSON；失败时会尝试提取 JSON 片段再解析。
+    Parse model output as JSON; fallback to extracting the first JSON snippet.
     """
 
-    text = normalize_jsonish(text)
+    normalized = normalize_jsonish(text)
     try:
-        return json.loads(text)
+        return json.loads(normalized)
     except json.JSONDecodeError:
-        snippet = extract_first_json(text)
+        snippet = extract_first_json(normalized)
         return json.loads(snippet)
-

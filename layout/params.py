@@ -16,64 +16,39 @@ def normalize_weights(weights: Iterable[float], *, min_value: float = 1e-6) -> l
     return [w / total for w in values]
 
 
-def default_params(template_type: str) -> dict[str, float | list[float]]:
-    if template_type == "left_right":
-        return {"left_ratio": 0.5}
-    if template_type == "hero_side":
-        return {"hero_ratio": 0.66}
-    if template_type == "left3_right3":
-        return {"row_weights": [1.0 / 3.0] * 3}
-    if template_type == "left4_right4":
-        return {"row_weights": [0.25] * 4}
+def _sanitize_slot_scales(raw: object) -> dict[str, dict[str, float]]:
+    if not isinstance(raw, dict):
+        return {}
+
+    cleaned: dict[str, dict[str, float]] = {}
+    for raw_slot_id, raw_item in raw.items():
+        slot_id = str(raw_slot_id).strip()
+        if not slot_id or not isinstance(raw_item, dict):
+            continue
+
+        w_raw = raw_item.get("w", raw_item.get("width", 1.0))
+        h_raw = raw_item.get("h", raw_item.get("height", 1.0))
+        try:
+            w = clamp(float(w_raw), 0.2, 1.0)
+            h = clamp(float(h_raw), 0.2, 1.0)
+        except (TypeError, ValueError):
+            continue
+
+        cleaned[slot_id] = {"w": w, "h": h}
+    return cleaned
+
+
+def default_params(template_type: str) -> dict[str, object]:
+    _ = template_type
     return {}
 
 
-def sanitize_params(template_type: str, params: dict | None) -> dict[str, float | list[float]]:
+def sanitize_params(template_type: str, params: dict | None) -> dict[str, object]:
+    _ = template_type
     if not isinstance(params, dict):
-        return default_params(template_type)
+        return {}
 
-    if template_type == "left_right":
-        if "left_ratio" not in params:
-            return default_params(template_type)
-        try:
-            left_ratio = float(params.get("left_ratio", 0.5))
-        except (TypeError, ValueError):
-            return default_params(template_type)
-        return {"left_ratio": clamp(left_ratio, 0.3, 0.7)}
-
-    if template_type == "hero_side":
-        hero_ratio = params.get("hero_ratio", None)
-        side_ratio = params.get("side_ratio", None)
-        if hero_ratio is None and side_ratio is not None:
-            try:
-                hero_ratio = 1.0 - float(side_ratio)
-            except (TypeError, ValueError):
-                hero_ratio = None
-        if hero_ratio is None:
-            return default_params(template_type)
-        try:
-            hero_ratio = float(hero_ratio)
-        except (TypeError, ValueError):
-            return default_params(template_type)
-        return {"hero_ratio": clamp(hero_ratio, 0.5, 0.8)}
-
-    if template_type == "left3_right3":
-        weights = params.get("row_weights")
-        if not isinstance(weights, list) or len(weights) != 3:
-            return default_params(template_type)
-        try:
-            return {"row_weights": normalize_weights(weights)}
-        except (TypeError, ValueError):
-            return default_params(template_type)
-
-    if template_type == "left4_right4":
-        weights = params.get("row_weights")
-        if not isinstance(weights, list) or len(weights) != 4:
-            return default_params(template_type)
-        try:
-            return {"row_weights": normalize_weights(weights)}
-        except (TypeError, ValueError):
-            return default_params(template_type)
-
-    return {}
-
+    slot_scales = _sanitize_slot_scales(params.get("slot_scales"))
+    if not slot_scales:
+        return {}
+    return {"slot_scales": slot_scales}

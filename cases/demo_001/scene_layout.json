@@ -5,11 +5,20 @@
       "layout": {
         "type": "left_right",
         "slots": {
-          "left": "title",
-          "right": "given"
+          "left": "o_diagram",
+          "right": "o_text_s1"
         },
         "params": {
-          "left_ratio": 0.3
+          "slot_scales": {
+            "left": {
+              "w": 0.95,
+              "h": 0.9
+            },
+            "right": {
+              "w": 0.9,
+              "h": 0.3
+            }
+          }
         }
       },
       "actions": [
@@ -17,55 +26,433 @@
           "op": "play",
           "anim": "fade_in",
           "targets": [
-            "title"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 0.2
-        },
-        {
-          "op": "play",
-          "anim": "fade_in",
-          "targets": [
-            "given"
+            "o_diagram"
           ]
         },
         {
           "op": "wait",
           "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_text_s1"
+          ]
         }
       ],
       "keep": [
-        "title"
-      ]
+        "o_diagram",
+        "o_text_s1"
+      ],
+      "roles": {
+        "o_diagram": "diagram",
+        "o_text_s1": "support_eq"
+      }
     },
     {
       "id": "S2",
       "layout": {
         "type": "left_right",
         "slots": {
-          "left": "title",
-          "right": "answer"
+          "left": "o_diagram_s2",
+          "right": "o_eq_s2"
         },
         "params": {
-          "left_ratio": 0.3
+          "slot_scales": {
+            "left": {
+              "w": 0.9,
+              "h": 0.9
+            },
+            "right": {
+              "w": 0.9,
+              "h": 0.3
+            }
+          }
         }
       },
       "actions": [
         {
           "op": "play",
-          "anim": "write",
+          "anim": "fade_in",
           "targets": [
-            "answer"
+            "o_diagram_s2"
           ]
         },
         {
           "op": "wait",
-          "duration": 1.0
+          "duration": 0.4
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_eq_s2"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_text_s2"
+          ]
         }
       ],
-      "keep": []
+      "keep": [
+        "o_diagram_s2",
+        "o_eq_s2",
+        "o_text_s2"
+      ],
+      "roles": {
+        "o_diagram_s2": "diagram",
+        "o_eq_s2": "core_eq",
+        "o_text_s2": "conclusion"
+      }
+    },
+    {
+      "id": "S3",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "o_diagram_s3",
+          "right": "o_eq_s3_1"
+        },
+        "params": {
+          "slot_scales": {
+            "left": {
+              "w": 0.9,
+              "h": 0.9
+            },
+            "right": {
+              "w": 0.9,
+              "h": 0.25
+            }
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_diagram_s3"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.4
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_eq_s3_1"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.3
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_eq_s3_2"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_text_s3"
+          ]
+        }
+      ],
+      "keep": [
+        "o_diagram_s3",
+        "o_eq_s3_1",
+        "o_eq_s3_2",
+        "o_text_s3"
+      ],
+      "roles": {
+        "o_diagram_s3": "diagram",
+        "o_eq_s3_1": "core_eq",
+        "o_eq_s3_2": "support_eq",
+        "o_text_s3": "conclusion"
+      }
+    },
+    {
+      "id": "S4",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "o_diagram_s4",
+          "right": "o_eq_s4"
+        },
+        "params": {
+          "slot_scales": {
+            "left": {
+              "w": 0.9,
+              "h": 0.9
+            },
+            "right": {
+              "w": 0.9,
+              "h": 0.3
+            }
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_diagram_s4"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.4
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_eq_s4"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_text_s4"
+          ]
+        }
+      ],
+      "keep": [
+        "o_diagram_s4",
+        "o_eq_s4",
+        "o_text_s4"
+      ],
+      "roles": {
+        "o_diagram_s4": "diagram",
+        "o_eq_s4": "core_eq",
+        "o_text_s4": "conclusion"
+      }
+    },
+    {
+      "id": "S5",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "o_diagram_s5",
+          "right": "o_eq_s5"
+        },
+        "params": {
+          "slot_scales": {
+            "left": {
+              "w": 0.9,
+              "h": 0.9
+            },
+            "right": {
+              "w": 0.9,
+              "h": 0.3
+            }
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_diagram_s5"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.4
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_eq_s5"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_text_s5"
+          ]
+        }
+      ],
+      "keep": [
+        "o_diagram_s5",
+        "o_eq_s5",
+        "o_text_s5"
+      ],
+      "roles": {
+        "o_diagram_s5": "diagram",
+        "o_eq_s5": "core_eq",
+        "o_text_s5": "conclusion"
+      }
+    },
+    {
+      "id": "S6",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "o_diagram_s6",
+          "right": "o_eq_s6"
+        },
+        "params": {
+          "slot_scales": {
+            "left": {
+              "w": 0.9,
+              "h": 0.9
+            },
+            "right": {
+              "w": 0.9,
+              "h": 0.3
+            }
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_diagram_s6"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.4
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_eq_s6"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_text_s6"
+          ]
+        }
+      ],
+      "keep": [
+        "o_diagram_s6",
+        "o_eq_s6",
+        "o_text_s6"
+      ],
+      "roles": {
+        "o_diagram_s6": "diagram",
+        "o_eq_s6": "core_eq",
+        "o_text_s6": "conclusion"
+      }
+    },
+    {
+      "id": "S7",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "o_diagram_s7",
+          "right": "o_eq_s7"
+        },
+        "params": {
+          "slot_scales": {
+            "left": {
+              "w": 0.9,
+              "h": 0.9
+            },
+            "right": {
+              "w": 0.9,
+              "h": 0.25
+            }
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_diagram_s7"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.4
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_eq_s7"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_text_s7"
+          ]
+        },
+        {
+          "op": "wait",
+          "duration": 0.3
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_text_s7_check"
+          ]
+        }
+      ],
+      "keep": [
+        "o_diagram_s7",
+        "o_eq_s7",
+        "o_text_s7",
+        "o_text_s7_check"
+      ],
+      "roles": {
+        "o_diagram_s7": "diagram",
+        "o_eq_s7": "core_eq",
+        "o_text_s7": "conclusion",
+        "o_text_s7_check": "check"
+      }
     }
   ]
 }

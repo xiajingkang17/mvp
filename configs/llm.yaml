@@ -1,14 +1,20 @@
 provider: zhipu
 
 zhipu:
-  # 默认模型（可用 .env 的 ZHIPU_MODEL 覆盖）
+  # Default model (can be overridden by ZHIPU_MODEL in .env)
   model: glm-4.7
 
-  # 采样参数（可用 .env 覆盖）
+  # Sampling params (can be overridden by .env)
   temperature: 0.3
   top_p: 0.95
-  max_tokens: 2048
+  max_tokens: 8192
 
-  # 超时（秒）
-  timeout_s: 120
+  # Request timeout in seconds
+  timeout_s: 240
 
+  # Retries for transient errors (HTTP 5xx / timeout / connection reset)
+  retries: 2
+  retry_backoff_s: 1.5
+
+  # Disable reasoning/thinking by default; helps JSON output stability
+  enable_thinking: false

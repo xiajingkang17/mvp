@@ -1,0 +1,532 @@
+{
+  "pedagogy_plan": {
+    "difficulty": "hard",
+    "need_single_goal": true,
+    "need_check_scene": false,
+    "check_types": [],
+    "cognitive_budget": {
+      "max_visible_objects": 5,
+      "max_new_formula": 4,
+      "max_new_symbols": 3,
+      "max_text_chars": 80
+    },
+    "module_order": [
+      "diagram",
+      "model",
+      "equation",
+      "solve",
+      "conclusion"
+    ]
+  },
+  "scenes": [
+    {
+      "id": "S1",
+      "intent": "构建题意物理场景图",
+      "goal": "展示斜面、粗糙段、弹簧及物块位置",
+      "modules": [
+        "diagram"
+      ],
+      "roles": {
+        "o_diagram": "diagram"
+      },
+      "new_symbols": [],
+      "is_check_scene": false,
+      "objects": [
+        {
+          "id": "o_diagram",
+          "type": "CompositeObject",
+          "params": {
+            "graph": {
+              "version": "0.1",
+              "space": {
+                "x_range": [
+                  -5,
+                  15
+                ],
+                "y_range": [
+                  -3,
+                  6
+                ],
+                "unit": "m",
+                "angle_unit": "deg",
+                "origin": "custom"
+              },
+              "parts": [
+                {
+                  "id": "p_incline",
+                  "type": "InclinedPlane",
+                  "params": {
+                    "angle": 37,
+                    "length": 5.0,
+                    "show_angle": true
+                  },
+                  "style": {
+                    "color": "#333333"
+                  },
+                  "seed_pose": {
+                    "x": -4.16,
+                    "y": 2.5,
+                    "theta": 0,
+                    "scale": 1.0
+                  }
+                },
+                {
+                  "id": "p_rough_floor",
+                  "type": "Rod",
+                  "params": {
+                    "length": 4.0,
+                    "thickness": 0.2
+                  },
+                  "style": {
+                    "color": "#888888"
+                  },
+                  "seed_pose": {
+                    "x": 0,
+                    "y": 0,
+                    "theta": 0,
+                    "scale": 1.0
+                  }
+                },
+                {
+                  "id": "p_spring",
+                  "type": "Spring",
+                  "params": {
+                    "length": 2.0,
+                    "height": 0.4,
+                    "num_coils": 8,
+                    "end_length": 0.2
+                  },
+                  "style": {
+                    "color": "#555555"
+                  },
+                  "seed_pose": {
+                    "x": 4.0,
+                    "y": 0,
+                    "theta": 0,
+                    "scale": 1.0
+                  }
+                },
+                {
+                  "id": "p_wall",
+                  "type": "Wall",
+                  "params": {
+                    "length": 2.0,
+                    "angle": 90
+                  },
+                  "style": {
+                    "color": "#333333"
+                  },
+                  "seed_pose": {
+                    "x": 6.2,
+                    "y": 0,
+                    "theta": 0,
+                    "scale": 1.0
+                  }
+                },
+                {
+                  "id": "p_block_P",
+                  "type": "Block",
+                  "params": {
+                    "width": 0.8,
+                    "height": 0.6,
+                    "label": "P",
+                    "label_color": "#000000"
+                  },
+                  "style": {
+                    "color": "#4CAF50"
+                  },
+                  "seed_pose": {
+                    "x": -2.0,
+                    "y": 1.2,
+                    "theta": 37,
+                    "scale": 1.0
+                  }
+                },
+                {
+                  "id": "p_block_Q",
+                  "type": "Block",
+                  "params": {
+                    "width": 1.0,
+                    "height": 0.8,
+                    "label": "Q",
+                    "label_color": "#000000"
+                  },
+                  "style": {
+                    "color": "#2196F3"
+                  },
+                  "seed_pose": {
+                    "x": 3.6,
+                    "y": 0.4,
+                    "theta": 0,
+                    "scale": 1.0
+                  }
+                }
+              ],
+              "tracks": [],
+              "constraints": [],
+              "motions": []
+            }
+          },
+          "style": {
+            "size_level": "XL"
+          },
+          "priority": 1
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "intent": "计算P到达C点碰前速度",
+      "goal": "利用能量守恒求 $v_{P0}$",
+      "modules": [
+        "model",
+        "equation",
+        "solve"
+      ],
+      "roles": {
+        "o_text_s2": "model",
+        "o_eq_s2_1": "equation",
+        "o_eq_s2_2": "solve"
+      },
+      "new_symbols": [
+        "v_{P0}"
+      ],
+      "is_check_scene": false,
+      "objects": [
+        {
+          "id": "o_text_s2",
+          "type": "TextBlock",
+          "params": {
+            "text": "P从A滑到C，重力势能转化为动能与摩擦热"
+          },
+          "style": {
+            "size_level": "S"
+          },
+          "priority": 1
+        },
+        {
+          "id": "o_eq_s2_1",
+          "type": "Formula",
+          "params": {
+            "latex": "m_1 g h - \\mu m_1 g L \\cos\\theta = \\frac{1}{2} m_1 v_{P0}^2"
+          },
+          "style": {},
+          "priority": 2
+        },
+        {
+          "id": "o_eq_s2_2",
+          "type": "Formula",
+          "params": {
+            "latex": "v_{P0} = \\sqrt{2gh - 2\\mu g L \\cos\\theta} = 6 \\, \\text{m/s}"
+          },
+          "style": {},
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "id": "S3",
+      "intent": "分析弹性碰撞过程",
+      "goal": "求碰后P和Q的速度",
+      "modules": [
+        "model",
+        "equation",
+        "solve"
+      ],
+      "roles": {
+        "o_text_s3": "model",
+        "o_eq_s3_1": "equation",
+        "o_eq_s3_2": "solve"
+      },
+      "new_symbols": [
+        "v_{P1}",
+        "v_{Q1}"
+      ],
+      "is_check_scene": false,
+      "objects": [
+        {
+          "id": "o_text_s3",
+          "type": "TextBlock",
+          "params": {
+            "text": "P与Q发生弹性碰撞，动量与动能守恒"
+          },
+          "style": {
+            "size_level": "S"
+          },
+          "priority": 1
+        },
+        {
+          "id": "o_eq_s3_1",
+          "type": "Formula",
+          "params": {
+            "latex": "\\begin{cases} m_1 v_{P0} = m_1 v_{P1} + m_2 v_{Q1} \\\\ \\frac{1}{2} m_1 v_{P0}^2 = \\frac{1}{2} m_1 v_{P1}^2 + \\frac{1}{2} m_2 v_{Q1}^2 \\end{cases}"
+          },
+          "style": {},
+          "priority": 2
+        },
+        {
+          "id": "o_eq_s3_2",
+          "type": "Formula",
+          "params": {
+            "latex": "v_{P1} = -3 \\, \\text{m/s}, \\quad v_{Q1} = 3 \\, \\text{m/s}"
+          },
+          "style": {},
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "id": "S4",
+      "intent": "计算弹簧最大压缩量",
+      "goal": "利用能量守恒求 $x_{\\max}$",
+      "modules": [
+        "model",
+        "equation",
+        "solve"
+      ],
+      "roles": {
+        "o_text_s4": "model",
+        "o_eq_s4_1": "equation",
+        "o_eq_s4_2": "solve"
+      },
+      "new_symbols": [
+        "x_{\\max}"
+      ],
+      "is_check_scene": false,
+      "objects": [
+        {
+          "id": "o_text_s4",
+          "type": "TextBlock",
+          "params": {
+            "text": "Q压缩弹簧，动能转化为弹性势能"
+          },
+          "style": {
+            "size_level": "S"
+          },
+          "priority": 1
+        },
+        {
+          "id": "o_eq_s4_1",
+          "type": "Formula",
+          "params": {
+            "latex": "\\frac{1}{2} m_2 v_{Q1}^2 = \\frac{1}{2} k x_{\\max}^2"
+          },
+          "style": {},
+          "priority": 2
+        },
+        {
+          "id": "o_eq_s4_2",
+          "type": "Formula",
+          "params": {
+            "latex": "x_{\\max} = v_{Q1} \\sqrt{\\frac{m_2}{k}} = 0.3 \\, \\text{m}"
+          },
+          "style": {},
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "id": "S5",
+      "intent": "计算Q在弹簧区运动时间",
+      "goal": "利用简谐运动周期求 $\\Delta t$",
+      "modules": [
+        "model",
+        "equation",
+        "solve"
+      ],
+      "roles": {
+        "o_text_s5": "model",
+        "o_eq_s5_1": "equation",
+        "o_eq_s5_2": "solve"
+      },
+      "new_symbols": [
+        "\\Delta t",
+        "T"
+      ],
+      "is_check_scene": false,
+      "objects": [
+        {
+          "id": "o_text_s5",
+          "type": "TextBlock",
+          "params": {
+            "text": "Q做简谐运动，从C出发再回到C为半个周期"
+          },
+          "style": {
+            "size_level": "S"
+          },
+          "priority": 1
+        },
+        {
+          "id": "o_eq_s5_1",
+          "type": "Formula",
+          "params": {
+            "latex": "T = 2\\pi \\sqrt{\\frac{m_2}{k}}, \\quad \\Delta t = \\frac{T}{2}"
+          },
+          "style": {},
+          "priority": 2
+        },
+        {
+          "id": "o_eq_s5_2",
+          "type": "Formula",
+          "params": {
+            "latex": "\\Delta t = \\pi \\sqrt{\\frac{3.0}{300}} \\approx 0.314 \\, \\text{s}"
+          },
+          "style": {},
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "id": "S6",
+      "intent": "判断Q能否追上P",
+      "goal": "分析粗糙段运动，判断是否相遇",
+      "modules": [
+        "model",
+        "equation",
+        "solve"
+      ],
+      "roles": {
+        "o_text_s6": "model",
+        "o_eq_s6_1": "equation",
+        "o_eq_s6_2": "solve"
+      },
+      "new_symbols": [
+        "s_P",
+        "s_Q"
+      ],
+      "is_check_scene": false,
+      "objects": [
+        {
+          "id": "o_text_s6",
+          "type": "TextBlock",
+          "params": {
+            "text": "比较Q回到C时P的位置与速度"
+          },
+          "style": {
+            "size_level": "S"
+          },
+          "priority": 1
+        },
+        {
+          "id": "o_eq_s6_1",
+          "type": "Formula",
+          "params": {
+            "latex": "v_{P1} = -3 \\, \\text{m/s}, \\quad a = \\mu g = 2.5 \\, \\text{m/s}^2"
+          },
+          "style": {},
+          "priority": 2
+        },
+        {
+          "id": "o_eq_s6_2",
+          "type": "Formula",
+          "params": {
+            "latex": "s_P = |v_{P1}| \\Delta t - \\frac{1}{2} a \\Delta t^2 \\approx 0.78 \\, \\text{m}"
+          },
+          "style": {},
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "id": "S7",
+      "intent": "计算相遇点位置及速度",
+      "goal": "求解追及问题",
+      "modules": [
+        "model",
+        "equation",
+        "solve"
+      ],
+      "roles": {
+        "o_text_s7": "model",
+        "o_eq_s7_1": "equation",
+        "o_eq_s7_2": "solve"
+      },
+      "new_symbols": [
+        "t_{meet}",
+        "x_{meet}"
+      ],
+      "is_check_scene": false,
+      "objects": [
+        {
+          "id": "o_text_s7",
+          "type": "TextBlock",
+          "params": {
+            "text": "设Q回到C后经时间 $t$ 追上P"
+          },
+          "style": {
+            "size_level": "S"
+          },
+          "priority": 1
+        },
+        {
+          "id": "o_eq_s7_1",
+          "type": "Formula",
+          "params": {
+            "latex": "s_Q(t) = v_{Q1} t - \\frac{1}{2} a t^2, \\quad s_P(t) = s_P(\\Delta t) + v_P(\\Delta t) t - \\frac{1}{2} a t^2"
+          },
+          "style": {},
+          "priority": 2
+        },
+        {
+          "id": "o_eq_s7_2",
+          "type": "Formula",
+          "params": {
+            "latex": "t_{meet} = 0.26 \\, \\text{s}, \\quad x_{meet} = 0.70 \\, \\text{m}"
+          },
+          "style": {},
+          "priority": 2
+        }
+      ]
+    },
+    {
+      "id": "S8",
+      "intent": "计算最终停止位置",
+      "goal": "求两物块停止点到B的距离",
+      "modules": [
+        "model",
+        "equation",
+        "conclusion"
+      ],
+      "roles": {
+        "o_text_s8": "model",
+        "o_eq_s8_1": "equation",
+        "o_eq_s8_2": "conclusion"
+      },
+      "new_symbols": [
+        "d_{stop}"
+      ],
+      "is_check_scene": false,
+      "objects": [
+        {
+          "id": "o_text_s8",
+          "type": "TextBlock",
+          "params": {
+            "text": "利用动能定理求总滑行距离"
+          },
+          "style": {
+            "size_level": "S"
+          },
+          "priority": 1
+        },
+        {
+          "id": "o_eq_s8_1",
+          "type": "Formula",
+          "params": {
+            "latex": "\\mu m g d_{total} = E_{k_{total}} \\Rightarrow d_{total} = \\frac{E_{k_{total}}}{\\mu m g}"
+          },
+          "style": {},
+          "priority": 2
+        },
+        {
+          "id": "o_eq_s8_2",
+          "type": "Formula",
+          "params": {
+            "latex": "P: 1.2 \\, \\text{m from B}; \\quad Q: 1.8 \\, \\text{m from B}"
+          },
+          "style": {},
+          "priority": 2
+        }
+      ]
+    }
+  ]
+}

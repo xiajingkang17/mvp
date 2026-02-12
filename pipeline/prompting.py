@@ -12,7 +12,7 @@ def load_prompt(name: str) -> str:
     """
     读取 prompts/ 下的提示词模板。
 
-    例：load_prompt("llm1_explanation.md")
+    例：load_prompt("llm1_teaching_plan.md")
     """
 
     path = PROMPTS_DIR / name

@@ -1,0 +1,45 @@
+}
+          },
+          "style": {
+            "size_level": "XL"
+          },
+          "priority": 1
+        },
+        {
+          "id": "o_eq_s7",
+          "type": "Formula",
+          "params": {
+            "latex": "\\frac{1}{2} m v^2 = \\mu m g s"
+          },
+          "style": {
+            "size_level": "M"
+          },
+          "priority": 2
+        },
+        {
+          "id": "o_text_s7",
+          "type": "TextBlock",
+          "params": {
+            "text": "解得：两者均停在距B点 $2.5\\text{m}$ 处"
+          },
+          "style": {
+            "size_level": "M"
+          },
+          "priority": 3
+        },
+        {
+          "id": "o_text_s7_check",
+          "type": "TextBlock",
+          "params": {
+            "text": "检查：位置在BC段内，且两者位置相同，符合弹性碰撞特定质量比下的对称性。"
+          },
+          "style": {
+            "size_level": "S",
+            "color": "#666666"
+          },
+          "priority": 4
+        }
+      ]
+    }
+  ]
+}
