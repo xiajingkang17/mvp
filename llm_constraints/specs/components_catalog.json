@@ -1,0 +1,57 @@
+{
+  "version": "0.1",
+  "components": {
+    "InclinedPlaneGroup": {"domain": "mechanics", "label": "斜面+滑块整体", "purpose": "快速构建斜面与物块的整体示意。"},
+    "Wall": {
+      "domain": "mechanics",
+      "label": "平面/斜面",
+      "purpose": "表示平面、斜面、挡板等接触边界。",
+      "param_rules": {
+        "angle": "slope magnitude only, must be in [0, 90]",
+        "rise_to": "required for slope direction, enum: left|right"
+      },
+      "examples": [
+        {"length": 3.0, "angle": 37, "rise_to": "left"},
+        {"length": 3.0, "angle": 30, "rise_to": "right"}
+      ]
+    },
+    "Block": {"domain": "mechanics", "label": "物块", "purpose": "表示受力与运动主体。"},
+    "Cart": {"domain": "mechanics", "label": "小车", "purpose": "表示带轮刚体小车。"},
+    "Weight": {"domain": "mechanics", "label": "重物", "purpose": "表示悬挂重物或砝码。"},
+    "Pulley": {"domain": "mechanics", "label": "滑轮", "purpose": "表示基础滑轮结构。"},
+    "FixedPulley": {"domain": "mechanics", "label": "定滑轮", "purpose": "表示改变力方向的定滑轮。"},
+    "MovablePulley": {"domain": "mechanics", "label": "动滑轮", "purpose": "表示省力结构中的动滑轮。"},
+    "Rope": {"domain": "mechanics", "label": "绳子", "purpose": "表示连接或受力传递路径。"},
+    "Spring": {"domain": "mechanics", "label": "弹簧", "purpose": "表示弹性连接与形变量。"},
+    "Rod": {"domain": "mechanics", "label": "细杆", "purpose": "表示刚性连接或参考线段。"},
+    "Hinge": {"domain": "mechanics", "label": "铰点", "purpose": "表示转动连接点。"},
+    "CircularGroove": {"domain": "mechanics", "label": "圆形轨道", "purpose": "表示圆形凹槽轨道。"},
+    "ArcTrack": {
+      "domain": "mechanics",
+      "label": "圆弧轨道",
+      "purpose": "表示由圆心、半径、起止角定义的单线圆弧轨道（角度从+x轴起逆时针）。"
+    },
+    "SemicircleGroove": {"domain": "mechanics", "label": "半圆轨道", "purpose": "表示半圆凹槽轨道。"},
+    "QuarterCircleGroove": {"domain": "mechanics", "label": "四分之一圆轨道", "purpose": "表示四分之一圆凹槽轨道。"},
+    "SemicircleCart": {"domain": "mechanics", "label": "半圆小车", "purpose": "表示半圆轮廓小车。"},
+    "QuarterCart": {"domain": "mechanics", "label": "四分之一圆小车", "purpose": "表示四分之一圆轮廓小车。"},
+    "SpringScale": {"domain": "mechanics", "label": "弹簧秤", "purpose": "表示测力读数装置。"},
+
+    "Resistor": {"domain": "electricity", "label": "电阻", "purpose": "表示电阻元件。"},
+    "Battery": {"domain": "electricity", "label": "电池", "purpose": "表示电源。"},
+    "Bulb": {"domain": "electricity", "label": "灯泡", "purpose": "表示发光负载。"},
+    "Switch": {"domain": "electricity", "label": "开关", "purpose": "表示通断控制。"},
+    "Capacitor": {"domain": "electricity", "label": "电容", "purpose": "表示电容储能元件。"},
+
+    "EMBattery": {"domain": "electromagnetism", "label": "电磁风格电池", "purpose": "电磁学图示中的电源符号。"},
+    "EMSwitch": {"domain": "electromagnetism", "label": "电磁风格开关", "purpose": "电磁学图示中的开关符号。"},
+    "Ammeter": {"domain": "electromagnetism", "label": "电流表", "purpose": "表示电流测量位置。"},
+    "Voltmeter": {"domain": "electromagnetism", "label": "电压表", "purpose": "表示电压测量位置。"},
+    "LightBulb": {"domain": "electromagnetism", "label": "小灯泡", "purpose": "表示电磁学图示中的灯泡。"},
+    "EMCapacitor": {"domain": "electromagnetism", "label": "电磁风格电容", "purpose": "表示电磁学图示中的电容。"},
+    "Rheostat": {"domain": "electromagnetism", "label": "滑动变阻器", "purpose": "表示可变电阻调节元件。"},
+    "Potentiometer": {"domain": "electromagnetism", "label": "电位器", "purpose": "表示电位调节元件。"},
+    "Inductor": {"domain": "electromagnetism", "label": "电感线圈", "purpose": "表示电感与磁场相关元件。"},
+    "LED": {"domain": "electromagnetism", "label": "发光二极管", "purpose": "表示单向导通发光元件。"}
+  }
+}

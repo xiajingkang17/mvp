@@ -114,6 +114,70 @@ def _draft_scene_ids(draft: dict) -> list[str]:
     return ids
 
 
+def _safe_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _motion_timeline_span(motion: Any) -> float:
+    if not isinstance(motion, dict):
+        return 0.0
+    timeline = motion.get("timeline")
+    if not isinstance(timeline, list):
+        return 0.0
+    points: list[float] = []
+    for item in timeline:
+        if not isinstance(item, dict):
+            continue
+        t_val = _safe_float(item.get("t"))
+        if t_val is None:
+            continue
+        points.append(t_val)
+    if len(points) < 2:
+        return 0.0
+    return max(points) - min(points)
+
+
+def _scene_motion_span_map(draft: dict) -> dict[str, float]:
+    result: dict[str, float] = {}
+    scenes = draft.get("scenes")
+    if not isinstance(scenes, list):
+        return result
+    for scene in scenes:
+        if not isinstance(scene, dict):
+            continue
+        scene_id = str(scene.get("id", "")).strip()
+        if not scene_id:
+            continue
+        max_span = 0.0
+        objects = scene.get("objects")
+        if not isinstance(objects, list):
+            result[scene_id] = 0.0
+            continue
+        for obj in objects:
+            if not isinstance(obj, dict):
+                continue
+            if str(obj.get("type", "")).strip() != "CompositeObject":
+                continue
+            params = obj.get("params")
+            if not isinstance(params, dict):
+                continue
+            graph = params.get("graph")
+            if not isinstance(graph, dict):
+                continue
+            motions = graph.get("motions")
+            if not isinstance(motions, list):
+                continue
+            for motion in motions:
+                span = _motion_timeline_span(motion)
+                if span > max_span:
+                    max_span = span
+        result[scene_id] = max_span
+    return result
+
+
 def _render_error_lines(errors: list[str], *, limit: int = 60) -> str:
     if not errors:
         return "(no validation errors)"
@@ -141,6 +205,7 @@ def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
     allowed_action_ops = set(enums["action_ops"])
     allowed_anims = set(enums["anims"])
     known_object_ids = _global_object_ids(draft)
+    motion_span_by_scene = _scene_motion_span_map(draft)
 
     for scene_index, scene in enumerate(scenes):
         scene_path = f"scenes[{scene_index}]"
@@ -149,6 +214,7 @@ def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
             continue
 
         scene_id = str(scene.get("id", "")).strip()
+        scene_motion_span = 0.0
         if not scene_id:
             errors.append(f"{scene_path}.id is required")
         else:
@@ -157,12 +223,14 @@ def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
             seen_scene_ids.add(scene_id)
             if scene_id not in expected_scene_set:
                 errors.append(f"{scene_path}.id not found in scene_draft: {scene_id}")
+            scene_motion_span = float(motion_span_by_scene.get(scene_id, 0.0))
 
         for required_key in ("layout", "actions", "keep"):
             if required_key not in scene:
                 errors.append(f"{scene_path}.{required_key} is required")
 
         used_ids: set[str] = set()
+        scene_timeline_duration = 0.0
 
         layout = scene.get("layout")
         if not isinstance(layout, dict):
@@ -254,18 +322,33 @@ def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
                     continue
 
                 if op == "wait":
-                    try:
-                        duration = float(action.get("duration"))
-                    except (TypeError, ValueError):
+                    duration = _safe_float(action.get("duration"))
+                    if duration is None:
                         errors.append(f"{action_path}.duration must be a number >= 0")
                         continue
                     if duration < 0:
                         errors.append(f"{action_path}.duration must be >= 0")
+                        continue
+                    scene_timeline_duration += duration
                     continue
 
                 anim = str(action.get("anim", "")).strip()
                 if anim not in allowed_anims:
                     errors.append(f"{action_path}.anim not allowed: {action.get('anim')}")
+
+                play_duration: float | None = None
+                if "duration" in action:
+                    play_duration = _safe_float(action.get("duration"))
+                    if play_duration is None:
+                        errors.append(f"{action_path}.duration must be a number > 0")
+                    elif play_duration <= 0:
+                        errors.append(f"{action_path}.duration must be > 0")
+                        play_duration = None
+                elif scene_motion_span > 0:
+                    errors.append(f"{action_path}.duration is required when scene has graph.motions")
+
+                if play_duration is not None:
+                    scene_timeline_duration += play_duration
 
                 targets_raw = action.get("targets")
                 if targets_raw is None and "target" in action:
@@ -310,6 +393,14 @@ def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
                         errors.append(
                             f"{action_path} transform requires src+dst (or at least 2 targets)"
                         )
+
+        if scene_motion_span > 0:
+            if scene_timeline_duration <= 0:
+                errors.append(f"{scene_path} has graph.motions but no effective timeline-driving action duration")
+            elif scene_timeline_duration + 1e-6 < scene_motion_span:
+                errors.append(
+                    f"{scene_path} action duration {scene_timeline_duration:.3f}s is shorter than required motion span {scene_motion_span:.3f}s"
+                )
 
         keep = scene.get("keep")
         if not isinstance(keep, list):

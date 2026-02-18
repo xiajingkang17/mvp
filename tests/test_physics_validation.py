@@ -24,8 +24,8 @@ def _make_plan_with_object(obj: dict) -> ScenePlan:
 def test_validate_accepts_known_physics_object_params():
     plan = _make_plan_with_object(
         {
-            "type": "InclinedPlane",
-            "params": {"angle": 30, "length": 5.0, "show_angle": True},
+            "type": "Wall",
+            "params": {"angle": 30, "length": 5.0, "hatch_spacing": 0.4},
             "style": {"size_level": "L"},
             "priority": 1,
         }
@@ -36,7 +36,7 @@ def test_validate_accepts_known_physics_object_params():
 def test_validate_rejects_unknown_physics_object_params():
     plan = _make_plan_with_object(
         {
-            "type": "InclinedPlane",
+            "type": "Wall",
             "params": {"angle": 30, "foo": 1},
             "style": {"size_level": "L"},
             "priority": 1,

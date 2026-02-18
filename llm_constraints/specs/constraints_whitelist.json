@@ -1,0 +1,237 @@
+{
+  "version": "0.1",
+  "constraints": {
+    "on_track_pose": {
+      "required_any_of": [
+        [
+          "part_id"
+        ],
+        [
+          "track_id"
+        ]
+      ],
+      "args": {
+        "part_id": {
+          "type": "string",
+          "required": true
+        },
+        "track_id": {
+          "type": "string",
+          "required": true
+        },
+        "anchor": {
+          "type": "string",
+          "default": "bottom_center"
+        },
+        "s": {
+          "type": "number",
+          "default": 0.0
+        },
+        "t": {
+          "type": "number",
+          "alias_of": "s"
+        },
+        "angle_mode": {
+          "type": "string",
+          "enum": [
+            "tangent",
+            "normal",
+            "fixed",
+            "keep"
+          ],
+          "default": "tangent"
+        },
+        "angle": {
+          "type": "number"
+        },
+        "angle_offset": {
+          "type": "number",
+          "default": 0.0
+        },
+        "contact_side": {
+          "type": "string",
+          "enum": [
+            "outer",
+            "inner"
+          ],
+          "default": "outer"
+        },
+        "clearance": {
+          "type": "number"
+        }
+      }
+    },
+    "attach": {
+      "required_any_of": [
+        [
+          "part_a",
+          "from_part_id",
+          "source_part_id",
+          "part_id"
+        ],
+        [
+          "part_b",
+          "to_part_id",
+          "target_part_id"
+        ]
+      ],
+      "args": {
+        "part_a": {
+          "type": "string"
+        },
+        "from_part_id": {
+          "type": "string",
+          "alias_group": "part_a"
+        },
+        "source_part_id": {
+          "type": "string",
+          "alias_group": "part_a"
+        },
+        "part_id": {
+          "type": "string",
+          "alias_group": "part_a"
+        },
+        "part_b": {
+          "type": "string"
+        },
+        "to_part_id": {
+          "type": "string",
+          "alias_group": "part_b"
+        },
+        "target_part_id": {
+          "type": "string",
+          "alias_group": "part_b"
+        },
+        "anchor_a": {
+          "type": "string"
+        },
+        "from_anchor": {
+          "type": "string",
+          "alias_group": "anchor_a"
+        },
+        "anchor": {
+          "type": "string",
+          "alias_group": "anchor_a"
+        },
+        "anchor_b": {
+          "type": "string"
+        },
+        "to_anchor": {
+          "type": "string",
+          "alias_group": "anchor_b"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "a_to_b",
+            "b_to_a",
+            "both"
+          ],
+          "default": "a_to_b"
+        },
+        "rigid": {
+          "type": "bool",
+          "default": false
+        }
+      }
+    },
+    "distance": {
+      "required_any_of": [
+        [
+          "part_a"
+        ],
+        [
+          "part_b"
+        ],
+        [
+          "d",
+          "distance"
+        ]
+      ],
+      "args": {
+        "part_a": {
+          "type": "string",
+          "required": true
+        },
+        "part_b": {
+          "type": "string",
+          "required": true
+        },
+        "anchor_a": {
+          "type": "string",
+          "default": "center"
+        },
+        "anchor_b": {
+          "type": "string",
+          "default": "center"
+        },
+        "d": {
+          "type": "number"
+        },
+        "distance": {
+          "type": "number",
+          "alias_group": "d"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "a_to_b",
+            "b_to_a",
+            "both"
+          ],
+          "default": "both"
+        }
+      }
+    },
+    "midpoint": {
+      "required_any_of": [
+        [
+          "part_id"
+        ]
+      ],
+      "extra_rule": "requires point_1 source and point_2 source",
+      "args": {
+        "part_id": {
+          "type": "string",
+          "required": true
+        },
+        "anchor": {
+          "type": "string",
+          "default": "center"
+        },
+        "point_1": {
+          "type": "point2d"
+        },
+        "point_2": {
+          "type": "point2d"
+        },
+        "part_1": {
+          "type": "string"
+        },
+        "anchor_1": {
+          "type": "string",
+          "default": "center"
+        },
+        "x1": {
+          "type": "number"
+        },
+        "y1": {
+          "type": "number"
+        },
+        "part_2": {
+          "type": "string"
+        },
+        "anchor_2": {
+          "type": "string",
+          "default": "center"
+        },
+        "x2": {
+          "type": "number"
+        },
+        "y2": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

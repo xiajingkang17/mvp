@@ -27,7 +27,7 @@ def _valid_graph() -> dict:
         "parts": [
             {
                 "id": "p_plane",
-                "type": "InclinedPlane",
+                "type": "Wall",
                 "params": {"angle": 30, "length": 6.0},
                 "style": {},
                 "seed_pose": {"x": 0, "y": 0, "theta": 0, "scale": 1.0},
@@ -41,7 +41,7 @@ def _valid_graph() -> dict:
             },
         ],
         "tracks": [{"id": "t1", "type": "segment", "data": {"x1": -3, "y1": 1.2, "x2": 3, "y2": -0.5}}],
-        "constraints": [{"id": "c1", "type": "on_segment", "args": {"part_id": "p_block", "track_id": "t1"}}],
+        "constraints": [{"id": "c1", "type": "on_track_pose", "args": {"part_id": "p_block", "track_id": "t1"}}],
         "motions": [],
     }
 
@@ -322,3 +322,176 @@ def test_normalize_scene_draft_maps_role_aliases_to_allowed_roles():
     assert normalized["scenes"][0]["roles"]["o2"] == "core_eq"
     errors = validate_scene_draft_data(normalized, allowed_object_types=_allowed_object_types())
     assert not any("has unknown role" in e for e in errors)
+
+
+def test_validate_scene_draft_requires_motion_for_dynamic_scene():
+    data = _valid_draft()
+    data["scenes"][0]["intent"] = "展示滑块运动过程"
+    errors = validate_scene_draft_data(data, allowed_object_types=_allowed_object_types())
+    assert any("params.graph.motions is required for dynamic scene" in e for e in errors)
+
+
+def test_validate_scene_draft_rejects_discontinuous_on_track_schedule_segments():
+    data = _valid_draft()
+    data["scenes"][0]["intent"] = "展示滑块沿轨道运动"
+    graph = data["scenes"][0]["objects"][1]["params"]["graph"]
+    graph["tracks"].append({"id": "t2", "type": "segment", "data": {"x1": 3, "y1": -0.5, "x2": 5, "y2": -0.5}})
+    graph["motions"] = [
+        {
+            "id": "m1",
+            "type": "on_track_schedule",
+            "args": {
+                "part_id": "p_block",
+                "anchor": "bottom_center",
+                "segments": [
+                    {"track_id": "t1", "u0": 0.0, "u1": 0.5, "s0": 0.0, "s1": 1.0},
+                    {"track_id": "t2", "u0": 0.6, "u1": 1.0, "s0": 0.0, "s1": 1.0},
+                ],
+            },
+            "timeline": [{"t": 0.0, "u": 0.0}, {"t": 2.0, "u": 1.0}],
+        }
+    ]
+    errors = validate_scene_draft_data(data, allowed_object_types=_allowed_object_types())
+    assert any("segments must be continuous in u" in e for e in errors)
+
+
+def test_validate_scene_draft_accepts_continuous_on_track_schedule():
+    data = _valid_draft()
+    data["scenes"][0]["intent"] = "展示滑块沿轨道运动"
+    graph = data["scenes"][0]["objects"][1]["params"]["graph"]
+    graph["tracks"].append({"id": "t2", "type": "segment", "data": {"x1": 3, "y1": -0.5, "x2": 5, "y2": -0.5}})
+    graph["motions"] = [
+        {
+            "id": "m1",
+            "type": "on_track_schedule",
+            "args": {
+                "part_id": "p_block",
+                "anchor": "bottom_center",
+                "segments": [
+                    {"track_id": "t1", "u0": 0.0, "u1": 0.5, "s0": 0.0, "s1": 1.0},
+                    {"track_id": "t2", "u0": 0.5, "u1": 1.0, "s0": 0.0, "s1": 1.0},
+                ],
+            },
+            "timeline": [{"t": 0.0, "u": 0.0}, {"t": 2.0, "u": 1.0}],
+        }
+    ]
+    errors = validate_scene_draft_data(data, allowed_object_types=_allowed_object_types())
+    assert not any("on_track_schedule" in e for e in errors)
+
+
+def test_validate_scene_draft_reports_attach_using_track_id_with_clear_message():
+    data = _valid_draft()
+    graph = data["scenes"][0]["objects"][1]["params"]["graph"]
+    graph["tracks"].append(
+        {
+            "id": "t_arc",
+            "type": "arc",
+            "data": {"center": {"x": 1.0, "y": 1.0}, "radius": 1.0, "start_angle": 180, "end_angle": 0},
+        }
+    )
+    graph["constraints"].append(
+        {
+            "id": "c_attach_bad",
+            "type": "attach",
+            "args": {"part_a": "p_plane", "part_b": "t_arc"},
+            "hard": True,
+        }
+    )
+    errors = validate_scene_draft_data(data, allowed_object_types=_allowed_object_types())
+    assert any("looks like a track id" in e for e in errors)
+
+
+def test_normalize_scene_draft_auto_fixes_attach_track_ref_to_part_ref():
+    data = _valid_draft()
+    graph = data["scenes"][0]["objects"][1]["params"]["graph"]
+    graph["parts"].append(
+        {
+            "id": "p_arc",
+            "type": "ArcTrack",
+            "params": {},
+            "style": {},
+            "seed_pose": {"x": 0, "y": 0, "theta": 0, "scale": 1.0},
+        }
+    )
+    graph["tracks"].append(
+        {
+            "id": "t_arc",
+            "type": "arc",
+            "data": {"center": {"x": 1.0, "y": 1.0}, "radius": 1.0, "start_angle": 180, "end_angle": 0},
+        }
+    )
+    graph["constraints"].append(
+        {
+            "id": "c_attach_bad",
+            "type": "attach",
+            "args": {"part_a": "p_plane", "part_b": "t_arc"},
+            "hard": True,
+        }
+    )
+
+    normalized, changed = normalize_scene_draft_data(data)
+    assert changed
+    assert normalized is not None
+    fixed_graph = normalized["scenes"][0]["objects"][1]["params"]["graph"]
+    fixed_constraint = [c for c in fixed_graph["constraints"] if c.get("id") == "c_attach_bad"][0]
+    assert fixed_constraint["args"]["part_b"] == "p_arc"
+
+
+def test_normalize_scene_draft_can_create_arc_part_from_arc_track_for_attach():
+    data = _valid_draft()
+    graph = data["scenes"][0]["objects"][1]["params"]["graph"]
+    graph["tracks"].append(
+        {
+            "id": "t_arc",
+            "type": "arc",
+            "data": {"center": {"x": 2.0, "y": 1.0}, "radius": 1.5, "start_angle": 180, "end_angle": 0},
+        }
+    )
+    graph["constraints"].append(
+        {
+            "id": "c_attach_bad",
+            "type": "attach",
+            "args": {"part_a": "p_plane", "part_b": "t_arc"},
+            "hard": True,
+        }
+    )
+
+    normalized, changed = normalize_scene_draft_data(data)
+    assert changed
+    assert normalized is not None
+    fixed_graph = normalized["scenes"][0]["objects"][1]["params"]["graph"]
+    part_ids = {part["id"] for part in fixed_graph["parts"]}
+    assert "p_arc" in part_ids
+    fixed_constraint = [c for c in fixed_graph["constraints"] if c.get("id") == "c_attach_bad"][0]
+    assert fixed_constraint["args"]["part_b"] == "p_arc"
+    errors = validate_scene_draft_data(normalized, allowed_object_types=_allowed_object_types())
+    assert not any("looks like a track id" in e for e in errors)
+
+
+def test_validate_scene_draft_allows_bbox_anchors_like_right_center():
+    data = _valid_draft()
+    graph = data["scenes"][0]["objects"][1]["params"]["graph"]
+    graph["parts"].append(
+        {
+            "id": "p_flat",
+            "type": "Wall",
+            "params": {"angle": 0, "length": 2.0},
+            "style": {},
+            "seed_pose": {"x": 1.0, "y": 0.0, "theta": 0, "scale": 1.0},
+        }
+    )
+    graph["constraints"].append(
+        {
+            "id": "c_attach_bbox_anchor",
+            "type": "attach",
+            "args": {
+                "part_a": "p_plane",
+                "anchor_a": "right_center",
+                "part_b": "p_flat",
+                "anchor_b": "left_center",
+            },
+            "hard": True,
+        }
+    )
+    errors = validate_scene_draft_data(data, allowed_object_types=_allowed_object_types())
+    assert not any("c_attach_bbox_anchor" in e and "invalid for part" in e for e in errors)

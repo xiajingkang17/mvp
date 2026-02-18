@@ -5,18 +5,20 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 from layout.params import sanitize_params
 from layout.templates import TEMPLATE_REGISTRY
 from schema.composite_graph_models import CompositeGraph
-from schema.scene_plan_models import PlayAction, ScenePlan
+from schema.scene_plan_models import PlayAction, ScenePlan, WaitAction
 
 from components.common.inline_math import (
     has_latex_tokens_outside_inline_math,
     has_unbalanced_inline_math_delimiters,
 )
 from components.physics.specs import PHYSICS_OBJECT_PARAM_SPECS
+from llm_constraints.constraints_spec import validate_constraint_args
 from .config import load_app_config, load_enums
 
 
@@ -26,10 +28,82 @@ class ValidationErrorItem:
 
 
 _CJK_RE = re.compile(r"[\u3400-\u9fff]")
+_ARC_ID_HINT_RE = re.compile(r"(?:^|_)(arc|semicircle|curve)(?:_|$)")
+_CURVED_PART_TYPES = {"ArcTrack", "SemicircleGroove", "QuarterCircleGroove", "CircularGroove"}
 
 
 def _contains_cjk(text: str) -> bool:
     return bool(_CJK_RE.search(text))
+
+
+@lru_cache(maxsize=1)
+def _load_anchor_dictionary() -> dict[str, set[str]]:
+    path = Path(__file__).resolve().parents[1] / "llm_constraints" / "specs" / "anchors_dictionary.json"
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return {}
+
+    components = raw.get("components")
+    if not isinstance(components, dict):
+        return {}
+
+    result: dict[str, set[str]] = {}
+    for component_type, payload in components.items():
+        if not isinstance(component_type, str) or not isinstance(payload, dict):
+            continue
+        anchors = payload.get("anchors")
+        if not isinstance(anchors, list):
+            continue
+        normalized = {str(item).strip().lower() for item in anchors if str(item).strip()}
+        if normalized:
+            result[component_type] = normalized
+    return result
+
+
+def _first_nonempty_str(args: dict, *keys: str) -> str | None:
+    for key in keys:
+        value = args.get(key)
+        if isinstance(value, str):
+            candidate = value.strip()
+            if candidate:
+                return candidate
+    return None
+
+
+def _allowed_anchor_names(part_type: str, anchor_dict: dict[str, set[str]]) -> set[str]:
+    return {name.lower() for name in anchor_dict.get(part_type, set())}
+
+
+def _validate_anchor_name(
+    *,
+    object_id: str,
+    constraint_index: int,
+    role: str,
+    part_id: str | None,
+    anchor: str | None,
+    part_type_by_id: dict[str, str],
+    anchor_dict: dict[str, set[str]],
+) -> list[ValidationErrorItem]:
+    if not part_id or not anchor:
+        return []
+
+    part_type = part_type_by_id.get(part_id)
+    if part_type is None:
+        return []
+
+    anchor_key = anchor.strip().lower()
+    allowed = _allowed_anchor_names(part_type, anchor_dict)
+    if anchor_key in allowed:
+        return []
+
+    allowed_text = ", ".join(sorted(allowed))
+    return [
+        ValidationErrorItem(
+            f"objects.{object_id}.params.graph.constraints[{constraint_index}] "
+            f"{role}='{anchor}' invalid for part '{part_id}' ({part_type}); allowed: {allowed_text}"
+        )
+    ]
 
 
 def _autofix_objects(plan: ScenePlan) -> bool:
@@ -82,6 +156,43 @@ def _validate_known_param_keys(object_id: str, obj_type: str, params: dict) -> l
     return [ValidationErrorItem(f"objects.{object_id} {obj_type} has unknown params: {', '.join(unknown)}")]
 
 
+def _track_space(track_type: str, data: dict) -> str:
+    explicit = str(data.get("space", "")).strip().lower()
+    if explicit in {"local", "world"}:
+        return explicit
+
+    if track_type in {"line", "segment"} and {"x1", "y1", "x2", "y2"}.issubset(data):
+        return "world"
+    if track_type == "arc" and {"cx", "cy"}.issubset(data):
+        if ("start_deg" in data or "end_deg" in data or "start_angle" in data or "end_angle" in data):
+            return "world"
+    if track_type == "line" and {"x0", "y0", "dx", "dy"}.issubset(data):
+        return "world"
+    return "local"
+
+
+def _has_local_endpoints(data: dict) -> bool:
+    has_anchor_a = isinstance(data.get("anchor_a", data.get("a1")), str) and bool(
+        str(data.get("anchor_a", data.get("a1"))).strip()
+    )
+    has_anchor_b = isinstance(data.get("anchor_b", data.get("a2")), str) and bool(
+        str(data.get("anchor_b", data.get("a2"))).strip()
+    )
+    return has_anchor_a and has_anchor_b
+
+
+def _has_local_arc_center(data: dict) -> bool:
+    if isinstance(data.get("center_anchor"), str) and str(data.get("center_anchor")).strip():
+        return True
+    return isinstance(data.get("cx_local"), (int, float)) and isinstance(data.get("cy_local"), (int, float))
+
+
+def _to_float_or_none(value: object) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
 def _validate_composite_object(
     *,
     object_id: str,
@@ -101,6 +212,9 @@ def _validate_composite_object(
 
     errors: list[ValidationErrorItem] = []
     allowed_part_types = set(allowed_object_types) - {"CompositeObject"}
+    part_type_by_id = {part.id: part.type for part in model.parts}
+    part_params_by_id = {part.id: dict(part.params or {}) for part in model.parts}
+    anchor_dict = _load_anchor_dictionary()
 
     for index, part in enumerate(model.parts):
         path = f"objects.{object_id}.params.graph.parts[{index}]"
@@ -108,7 +222,176 @@ def _validate_composite_object(
             errors.append(ValidationErrorItem(f"{path}.type not allowed: {part.type}"))
             continue
         errors.extend(_validate_known_param_keys(f"{object_id}.params.graph.parts[{index}]", part.type, part.params))
+        if part.type == "Rod" and _ARC_ID_HINT_RE.search(part.id.strip().lower()):
+            errors.append(
+                ValidationErrorItem(
+                    f"{path}.type uses Rod for arc-like id '{part.id}'; use ArcTrack/SemicircleGroove instead"
+                )
+            )
 
+    has_arc_track = any(track.type == "arc" for track in model.tracks)
+    has_curved_part = any(part.type in _CURVED_PART_TYPES for part in model.parts)
+    if has_arc_track and not has_curved_part:
+        errors.append(
+            ValidationErrorItem(
+                f"objects.{object_id}.params.graph has arc track(s) but no curved part "
+                f"({', '.join(sorted(_CURVED_PART_TYPES))})"
+            )
+        )
+
+    for track_index, track in enumerate(model.tracks):
+        track_path = f"objects.{object_id}.params.graph.tracks[{track_index}]"
+        data = dict(track.data or {})
+        ttype = str(track.type).strip().lower()
+        space = _track_space(ttype, data)
+
+        if space == "world":
+            if ttype in {"line", "segment"} and not (
+                {"x1", "y1", "x2", "y2"}.issubset(data) or {"x0", "y0", "dx", "dy"}.issubset(data)
+            ):
+                errors.append(ValidationErrorItem(f"{track_path}.data(world) missing line coordinates"))
+            if ttype == "arc":
+                has_center = "cx" in data and "cy" in data
+                has_angles = any(key in data for key in ("start_deg", "end_deg", "start_angle", "end_angle"))
+                has_radius = any(key in data for key in ("r", "radius"))
+                if not (has_center and has_angles and has_radius):
+                    errors.append(ValidationErrorItem(f"{track_path}.data(world) missing arc coordinates"))
+            continue
+
+        part_id = _first_nonempty_str(data, "part_id")
+        if not part_id:
+            errors.append(ValidationErrorItem(f"{track_path}.data(local) requires part_id"))
+            continue
+        if part_id not in part_type_by_id:
+            errors.append(ValidationErrorItem(f"{track_path}.data.part_id references unknown part id: {part_id}"))
+            continue
+
+        if ttype in {"line", "segment"}:
+            has_legacy_local_points = any(
+                key in data for key in ("p1_local", "p2_local", "x1_local", "y1_local", "x2_local", "y2_local")
+            )
+            if has_legacy_local_points:
+                errors.append(
+                    ValidationErrorItem(
+                        f"{track_path}.data(local line) forbids p1_local/p2_local/x*_local; use anchor_a/anchor_b"
+                    )
+                )
+            has_anchor_pair = _has_local_endpoints(data)
+            if not has_anchor_pair:
+                errors.append(ValidationErrorItem(f"{track_path}.data(local line) requires anchor_a and anchor_b"))
+            part_type = part_type_by_id.get(part_id, "")
+            allowed = _allowed_anchor_names(part_type, anchor_dict)
+            for role, key_a, key_b in (("anchor_a", "anchor_a", "a1"), ("anchor_b", "anchor_b", "a2")):
+                anchor_name = _first_nonempty_str(data, key_a, key_b)
+                if not anchor_name:
+                    continue
+                if anchor_name.strip().lower() in allowed:
+                    continue
+                allowed_text = ", ".join(sorted(allowed))
+                errors.append(
+                    ValidationErrorItem(
+                        f"{track_path}.data.{role}='{anchor_name}' invalid for part '{part_id}' "
+                        f"({part_type}); allowed: {allowed_text}"
+                    )
+                )
+            continue
+
+        if ttype == "arc":
+            has_center = _has_local_arc_center(data)
+            has_radius = any(key in data for key in ("radius_local", "r_local"))
+            has_angles = (
+                ("start_deg_local" in data and "end_deg_local" in data)
+                or ("start_angle_local" in data and "end_angle_local" in data)
+            )
+            if not has_center:
+                errors.append(ValidationErrorItem(f"{track_path}.data(local arc) missing center_anchor or cx_local/cy_local"))
+            if not has_radius:
+                errors.append(ValidationErrorItem(f"{track_path}.data(local arc) missing radius_local/r_local"))
+            if not has_angles:
+                errors.append(ValidationErrorItem(f"{track_path}.data(local arc) missing start/end local angles"))
+
+            part_type = part_type_by_id.get(part_id, "")
+            if "center_anchor" in data:
+                center_anchor = _first_nonempty_str(data, "center_anchor")
+                if center_anchor:
+                    allowed = _allowed_anchor_names(part_type, anchor_dict)
+                    if center_anchor.strip().lower() not in allowed:
+                        allowed_text = ", ".join(sorted(allowed))
+                        errors.append(
+                            ValidationErrorItem(
+                                f"{track_path}.data.center_anchor='{center_anchor}' invalid for part '{part_id}' "
+                                f"({part_type}); allowed: {allowed_text}"
+                            )
+                        )
+
+            part_params = part_params_by_id.get(part_id, {})
+            part_start = _to_float_or_none(part_params.get("start_angle", part_params.get("start_deg")))
+            part_end = _to_float_or_none(part_params.get("end_angle", part_params.get("end_deg")))
+            track_start = _to_float_or_none(data.get("start_deg_local", data.get("start_angle_local")))
+            track_end = _to_float_or_none(data.get("end_deg_local", data.get("end_angle_local")))
+            if part_start is not None and track_start is not None and abs(part_start - track_start) > 1e-6:
+                errors.append(
+                    ValidationErrorItem(
+                        f"{track_path}.data.start angle ({track_start}) must match {part_id}.params.start_angle ({part_start})"
+                    )
+                )
+            if part_end is not None and track_end is not None and abs(part_end - track_end) > 1e-6:
+                errors.append(
+                    ValidationErrorItem(
+                        f"{track_path}.data.end angle ({track_end}) must match {part_id}.params.end_angle ({part_end})"
+                    )
+                )
+
+    for index, constraint in enumerate(model.constraints):
+        args = dict(constraint.args or {})
+        for message in validate_constraint_args(constraint.type, args):
+            errors.append(
+                ValidationErrorItem(
+                    f"objects.{object_id}.params.graph.constraints[{index}] {message}"
+                )
+            )
+
+        if constraint.type == "attach":
+            part_a = _first_nonempty_str(args, "part_a", "from_part_id", "source_part_id", "part_id")
+            part_b = _first_nonempty_str(args, "part_b", "to_part_id", "target_part_id")
+            anchor_a = _first_nonempty_str(args, "anchor_a", "from_anchor", "anchor")
+            anchor_b = _first_nonempty_str(args, "anchor_b", "to_anchor")
+            errors.extend(
+                _validate_anchor_name(
+                    object_id=object_id,
+                    constraint_index=index,
+                    role="anchor_a",
+                    part_id=part_a,
+                    anchor=anchor_a,
+                    part_type_by_id=part_type_by_id,
+                    anchor_dict=anchor_dict,
+                )
+            )
+            errors.extend(
+                _validate_anchor_name(
+                    object_id=object_id,
+                    constraint_index=index,
+                    role="anchor_b",
+                    part_id=part_b,
+                    anchor=anchor_b,
+                    part_type_by_id=part_type_by_id,
+                    anchor_dict=anchor_dict,
+                )
+            )
+        elif constraint.type == "on_track_pose":
+            part_id = _first_nonempty_str(args, "part_id")
+            anchor = _first_nonempty_str(args, "anchor")
+            errors.extend(
+                _validate_anchor_name(
+                    object_id=object_id,
+                    constraint_index=index,
+                    role="anchor",
+                    part_id=part_id,
+                    anchor=anchor,
+                    part_type_by_id=part_type_by_id,
+                    anchor_dict=anchor_dict,
+                )
+            )
     return errors
 
 
@@ -154,6 +437,59 @@ def _count_text_overflow(plan: ScenePlan, object_ids: set[str], *, max_chars: in
         if len(str(text)) > max_chars:
             overflow_ids.append(oid)
     return overflow_ids
+
+
+def _safe_float(value: object) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _motion_timeline_span(motion: object) -> float:
+    if not isinstance(motion, dict):
+        return 0.0
+    timeline = motion.get("timeline")
+    if not isinstance(timeline, list):
+        return 0.0
+    times: list[float] = []
+    for item in timeline:
+        if not isinstance(item, dict):
+            continue
+        t_val = _safe_float(item.get("t"))
+        if t_val is None:
+            continue
+        times.append(t_val)
+    if len(times) < 2:
+        return 0.0
+    return max(times) - min(times)
+
+
+def _composite_motion_span(params: dict) -> float:
+    graph = params.get("graph")
+    if not isinstance(graph, dict):
+        return 0.0
+    motions = graph.get("motions")
+    if not isinstance(motions, list):
+        return 0.0
+    max_span = 0.0
+    for motion in motions:
+        span = _motion_timeline_span(motion)
+        if span > max_span:
+            max_span = span
+    return max_span
+
+
+def _scene_motion_span(plan: ScenePlan, object_ids: set[str]) -> float:
+    max_span = 0.0
+    for object_id in object_ids:
+        obj = plan.objects.get(object_id)
+        if obj is None or obj.type != "CompositeObject":
+            continue
+        span = _composite_motion_span(obj.params)
+        if span > max_span:
+            max_span = span
+    return max_span
 
 
 def autofix_plan(plan: ScenePlan) -> bool:
@@ -317,6 +653,7 @@ def validate_plan(plan: ScenePlan) -> list[ValidationErrorItem]:
         unknown = sorted([x for x in referenced_ids if x not in plan.objects])
         for object_id in unknown:
             errors.append(ValidationErrorItem(f"scenes[{scene_index}] references unknown object id: {object_id}"))
+        scene_motion_span_sec = _scene_motion_span(plan, referenced_ids)
 
         if budget is not None and len(referenced_ids) > budget.max_visible_objects:
             errors.append(
@@ -375,11 +712,23 @@ def validate_plan(plan: ScenePlan) -> list[ValidationErrorItem]:
             if str(role).strip().lower() not in allowed_roles:
                 errors.append(ValidationErrorItem(f"scenes[{scene_index}].roles[{object_id}] has unknown role: {role}"))
 
+        scene_action_duration = 0.0
         for action_index, action in enumerate(scene.actions):
             if action.op not in enums["action_ops"]:
                 errors.append(ValidationErrorItem(f"scenes[{scene_index}].actions[{action_index}].op not allowed"))
             if isinstance(action, PlayAction) and action.anim not in enums["anims"]:
                 errors.append(ValidationErrorItem(f"scenes[{scene_index}].actions[{action_index}].anim not allowed"))
+
+            if isinstance(action, WaitAction):
+                scene_action_duration += float(action.duration)
+            elif isinstance(action, PlayAction):
+                if scene_motion_span_sec > 0 and action.duration is None:
+                    errors.append(
+                        ValidationErrorItem(
+                            f"scenes[{scene_index}].actions[{action_index}].duration required when scene has graph.motions"
+                        )
+                    )
+                scene_action_duration += float(action.duration or app.defaults.action_duration)
 
             if isinstance(action, PlayAction) and action.anim == "transform":
                 src = action.src or (action.targets[0] if len(action.targets) >= 1 else None)
@@ -388,6 +737,13 @@ def validate_plan(plan: ScenePlan) -> list[ValidationErrorItem]:
                     errors.append(
                         ValidationErrorItem(f"scenes[{scene_index}].actions[{action_index}] transform needs src+dst")
                     )
+
+        if scene_motion_span_sec > 0 and scene_action_duration + 1e-6 < scene_motion_span_sec:
+            errors.append(
+                ValidationErrorItem(
+                    f"scenes[{scene_index}] action duration {scene_action_duration:.3f}s is shorter than motion span {scene_motion_span_sec:.3f}s"
+                )
+            )
 
     if pedagogy is not None and pedagogy.need_check_scene and not has_check_scene:
         errors.append(ValidationErrorItem("pedagogy_plan.need_check_scene=true but no scene has is_check_scene=true"))

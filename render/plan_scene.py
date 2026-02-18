@@ -67,7 +67,7 @@ def _anchor_point(center_x: float, center_y: float, width: float, height: float,
     return (center_x, center_y)
 
 
-def apply_placement(mobj, placement, *, slot_padding: float):
+def apply_placement(mobj, placement, *, slot_padding: float, base_size: tuple[float, float] | None = None):
     inner_w = max(0.01, placement.width * (1 - 2 * slot_padding))
     inner_h = max(0.01, placement.height * (1 - 2 * slot_padding))
 
@@ -81,8 +81,16 @@ def apply_placement(mobj, placement, *, slot_padding: float):
     )
     aligned_edge = _anchor_to_aligned_edge(placement.anchor)
 
+    base_w = base_h = 0.0
+    if base_size is not None:
+        base_w, base_h = float(base_size[0]), float(base_size[1])
+
     scale_factor = 1.0
-    if getattr(mobj, "width", 0) > 0 and getattr(mobj, "height", 0) > 0:
+    if base_w > 0 and base_h > 0:
+        # Use the original (unscaled) size as the reference to avoid compounding
+        # scale across scenes when placements are re-applied.
+        scale_factor = min(inner_w / base_w, inner_h / base_h)
+    elif getattr(mobj, "width", 0) > 0 and getattr(mobj, "height", 0) > 0:
         scale_factor = min(inner_w / mobj.width, inner_h / mobj.height)
 
     if hasattr(mobj, "composite_set_placement"):
@@ -95,11 +103,24 @@ def apply_placement(mobj, placement, *, slot_padding: float):
             ref = probe.get_critical_point(aligned_edge)
         tx = float(anchor_point[0]) - float(ref[0])
         ty = float(anchor_point[1]) - float(ref[1])
-        mobj.composite_set_placement(scale_factor, tx, ty)
+        setter = getattr(mobj, "composite_set_placement_absolute", None)
+        if callable(setter):
+            setter(scale_factor, tx, ty)
+        else:
+            # Back-compat: old composite placement API is relative/multiplicative.
+            mobj.composite_set_placement(scale_factor, tx, ty)
         return
 
     if scale_factor != 1.0:
-        mobj.scale(scale_factor)
+        # Apply absolute scaling relative to the object's base size when available,
+        # so re-running layout doesn't gradually drift.
+        if base_w > 0 and getattr(mobj, "width", 0) > 0:
+            target_w = scale_factor * base_w
+            mul = float(target_w) / float(mobj.width) if float(mobj.width) != 0 else 1.0
+            if mul != 1.0:
+                mobj.scale(mul, about_point=ORIGIN)
+        else:
+            mobj.scale(scale_factor, about_point=ORIGIN)
 
     if aligned_edge is None:
         mobj.move_to([anchor_point[0], anchor_point[1], 0])
@@ -278,7 +299,22 @@ class PlanScene(Scene):
                     mobj.z_index = spec.z_index
                 state.objects[object_id] = mobj
                 if hasattr(mobj, "composite_set_time"):
-                    mobj.composite_set_time(state.timeline_seconds)
+                    setter = getattr(mobj, "composite_set_time", None)
+                    clock = getattr(state, "timeline_clock", None)
+                    if clock is None:
+                        origin_t = float(state.timeline_seconds)
+                    else:
+                        origin_t = float(clock.get_value())
+                    mobj.composite_time_origin = origin_t
+                    if callable(setter):
+                        setter(0.0)
+
+                    def _reset_time_origin(new_origin_t: float, _setter=setter, _mobj=mobj):
+                        _mobj.composite_time_origin = float(new_origin_t)
+                        if callable(_setter):
+                            _setter(0.0)
+
+                    mobj.composite_reset_time_origin = _reset_time_origin
 
                     def _time_updater(m, dt, _state=state):
                         clock = getattr(_state, "timeline_clock", None)
@@ -286,7 +322,9 @@ class PlanScene(Scene):
                             return
                         setter = getattr(m, "composite_set_time", None)
                         if callable(setter):
-                            setter(float(clock.get_value()))
+                            origin = float(getattr(m, "composite_time_origin", 0.0))
+                            local_t = float(clock.get_value()) - origin
+                            setter(local_t if local_t >= 0.0 else 0.0)
 
                     mobj.add_updater(_time_updater)
                     mobj.composite_time_updater = _time_updater
@@ -324,7 +362,12 @@ class PlanScene(Scene):
             placements.update(auto_placements)
 
             for object_id, placement in placements.items():
-                apply_placement(state.objects[object_id], placement, slot_padding=ctx.app.slot_padding)
+                apply_placement(
+                    state.objects[object_id],
+                    placement,
+                    slot_padding=ctx.app.slot_padding,
+                    base_size=state.base_sizes.get(object_id),
+                )
 
             for action in scene.actions:
                 result = action_engine.run_action(action)

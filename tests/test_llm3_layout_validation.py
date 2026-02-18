@@ -41,6 +41,57 @@ def _valid_layout() -> dict:
     }
 
 
+def _draft_with_motion() -> dict:
+    return {
+        "scenes": [
+            {
+                "id": "S1",
+                "objects": [
+                    {
+                        "id": "o_diagram",
+                        "type": "CompositeObject",
+                        "params": {
+                            "graph": {
+                                "version": "0.1",
+                                "parts": [],
+                                "tracks": [],
+                                "constraints": [],
+                                "motions": [
+                                    {
+                                        "id": "m1",
+                                        "type": "on_track",
+                                        "args": {"part_id": "p1", "track_id": "t1"},
+                                        "timeline": [{"t": 0.0, "s": 0.0}, {"t": 3.0, "s": 1.0}],
+                                    }
+                                ],
+                            }
+                        },
+                        "style": {},
+                        "priority": 1,
+                    },
+                    {"id": "o_text", "type": "TextBlock", "params": {"text": "说明"}, "style": {}, "priority": 1},
+                ],
+            }
+        ]
+    }
+
+
+def _layout_for_motion(*, play_duration: float | None, wait_duration: float) -> dict:
+    play_action: dict = {"op": "play", "anim": "fade_in", "targets": ["o_diagram"]}
+    if play_duration is not None:
+        play_action["duration"] = play_duration
+    return {
+        "scenes": [
+            {
+                "id": "S1",
+                "layout": {"type": "left_right", "slots": {"left": "o_diagram", "right": "o_text"}, "params": {}},
+                "actions": [play_action, {"op": "wait", "duration": wait_duration}],
+                "keep": ["o_diagram", "o_text"],
+            }
+        ]
+    }
+
+
 def test_validate_layout_data_accepts_valid_contract():
     errors = _validate_layout_data(data=_valid_layout(), draft=_draft(), enums=load_enums())
     assert errors == []
@@ -58,3 +109,21 @@ def test_validate_layout_data_rejects_roles_object_not_used():
     data["scenes"][0]["roles"]["o_unused"] = "support_eq"
     errors = _validate_layout_data(data=data, draft=_draft(), enums=load_enums())
     assert any("roles references object not used in this scene: o_unused" in e for e in errors)
+
+
+def test_validate_layout_data_requires_explicit_play_duration_for_motion_scene():
+    data = _layout_for_motion(play_duration=None, wait_duration=3.5)
+    errors = _validate_layout_data(data=data, draft=_draft_with_motion(), enums=load_enums())
+    assert any("duration is required when scene has graph.motions" in e for e in errors)
+
+
+def test_validate_layout_data_requires_total_duration_to_cover_motion_span():
+    data = _layout_for_motion(play_duration=0.5, wait_duration=1.0)
+    errors = _validate_layout_data(data=data, draft=_draft_with_motion(), enums=load_enums())
+    assert any("shorter than required motion span" in e for e in errors)
+
+
+def test_validate_layout_data_accepts_motion_scene_when_duration_is_sufficient():
+    data = _layout_for_motion(play_duration=1.0, wait_duration=2.2)
+    errors = _validate_layout_data(data=data, draft=_draft_with_motion(), enums=load_enums())
+    assert errors == []

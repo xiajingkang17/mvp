@@ -11,11 +11,11 @@
         "params": {
           "slot_scales": {
             "left": {
-              "w": 0.95,
-              "h": 0.9
+              "w": 0.6,
+              "h": 0.8
             },
             "right": {
-              "w": 0.9,
+              "w": 0.35,
               "h": 0.3
             }
           }
@@ -24,31 +24,28 @@
       "actions": [
         {
           "op": "play",
-          "anim": "fade_in",
+          "anim": "create",
           "targets": [
             "o_diagram"
           ]
         },
         {
           "op": "wait",
-          "duration": 0.5
+          "duration": 1.0
         },
         {
           "op": "play",
-          "anim": "write",
+          "anim": "fade_in",
           "targets": [
             "o_text_s1"
           ]
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
         }
       ],
-      "keep": [
-        "o_diagram",
-        "o_text_s1"
-      ],
-      "roles": {
-        "o_diagram": "diagram",
-        "o_text_s1": "support_eq"
-      }
+      "keep": []
     },
     {
       "id": "S2",
@@ -61,11 +58,11 @@
         "params": {
           "slot_scales": {
             "left": {
-              "w": 0.9,
-              "h": 0.9
+              "w": 0.5,
+              "h": 0.8
             },
             "right": {
-              "w": 0.9,
+              "w": 0.45,
               "h": 0.3
             }
           }
@@ -74,20 +71,9 @@
       "actions": [
         {
           "op": "play",
-          "anim": "fade_in",
+          "anim": "create",
           "targets": [
             "o_diagram_s2"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 0.4
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_eq_s2"
           ]
         },
         {
@@ -98,20 +84,27 @@
           "op": "play",
           "anim": "write",
           "targets": [
-            "o_text_s2"
+            "o_eq_s2"
+          ],
+          "duration": 1.5
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_res_s2"
           ]
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
         }
       ],
-      "keep": [
-        "o_diagram_s2",
-        "o_eq_s2",
-        "o_text_s2"
-      ],
-      "roles": {
-        "o_diagram_s2": "diagram",
-        "o_eq_s2": "core_eq",
-        "o_text_s2": "conclusion"
-      }
+      "keep": []
     },
     {
       "id": "S3",
@@ -119,17 +112,17 @@
         "type": "left_right",
         "slots": {
           "left": "o_diagram_s3",
-          "right": "o_eq_s3_1"
+          "right": "o_eq_s3"
         },
         "params": {
           "slot_scales": {
             "left": {
-              "w": 0.9,
-              "h": 0.9
+              "w": 0.5,
+              "h": 0.8
             },
             "right": {
-              "w": 0.9,
-              "h": 0.25
+              "w": 0.45,
+              "h": 0.4
             }
           }
         }
@@ -137,31 +130,9 @@
       "actions": [
         {
           "op": "play",
-          "anim": "fade_in",
+          "anim": "create",
           "targets": [
             "o_diagram_s3"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 0.4
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_eq_s3_1"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 0.3
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_eq_s3_2"
           ]
         },
         {
@@ -172,22 +143,27 @@
           "op": "play",
           "anim": "write",
           "targets": [
-            "o_text_s3"
+            "o_eq_s3"
+          ],
+          "duration": 2.0
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_res_s3"
           ]
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
         }
       ],
-      "keep": [
-        "o_diagram_s3",
-        "o_eq_s3_1",
-        "o_eq_s3_2",
-        "o_text_s3"
-      ],
-      "roles": {
-        "o_diagram_s3": "diagram",
-        "o_eq_s3_1": "core_eq",
-        "o_eq_s3_2": "support_eq",
-        "o_text_s3": "conclusion"
-      }
+      "keep": []
     },
     {
       "id": "S4",
@@ -200,11 +176,11 @@
         "params": {
           "slot_scales": {
             "left": {
-              "w": 0.9,
-              "h": 0.9
+              "w": 0.5,
+              "h": 0.8
             },
             "right": {
-              "w": 0.9,
+              "w": 0.45,
               "h": 0.3
             }
           }
@@ -213,20 +189,9 @@
       "actions": [
         {
           "op": "play",
-          "anim": "fade_in",
+          "anim": "create",
           "targets": [
             "o_diagram_s4"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 0.4
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_eq_s4"
           ]
         },
         {
@@ -237,20 +202,27 @@
           "op": "play",
           "anim": "write",
           "targets": [
-            "o_text_s4"
+            "o_eq_s4"
+          ],
+          "duration": 1.5
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_res_s4"
           ]
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
         }
       ],
-      "keep": [
-        "o_diagram_s4",
-        "o_eq_s4",
-        "o_text_s4"
-      ],
-      "roles": {
-        "o_diagram_s4": "diagram",
-        "o_eq_s4": "core_eq",
-        "o_text_s4": "conclusion"
-      }
+      "keep": []
     },
     {
       "id": "S5",
@@ -263,12 +235,12 @@
         "params": {
           "slot_scales": {
             "left": {
-              "w": 0.9,
-              "h": 0.9
+              "w": 0.5,
+              "h": 0.8
             },
             "right": {
-              "w": 0.9,
-              "h": 0.3
+              "w": 0.45,
+              "h": 0.4
             }
           }
         }
@@ -276,183 +248,40 @@
       "actions": [
         {
           "op": "play",
-          "anim": "fade_in",
+          "anim": "create",
           "targets": [
             "o_diagram_s5"
           ]
         },
         {
           "op": "wait",
-          "duration": 0.4
+          "duration": 0.5
         },
         {
           "op": "play",
           "anim": "write",
           "targets": [
             "o_eq_s5"
-          ]
+          ],
+          "duration": 2.0
         },
         {
           "op": "wait",
           "duration": 0.5
         },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_text_s5"
-          ]
-        }
-      ],
-      "keep": [
-        "o_diagram_s5",
-        "o_eq_s5",
-        "o_text_s5"
-      ],
-      "roles": {
-        "o_diagram_s5": "diagram",
-        "o_eq_s5": "core_eq",
-        "o_text_s5": "conclusion"
-      }
-    },
-    {
-      "id": "S6",
-      "layout": {
-        "type": "left_right",
-        "slots": {
-          "left": "o_diagram_s6",
-          "right": "o_eq_s6"
-        },
-        "params": {
-          "slot_scales": {
-            "left": {
-              "w": 0.9,
-              "h": 0.9
-            },
-            "right": {
-              "w": 0.9,
-              "h": 0.3
-            }
-          }
-        }
-      },
-      "actions": [
         {
           "op": "play",
           "anim": "fade_in",
           "targets": [
-            "o_diagram_s6"
+            "o_res_s5"
           ]
         },
         {
           "op": "wait",
-          "duration": 0.4
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_eq_s6"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 0.5
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_text_s6"
-          ]
+          "duration": 1.0
         }
       ],
-      "keep": [
-        "o_diagram_s6",
-        "o_eq_s6",
-        "o_text_s6"
-      ],
-      "roles": {
-        "o_diagram_s6": "diagram",
-        "o_eq_s6": "core_eq",
-        "o_text_s6": "conclusion"
-      }
-    },
-    {
-      "id": "S7",
-      "layout": {
-        "type": "left_right",
-        "slots": {
-          "left": "o_diagram_s7",
-          "right": "o_eq_s7"
-        },
-        "params": {
-          "slot_scales": {
-            "left": {
-              "w": 0.9,
-              "h": 0.9
-            },
-            "right": {
-              "w": 0.9,
-              "h": 0.25
-            }
-          }
-        }
-      },
-      "actions": [
-        {
-          "op": "play",
-          "anim": "fade_in",
-          "targets": [
-            "o_diagram_s7"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 0.4
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_eq_s7"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 0.5
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_text_s7"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 0.3
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_text_s7_check"
-          ]
-        }
-      ],
-      "keep": [
-        "o_diagram_s7",
-        "o_eq_s7",
-        "o_text_s7",
-        "o_text_s7_check"
-      ],
-      "roles": {
-        "o_diagram_s7": "diagram",
-        "o_eq_s7": "core_eq",
-        "o_text_s7": "conclusion",
-        "o_text_s7_check": "check"
-      }
+      "keep": []
     }
   ]
 }

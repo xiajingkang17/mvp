@@ -4,6 +4,7 @@ import argparse
 import json
 import re
 import sys
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Literal
 
@@ -23,17 +24,34 @@ from pipeline.llm.zhipu import chat_completion
 from pipeline.llm_continuation import continue_json_output
 from pipeline.prompting import load_prompt
 from schema.composite_graph_models import CompositeGraph
+from llm_constraints.constraints_spec import validate_constraint
 
 
 _CJK_RE = re.compile(r"[\u3400-\u9fff]")
 _LATEX_CMD_RE = re.compile(r"\\[a-zA-Z]+")
 _LATEX_TOKEN_RE = re.compile(r"\\[a-zA-Z]+(?:\{[^{}]*\})?")
 _TOP_LEVEL_OBJECT_TYPES = ("TextBlock", "BulletPanel", "Formula", "CompositeObject")
+_MOVABLE_PART_TYPES = {"Block", "Cart", "Weight", "SemicircleCart", "QuarterCart"}
+_CURVED_PART_TYPES = {"ArcTrack", "SemicircleGroove", "QuarterCircleGroove", "CircularGroove"}
+_DYNAMIC_SCENE_KEYWORDS = (
+    "动画",
+    "动图",
+    "运动过程",
+    "滑动过程",
+    "连续运动",
+    "下滑",
+    "碰撞",
+    "轨迹",
+    "motion",
+    "animate",
+    "slid",
+    "slide",
+    "collision",
+)
 
 _MECHANICS_TYPES = {
     "InclinedPlaneGroup",
     "Wall",
-    "InclinedPlane",
     "Block",
     "Cart",
     "Weight",
@@ -45,6 +63,7 @@ _MECHANICS_TYPES = {
     "Rod",
     "Hinge",
     "CircularGroove",
+    "ArcTrack",
     "SemicircleGroove",
     "QuarterCircleGroove",
     "SemicircleCart",
@@ -68,7 +87,6 @@ _ELECTROMAG_TYPES = {
 _COMPONENT_LABELS = {
     "InclinedPlaneGroup": "斜面+滑块整体",
     "Wall": "墙面/挡板",
-    "InclinedPlane": "斜面",
     "Block": "方块/物块",
     "Cart": "小车",
     "Weight": "重物",
@@ -104,7 +122,6 @@ _COMPONENT_LABELS = {
 
 _COMPONENT_PURPOSES = {
     "InclinedPlaneGroup": "快速构建“斜面+物块”题意主图。",
-    "InclinedPlane": "表示斜面本体，常与 Block 组合。",
     "Block": "表示受力/运动主体物块。",
     "Rope": "表示拉力路径或连接关系。",
     "Spring": "表示弹簧储能与压缩/伸长。",
@@ -169,6 +186,24 @@ _DOMAIN_KEYWORDS = {
         "led",
     ],
 }
+
+_PHYSICS_FAMILY_KEYWORDS = [
+    "物理",
+    "力学",
+    "电学",
+    "电磁",
+    "受力",
+    "运动",
+    "速度",
+    "加速度",
+    "电流",
+    "电压",
+    "magnetic",
+    "mechanics",
+    "electricity",
+    "electromagnetism",
+    "physics",
+]
 
 
 class DraftObjectSpec(BaseModel):
@@ -242,12 +277,145 @@ def _contains_cjk(text: str) -> bool:
     return bool(_CJK_RE.search(text))
 
 
+def _scene_requires_motion(scene: DraftSceneSpec) -> bool:
+    chunks: list[str] = []
+    for value in (scene.intent, scene.goal, scene.notes):
+        if isinstance(value, str) and value.strip():
+            chunks.append(value.strip())
+    chunks.extend([str(x).strip() for x in scene.modules if str(x).strip()])
+    text = " ".join(chunks).lower()
+    if not text:
+        return False
+    return any(keyword in text for keyword in _DYNAMIC_SCENE_KEYWORDS)
+
+
 def _physics_param_catalog() -> dict[str, list[str]]:
     return {k: list(v) for k, v in sorted(PHYSICS_OBJECT_PARAM_SPECS.items())}
 
 
-def _infer_domains(problem: str, explanation: str) -> list[str]:
-    text = f"{problem}\n{explanation}".lower()
+@lru_cache(maxsize=1)
+def _load_llm_constraints_assets() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    base = Path("llm_constraints")
+    constraints = json.loads((base / "specs" / "constraints_whitelist.json").read_text(encoding="utf-8"))
+    anchors = json.loads((base / "specs" / "anchors_dictionary.json").read_text(encoding="utf-8"))
+    catalog = json.loads((base / "specs" / "components_catalog.json").read_text(encoding="utf-8"))
+    return constraints, anchors, catalog
+
+
+@lru_cache(maxsize=1)
+def _load_protocol_docs() -> dict[str, str]:
+    base = Path("llm_constraints")
+    names = [
+        "protocols/index.md",
+        "protocols/core.md",
+        "protocols/assembly.md",
+        "protocols/motion.md",
+        "protocols/validation.md",
+    ]
+    docs: dict[str, str] = {}
+    for name in names:
+        path = base / name
+        if path.exists():
+            docs[name] = path.read_text(encoding="utf-8").strip()
+    return docs
+
+
+def _build_protocol_bundle_for_prompt(domains: list[str]) -> dict[str, Any]:
+    docs = _load_protocol_docs()
+    domain_set = set(domains)
+    selected_order = [
+        "protocols/index.md",
+        "protocols/core.md",
+        "protocols/assembly.md",
+        "protocols/validation.md",
+    ]
+    if "mechanics" in domain_set or not domain_set:
+        selected_order.append("protocols/motion.md")
+    selected = {name: docs[name] for name in selected_order if name in docs}
+    return {"files": list(selected.keys()), "docs": selected}
+
+
+def _build_constraint_prompt_bundle(
+    *,
+    part_types: list[str],
+    domains: list[str],
+) -> dict[str, Any]:
+    constraints_raw, anchors_raw, _ = _load_llm_constraints_assets()
+    constraints_map = constraints_raw.get("constraints", {}) if isinstance(constraints_raw, dict) else {}
+    components_map = anchors_raw.get("components", {}) if isinstance(anchors_raw, dict) else {}
+
+    mechanics_mode = "mechanics" in set(domains)
+    if mechanics_mode:
+        allowed_constraints = sorted(constraints_map.keys())
+    else:
+        allowed_constraints = []
+
+    anchors_subset: dict[str, Any] = {}
+    for part_type in part_types:
+        entry = components_map.get(part_type)
+        if not isinstance(entry, dict):
+            continue
+        anchors = entry.get("anchors", [])
+        anchors_subset[part_type] = {"anchors": list(anchors) if isinstance(anchors, list) else []}
+
+    constraint_subset = {key: constraints_map[key] for key in allowed_constraints if key in constraints_map}
+    return {
+        "allowed_constraint_types": allowed_constraints,
+        "constraints_whitelist": constraint_subset,
+        "anchors_dictionary": anchors_subset,
+    }
+
+
+def _build_components_catalog_for_prompt(part_types: list[str], domains: list[str]) -> dict[str, Any]:
+    _, _, catalog_raw = _load_llm_constraints_assets()
+    components = catalog_raw.get("components", {}) if isinstance(catalog_raw, dict) else {}
+    domain_set = set(domains)
+    selected: dict[str, Any] = {}
+    for comp_type in part_types:
+        item = components.get(comp_type)
+        if not isinstance(item, dict):
+            continue
+        item_domain = str(item.get("domain", "")).strip().lower()
+        if item_domain and domain_set and item_domain not in domain_set:
+            continue
+        selected[comp_type] = item
+    return selected
+
+
+def _constraints_for_prompt_display(constraints_whitelist: dict[str, Any]) -> dict[str, Any]:
+    rendered = json.loads(json.dumps(constraints_whitelist, ensure_ascii=False))
+    if not isinstance(rendered, dict):
+        return {}
+    for _, item in rendered.items():
+        if isinstance(item, dict):
+            if "args" in item and "arg_specs" not in item:
+                item["arg_specs"] = item.pop("args")
+            elif "params" in item and "arg_specs" not in item:
+                item["arg_specs"] = item.pop("params")
+    return rendered
+
+
+def _teaching_plan_context_text(teaching_plan: dict[str, Any] | None) -> str:
+    if not isinstance(teaching_plan, dict):
+        return ""
+    parts: list[str] = []
+    explanation_full = teaching_plan.get("explanation_full")
+    if isinstance(explanation_full, str) and explanation_full.strip():
+        parts.append(explanation_full.strip())
+    sub_questions = teaching_plan.get("sub_questions")
+    if isinstance(sub_questions, list):
+        for item in sub_questions:
+            if not isinstance(item, dict):
+                continue
+            for key in ("question", "goal", "transition"):
+                value = item.get(key)
+                if isinstance(value, str) and value.strip():
+                    parts.append(value.strip())
+    return "\n".join(parts)
+
+
+def _infer_domains(problem: str, teaching_context: str) -> list[str]:
+    text = f"{problem}\n{teaching_context}".lower()
     scores: dict[str, int] = {}
     for domain, keywords in _DOMAIN_KEYWORDS.items():
         score = sum(1 for kw in keywords if kw and kw.lower() in text)
@@ -257,6 +425,22 @@ def _infer_domains(problem: str, explanation: str) -> list[str]:
     if hit_domains:
         return hit_domains
     return ["mechanics", "electricity", "electromagnetism"]
+
+
+def _infer_subject_family(problem: str, teaching_context: str) -> str:
+    text = f"{problem}\n{teaching_context}".lower()
+    if any(keyword in text for keyword in _PHYSICS_FAMILY_KEYWORDS):
+        return "physics"
+    # 预留后续扩展: math / chemistry / ...
+    return "unknown"
+
+
+def _resolve_domains_for_components(problem: str, teaching_plan: dict[str, Any] | None) -> tuple[str, list[str]]:
+    teaching_context = _teaching_plan_context_text(teaching_plan)
+    family = _infer_subject_family(problem, teaching_context)
+    if family == "physics":
+        return family, ["mechanics", "electricity", "electromagnetism"]
+    return family, _infer_domains(problem, teaching_context)
 
 
 def _domain_types(domain: str) -> set[str]:
@@ -312,11 +496,101 @@ def _validate_known_param_keys(path: str, obj_type: str, params: dict[str, Any])
     return [f"{path} has unknown params: {', '.join(unknown)}"]
 
 
+def _prevalidate_composite_graph_raw(*, path: str, graph: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+
+    parts = graph.get("parts")
+    tracks = graph.get("tracks")
+    constraints = graph.get("constraints")
+
+    part_ids: set[str] = set()
+    part_type_by_id: dict[str, str] = {}
+    if isinstance(parts, list):
+        for item in parts:
+            if not isinstance(item, dict):
+                continue
+            part_id = item.get("id")
+            if not isinstance(part_id, str) or not part_id.strip():
+                continue
+            normalized = part_id.strip()
+            part_ids.add(normalized)
+            part_type_by_id[normalized] = str(item.get("type", "")).strip()
+
+    track_ids: set[str] = set()
+    track_part_links: dict[str, str] = {}
+    if isinstance(tracks, list):
+        for item in tracks:
+            if not isinstance(item, dict):
+                continue
+            track_id = item.get("id")
+            if not isinstance(track_id, str) or not track_id.strip():
+                continue
+            track_key = track_id.strip()
+            track_ids.add(track_key)
+
+            data = item.get("data")
+            if isinstance(data, dict):
+                part_ref = data.get("part_id")
+                if isinstance(part_ref, str) and part_ref.strip():
+                    track_part_links[track_key] = part_ref.strip()
+
+    if isinstance(constraints, list):
+        for index, constraint in enumerate(constraints):
+            if not isinstance(constraint, dict):
+                continue
+            c_type = str(constraint.get("type", "")).strip()
+            if c_type != "attach":
+                continue
+            args = constraint.get("args")
+            if not isinstance(args, dict):
+                continue
+            for key_name in (
+                "part_a",
+                "part_b",
+                "from_part_id",
+                "to_part_id",
+                "source_part_id",
+                "target_part_id",
+                "part_id",
+            ):
+                value = args.get(key_name)
+                if not isinstance(value, str) or not value.strip():
+                    continue
+                normalized_value = value.strip()
+                if normalized_value not in track_ids:
+                    continue
+                hint = (
+                    f"{path}.params.graph.constraints[{index}].args.{key_name}='{normalized_value}' "
+                    "looks like a track id. attach requires part ids from graph.parts[].id."
+                )
+                part_link = track_part_links.get(normalized_value)
+                if part_link and part_link in part_ids:
+                    hint += f" Use '{part_link}' instead."
+                elif normalized_value.startswith("t_"):
+                    candidate = f"p_{normalized_value[2:]}"
+                    if candidate in part_ids:
+                        hint += f" Use '{candidate}' instead."
+                errors.append(hint)
+
+    has_arc_track = False
+    if isinstance(tracks, list):
+        has_arc_track = any(isinstance(item, dict) and str(item.get("type", "")).strip() == "arc" for item in tracks)
+    has_curved_part = any(part_type_by_id.get(pid) in _CURVED_PART_TYPES for pid in part_type_by_id)
+    if has_arc_track and not has_curved_part:
+        errors.append(
+            f"{path}.params.graph has arc track(s) but no curved part in graph.parts "
+            f"(expected one of: {', '.join(sorted(_CURVED_PART_TYPES))})"
+        )
+
+    return errors
+
+
 def _validate_composite_graph(
     *,
     path: str,
     params: dict[str, Any],
     allowed_object_types: set[str],
+    require_motion: bool = False,
 ) -> list[str]:
     graph = params.get("graph")
     if graph is None:
@@ -324,19 +598,370 @@ def _validate_composite_graph(
     if not isinstance(graph, dict):
         return [f"{path} params.graph must be an object"]
 
+    pre_errors = _prevalidate_composite_graph_raw(path=path, graph=graph)
+
     try:
         model = CompositeGraph.model_validate(graph)
     except Exception as exc:  # noqa: BLE001
+        if pre_errors:
+            return pre_errors
         return [f"{path} invalid params.graph: {exc}"]
 
-    errors: list[str] = []
+    errors: list[str] = list(pre_errors)
     allowed_part_types = set(allowed_object_types) - {"CompositeObject"}
+    part_type_by_id: dict[str, str] = {}
+    track_ids = {track.id for track in model.tracks}
+    track_by_id = {track.id: track for track in model.tracks}
+    movable_part_ids: set[str] = set()
     for index, part in enumerate(model.parts):
         part_path = f"{path}.params.graph.parts[{index}]"
         if part.type not in allowed_part_types:
             errors.append(f"{part_path}.type not allowed: {part.type}")
             continue
+        part_type_by_id[part.id] = part.type
+        if part.type in _MOVABLE_PART_TYPES:
+            movable_part_ids.add(part.id)
         errors.extend(_validate_known_param_keys(part_path, part.type, part.params))
+
+    _, anchors_raw, _ = _load_llm_constraints_assets()
+    components_map = anchors_raw.get("components", {}) if isinstance(anchors_raw, dict) else {}
+
+    def _allowed_anchor_set(part_id: str) -> set[str]:
+        part_type = part_type_by_id.get(part_id)
+        if not part_type:
+            return set()
+        entry = components_map.get(part_type)
+        if not isinstance(entry, dict):
+            return set()
+        anchors = entry.get("anchors")
+        if not isinstance(anchors, list):
+            return set()
+        return {str(x).strip().lower() for x in anchors if str(x).strip()}
+
+    def _check_anchor(anchor_key: str, part_id: str | None, args: dict[str, Any], c_path: str) -> None:
+        if anchor_key not in args:
+            return
+        anchor_name = args.get(anchor_key)
+        if not isinstance(anchor_name, str):
+            return
+        if not part_id:
+            return
+        allowed = _allowed_anchor_set(part_id)
+        if not allowed:
+            return
+        normalized_anchor = anchor_name.strip().lower()
+        if normalized_anchor not in allowed:
+            allowed_text = ", ".join(sorted(allowed))
+            errors.append(
+                f"{c_path}.args.{anchor_key} invalid for part '{part_id}': {anchor_name} (allowed: {allowed_text})"
+            )
+
+    def _check_track_anchor(anchor_key: str, part_id: str | None, data: dict[str, Any], t_path: str) -> None:
+        if anchor_key not in data:
+            return
+        anchor_name = data.get(anchor_key)
+        if not isinstance(anchor_name, str):
+            return
+        if not part_id:
+            return
+        allowed = _allowed_anchor_set(part_id)
+        if not allowed:
+            return
+        normalized_anchor = anchor_name.strip().lower()
+        if normalized_anchor not in allowed:
+            allowed_text = ", ".join(sorted(allowed))
+            errors.append(
+                f"{t_path}.data.{anchor_key} invalid for part '{part_id}': {anchor_name} (allowed: {allowed_text})"
+            )
+
+    def _validate_motion_timeline(
+        *,
+        motion_path: str,
+        timeline: list[dict[str, Any]],
+        key: str,
+        require_non_decreasing_value: bool = False,
+    ) -> list[tuple[float, float]]:
+        if not timeline:
+            errors.append(f"{motion_path}.timeline cannot be empty")
+            return []
+        if len(timeline) < 2:
+            errors.append(f"{motion_path}.timeline must have at least 2 points")
+
+        points: list[tuple[float, float]] = []
+        prev_t: float | None = None
+        prev_v: float | None = None
+        for point_index, item in enumerate(timeline):
+            point_path = f"{motion_path}.timeline[{point_index}]"
+            if not isinstance(item, dict):
+                errors.append(f"{point_path} must be an object")
+                continue
+            t_raw = item.get("t")
+            t_value: float | None = None
+            if not isinstance(t_raw, (int, float)):
+                errors.append(f"{point_path}.t must be a number")
+            else:
+                t_value = float(t_raw)
+                if prev_t is not None and t_value <= prev_t:
+                    errors.append(f"{point_path}.t must be strictly increasing")
+                prev_t = t_value
+
+            v_value: float | None = None
+            if key not in item:
+                errors.append(f"{point_path} missing '{key}'")
+            elif not isinstance(item.get(key), (int, float)):
+                errors.append(f"{point_path}.{key} must be a number")
+            else:
+                v_value = float(item.get(key))
+
+            if t_value is None or v_value is None:
+                continue
+            if require_non_decreasing_value and prev_v is not None and v_value < prev_v:
+                errors.append(f"{point_path}.{key} must be non-decreasing")
+            prev_v = v_value
+            points.append((t_value, v_value))
+        return points
+
+    attach_part_pairs: set[frozenset[str]] = set()
+    for constraint in model.constraints:
+        if str(constraint.type).strip() != "attach":
+            continue
+        c_args = dict(constraint.args or {})
+        part_a = c_args.get("part_a")
+        part_b = c_args.get("part_b")
+        if not isinstance(part_a, str) or not part_a.strip():
+            continue
+        if not isinstance(part_b, str) or not part_b.strip():
+            continue
+        attach_part_pairs.add(frozenset((part_a.strip(), part_b.strip())))
+
+    def _track_endpoint(track_id: str, which: str) -> tuple[str, str | None] | None:
+        track = track_by_id.get(track_id)
+        if track is None:
+            return None
+        data = dict(track.data or {})
+        part_id = data.get("part_id")
+        if not isinstance(part_id, str) or not part_id.strip():
+            return None
+        if which == "start":
+            anchor_raw = data.get("anchor_a", data.get("from_anchor", data.get("start_anchor")))
+        else:
+            anchor_raw = data.get("anchor_b", data.get("to_anchor", data.get("end_anchor")))
+        anchor = str(anchor_raw).strip() if isinstance(anchor_raw, str) and anchor_raw.strip() else None
+        return part_id.strip(), anchor
+
+    for track_index, track in enumerate(model.tracks):
+        t_path = f"{path}.params.graph.tracks[{track_index}]"
+        t_data = dict(track.data or {})
+        t_type = str(track.type).strip().lower()
+        t_space = str(t_data.get("space", "local")).strip().lower()
+        is_local = t_space != "world"
+        t_part = t_data.get("part_id")
+        part_id = t_part.strip() if isinstance(t_part, str) and t_part.strip() else None
+        if is_local and part_id is None:
+            errors.append(f"{t_path}.data(local) requires part_id")
+            continue
+        if part_id is None:
+            continue
+
+        if t_type in {"line", "segment"} and is_local:
+            has_legacy_local_points = any(
+                key in t_data for key in ("p1_local", "p2_local", "x1_local", "y1_local", "x2_local", "y2_local")
+            )
+            if has_legacy_local_points:
+                errors.append(
+                    f"{t_path}.data(line local) forbids p1_local/p2_local/x*_local; use anchor_a/anchor_b only"
+                )
+
+            anchor_a = t_data.get("anchor_a", t_data.get("a1"))
+            anchor_b = t_data.get("anchor_b", t_data.get("a2"))
+            if not isinstance(anchor_a, str) or not anchor_a.strip():
+                errors.append(f"{t_path}.data(anchor_a) required for local line/segment")
+            if not isinstance(anchor_b, str) or not anchor_b.strip():
+                errors.append(f"{t_path}.data(anchor_b) required for local line/segment")
+
+        if t_type == "arc" and is_local:
+            has_center_anchor = isinstance(t_data.get("center_anchor"), str) and bool(str(t_data.get("center_anchor")).strip())
+            has_center_xy_local = isinstance(t_data.get("cx_local"), (int, float)) and isinstance(
+                t_data.get("cy_local"), (int, float)
+            )
+            if not (has_center_anchor or has_center_xy_local):
+                errors.append(f"{t_path}.data(local arc) requires center_anchor or cx_local+cy_local")
+
+            if not any(key in t_data for key in ("radius_local", "r_local")):
+                errors.append(f"{t_path}.data(local arc) requires radius_local or r_local")
+
+            has_local_angles = (
+                ("start_deg_local" in t_data and "end_deg_local" in t_data)
+                or ("start_angle_local" in t_data and "end_angle_local" in t_data)
+            )
+            if not has_local_angles:
+                errors.append(f"{t_path}.data(local arc) requires start/end local angles")
+
+        _check_track_anchor("anchor_a", part_id, t_data, t_path)
+        _check_track_anchor("anchor_b", part_id, t_data, t_path)
+        _check_track_anchor("a1", part_id, t_data, t_path)
+        _check_track_anchor("a2", part_id, t_data, t_path)
+        _check_track_anchor("center_anchor", part_id, t_data, t_path)
+
+    for index, constraint in enumerate(model.constraints):
+        c_path = f"{path}.params.graph.constraints[{index}]"
+        for item in validate_constraint(constraint):
+            errors.append(f"{c_path}: {item}")
+
+        c_args = dict(constraint.args or {})
+
+        part_id = c_args.get("part_id") if isinstance(c_args.get("part_id"), str) else None
+        part_a = c_args.get("part_a") if isinstance(c_args.get("part_a"), str) else None
+        part_b = c_args.get("part_b") if isinstance(c_args.get("part_b"), str) else None
+        from_part = c_args.get("from_part_id") if isinstance(c_args.get("from_part_id"), str) else None
+        to_part = c_args.get("to_part_id") if isinstance(c_args.get("to_part_id"), str) else None
+        source_part = c_args.get("source_part_id") if isinstance(c_args.get("source_part_id"), str) else None
+        target_part = c_args.get("target_part_id") if isinstance(c_args.get("target_part_id"), str) else None
+
+        part_for_anchor = part_id or part_a or from_part or source_part
+        part_for_anchor_a = part_a or from_part or source_part or part_id
+        part_for_anchor_b = part_b or to_part or target_part
+        part_for_anchor_1 = c_args.get("part_1") if isinstance(c_args.get("part_1"), str) else None
+        part_for_anchor_2 = c_args.get("part_2") if isinstance(c_args.get("part_2"), str) else None
+
+        _check_anchor("anchor", part_for_anchor, c_args, c_path)
+        _check_anchor("anchor_a", part_for_anchor_a, c_args, c_path)
+        _check_anchor("from_anchor", part_for_anchor_a, c_args, c_path)
+        _check_anchor("anchor_b", part_for_anchor_b, c_args, c_path)
+        _check_anchor("to_anchor", part_for_anchor_b, c_args, c_path)
+        _check_anchor("anchor_1", part_for_anchor_1, c_args, c_path)
+        _check_anchor("anchor_2", part_for_anchor_2, c_args, c_path)
+
+    allowed_motion_types = {"on_track", "on_track_schedule"}
+    moved_part_ids: set[str] = set()
+    for index, motion in enumerate(model.motions):
+        m_path = f"{path}.params.graph.motions[{index}]"
+        motion_type = str(motion.type).strip()
+        if motion_type not in allowed_motion_types:
+            errors.append(
+                f"{m_path}.type not allowed: {motion.type} (allowed: on_track, on_track_schedule)"
+            )
+            continue
+
+        m_args = dict(motion.args or {})
+        part_id = m_args.get("part_id")
+        if not isinstance(part_id, str) or not part_id.strip():
+            errors.append(f"{m_path}.args.part_id required")
+            continue
+        part_id = part_id.strip()
+        if part_id not in part_type_by_id:
+            errors.append(f"{m_path}.args.part_id unknown: {part_id}")
+            continue
+        moved_part_ids.add(part_id)
+
+        _check_anchor("anchor", part_id, m_args, m_path)
+
+        default_key = "s" if motion_type == "on_track" else "u"
+        param_key_raw = m_args.get("param_key", default_key)
+        param_key = str(param_key_raw).strip() if param_key_raw is not None else default_key
+        if not param_key:
+            errors.append(f"{m_path}.args.param_key cannot be empty")
+            param_key = default_key
+        timeline_points = _validate_motion_timeline(
+            motion_path=m_path,
+            timeline=motion.timeline,
+            key=param_key,
+            require_non_decreasing_value=(motion_type == "on_track_schedule"),
+        )
+
+        if motion_type == "on_track":
+            track_id = m_args.get("track_id")
+            if not isinstance(track_id, str) or not track_id.strip():
+                errors.append(f"{m_path}.args.track_id required for on_track")
+            elif track_id.strip() not in track_ids:
+                errors.append(f"{m_path}.args.track_id unknown: {track_id}")
+            continue
+
+        segments = m_args.get("segments")
+        if not isinstance(segments, list) or not segments:
+            errors.append(f"{m_path}.args.segments must be a non-empty list for on_track_schedule")
+            continue
+
+        normalized_segments: list[tuple[float, float, str]] = []
+        for seg_index, segment in enumerate(segments):
+            seg_path = f"{m_path}.args.segments[{seg_index}]"
+            if not isinstance(segment, dict):
+                errors.append(f"{seg_path} must be an object")
+                continue
+
+            track_id = segment.get("track_id")
+            if not isinstance(track_id, str) or not track_id.strip():
+                errors.append(f"{seg_path}.track_id required")
+                continue
+            track_id = track_id.strip()
+            if track_id not in track_ids:
+                errors.append(f"{seg_path}.track_id unknown: {track_id}")
+                continue
+
+            u0_raw = segment.get("u0")
+            u1_raw = segment.get("u1")
+            if not isinstance(u0_raw, (int, float)):
+                errors.append(f"{seg_path}.u0 must be a number")
+                continue
+            if not isinstance(u1_raw, (int, float)):
+                errors.append(f"{seg_path}.u1 must be a number")
+                continue
+            u0 = float(u0_raw)
+            u1 = float(u1_raw)
+            if u1 <= u0:
+                errors.append(f"{seg_path} requires u1 > u0")
+                continue
+
+            normalized_segments.append((u0, u1, track_id))
+            for key_name in ("s0", "s1"):
+                if key_name in segment and not isinstance(segment.get(key_name), (int, float)):
+                    errors.append(f"{seg_path}.{key_name} must be a number")
+
+        if not normalized_segments:
+            continue
+
+        for seg_index in range(1, len(normalized_segments)):
+            prev_u1 = normalized_segments[seg_index - 1][1]
+            curr_u0 = normalized_segments[seg_index][0]
+            if abs(curr_u0 - prev_u1) > 1e-6:
+                errors.append(f"{m_path}.args.segments must be continuous in u (segment {seg_index - 1}->{seg_index})")
+
+            prev_track = normalized_segments[seg_index - 1][2]
+            curr_track = normalized_segments[seg_index][2]
+            if prev_track == curr_track:
+                continue
+            prev_end = _track_endpoint(prev_track, "end")
+            curr_start = _track_endpoint(curr_track, "start")
+            if prev_end is None or curr_start is None:
+                continue
+            prev_part, _ = prev_end
+            curr_part, _ = curr_start
+            if prev_part == curr_part:
+                continue
+            if frozenset((prev_part, curr_part)) not in attach_part_pairs:
+                errors.append(
+                    f"{m_path}.args.segments[{seg_index}] switches track '{prev_track}' -> '{curr_track}' "
+                    f"without attach link between parts '{prev_part}' and '{curr_part}'"
+                )
+
+        if timeline_points:
+            values = [item[1] for item in timeline_points]
+            min_u = min(values)
+            max_u = max(values)
+            first_u0 = normalized_segments[0][0]
+            last_u1 = normalized_segments[-1][1]
+            if min_u > first_u0 + 1e-6:
+                errors.append(f"{m_path}.timeline {param_key} starts after first segment.u0")
+            if max_u < last_u1 - 1e-6:
+                errors.append(f"{m_path}.timeline {param_key} ends before last segment.u1")
+
+    if require_motion and movable_part_ids and model.tracks:
+        if not model.motions:
+            errors.append(f"{path}.params.graph.motions is required for dynamic scene")
+        elif not (moved_part_ids & movable_part_ids):
+            errors.append(
+                f"{path}.params.graph.motions does not drive movable parts: {', '.join(sorted(movable_part_ids))}"
+            )
 
     return errors
 
@@ -356,6 +981,7 @@ def validate_scene_draft_data(data: Any, *, allowed_object_types: set[str]) -> l
 
     for scene_index, scene in enumerate(draft.scenes):
         path = f"scenes[{scene_index}]"
+        scene_requires_motion = _scene_requires_motion(scene)
         if len(scene.objects) > 9:
             errors.append(f"{path}.objects has {len(scene.objects)} items, exceeds max 9")
         if budget is not None and len(scene.objects) > budget.max_visible_objects:
@@ -444,6 +1070,7 @@ def validate_scene_draft_data(data: Any, *, allowed_object_types: set[str]) -> l
                         path=obj_path,
                         params=obj.params,
                         allowed_object_types=allowed_object_types,
+                        require_motion=scene_requires_motion,
                     )
                 )
 
@@ -584,6 +1211,156 @@ def _normalize_scene_role(object_id: str, role: str) -> str:
     return "support_eq"
 
 
+def _auto_fix_attach_track_part_refs(graph: dict[str, Any]) -> bool:
+    parts = graph.get("parts")
+    tracks = graph.get("tracks")
+    constraints = graph.get("constraints")
+    if not isinstance(parts, list) or not isinstance(tracks, list) or not isinstance(constraints, list):
+        return False
+
+    part_ids: set[str] = set()
+    part_type_by_id: dict[str, str] = {}
+    for part in parts:
+        if not isinstance(part, dict):
+            continue
+        part_id = part.get("id")
+        if not isinstance(part_id, str) or not part_id.strip():
+            continue
+        normalized = part_id.strip()
+        part_ids.add(normalized)
+        part_type_by_id[normalized] = str(part.get("type", "")).strip()
+
+    track_to_part: dict[str, str] = {}
+    track_by_id: dict[str, dict[str, Any]] = {}
+    for track in tracks:
+        if not isinstance(track, dict):
+            continue
+        track_id = track.get("id")
+        if not isinstance(track_id, str) or not track_id.strip():
+            continue
+        track_key = track_id.strip()
+        track_by_id[track_key] = track
+        data = track.get("data")
+        if not isinstance(data, dict):
+            continue
+        part_ref = data.get("part_id")
+        if isinstance(part_ref, str) and part_ref.strip() in part_ids:
+            track_to_part[track_key] = part_ref.strip()
+
+    curved_parts = [pid for pid, ptype in part_type_by_id.items() if ptype in _CURVED_PART_TYPES]
+    changed = False
+
+    def _to_float(value: Any, default: float) -> float:
+        try:
+            return float(value)
+        except Exception:  # noqa: BLE001
+            return default
+
+    def _derive_arc_angles(data: dict[str, Any]) -> tuple[float, float]:
+        start_angle = _to_float(data.get("start_angle", data.get("start_deg", data.get("a0", 0.0))), 0.0)
+        end_angle = _to_float(data.get("end_angle", data.get("end_deg", data.get("a1", 90.0))), 90.0)
+        return start_angle, end_angle
+
+    def _derive_center(data: dict[str, Any]) -> tuple[float, float, float]:
+        center = data.get("center")
+        if isinstance(center, dict):
+            cx = _to_float(center.get("x"), 0.0)
+            cy = _to_float(center.get("y"), 0.0)
+            return cx, cy, 0.0
+        if isinstance(center, (list, tuple)) and len(center) >= 2:
+            cx = _to_float(center[0], 0.0)
+            cy = _to_float(center[1], 0.0)
+            cz = _to_float(center[2], 0.0) if len(center) >= 3 else 0.0
+            return cx, cy, cz
+        cx = _to_float(data.get("cx"), 0.0)
+        cy = _to_float(data.get("cy"), 0.0)
+        return cx, cy, 0.0
+
+    def _ensure_arc_part_from_track(track_id: str) -> str | None:
+        track = track_by_id.get(track_id)
+        if not isinstance(track, dict):
+            return None
+        track_type = str(track.get("type", "")).strip()
+        if track_type != "arc":
+            return None
+
+        candidate = f"p_{track_id[2:]}" if track_id.startswith("t_") else f"p_{track_id}"
+        new_id = candidate
+        suffix = 1
+        while new_id in part_ids:
+            suffix += 1
+            new_id = f"{candidate}_{suffix}"
+
+        data = track.get("data")
+        if not isinstance(data, dict):
+            data = {}
+            track["data"] = data
+        cx, cy, cz = _derive_center(data)
+        radius = _to_float(data.get("radius"), 1.0)
+        start_angle, end_angle = _derive_arc_angles(data)
+
+        part = {
+            "id": new_id,
+            "type": "ArcTrack",
+            "params": {
+                "center": [cx, cy, cz],
+                "radius": radius,
+                "start_angle": start_angle,
+                "end_angle": end_angle,
+            },
+            "style": {},
+            "seed_pose": {"x": cx, "y": cy, "theta": 0.0, "scale": 1.0},
+        }
+        parts.append(part)
+        part_ids.add(new_id)
+        part_type_by_id[new_id] = "ArcTrack"
+        track_to_part[track_id] = new_id
+        if "part_id" not in data:
+            data["part_id"] = new_id
+        if "anchor_a" not in data and "from_anchor" not in data and "start_anchor" not in data:
+            data["anchor_a"] = "start"
+        if "anchor_b" not in data and "to_anchor" not in data and "end_anchor" not in data:
+            data["anchor_b"] = "end"
+        return new_id
+
+    for constraint in constraints:
+        if not isinstance(constraint, dict):
+            continue
+        if str(constraint.get("type", "")).strip() != "attach":
+            continue
+        args = constraint.get("args")
+        if not isinstance(args, dict):
+            continue
+
+        for key_name in ("part_a", "part_b", "from_part_id", "to_part_id", "source_part_id", "target_part_id"):
+            value = args.get(key_name)
+            if not isinstance(value, str) or not value.strip():
+                continue
+            normalized_value = value.strip()
+            if normalized_value in part_ids:
+                continue
+
+            mapped_part = track_to_part.get(normalized_value)
+            if mapped_part is None and normalized_value.startswith("t_"):
+                candidate = f"p_{normalized_value[2:]}"
+                if candidate in part_ids:
+                    mapped_part = candidate
+
+            if mapped_part is None and "arc" in normalized_value.lower() and len(curved_parts) == 1:
+                mapped_part = curved_parts[0]
+
+            if mapped_part is None and normalized_value in track_by_id:
+                mapped_part = _ensure_arc_part_from_track(normalized_value)
+
+            if mapped_part is None:
+                continue
+
+            args[key_name] = mapped_part
+            changed = True
+
+    return changed
+
+
 def normalize_scene_draft_data(data: Any) -> tuple[dict[str, Any] | None, bool]:
     if not isinstance(data, dict):
         return None, False
@@ -686,6 +1463,8 @@ def normalize_scene_draft_data(data: Any) -> tuple[dict[str, Any] | None, bool]:
                 if isinstance(space, dict) and space.get("origin") not in {None, "center"}:
                     space["origin"] = "center"
                     changed = True
+                if _auto_fix_attach_track_part_refs(graph):
+                    changed = True
 
     pedagogy = data.get("pedagogy_plan")
     max_new_symbols_limit: int | None = None
@@ -770,12 +1549,11 @@ def _compact_teaching_plan(teaching_plan: Any) -> dict[str, Any] | None:
 def _build_user_payload(
     *,
     problem: str,
-    explanation: str,
     teaching_plan: dict[str, Any] | None,
     allowed_object_types: set[str],
 ) -> str:
     top_level_allowed = [x for x in _TOP_LEVEL_OBJECT_TYPES if x in allowed_object_types]
-    domains = _infer_domains(problem, explanation)
+    subject_family, domains = _resolve_domains_for_components(problem, teaching_plan)
     cards = _build_component_cards(domains)
     domain_types = set(cards.keys())
     part_types = sorted(
@@ -785,6 +1563,10 @@ def _build_user_payload(
     )
 
     compact_teaching_plan = _compact_teaching_plan(teaching_plan)
+    constraint_bundle = _build_constraint_prompt_bundle(part_types=part_types, domains=domains)
+    components_catalog = _build_components_catalog_for_prompt(part_types, domains)
+    constraint_display = _constraints_for_prompt_display(constraint_bundle["constraints_whitelist"])
+    protocol_bundle = _build_protocol_bundle_for_prompt(domains)
 
     lines = [
         "Allowed top-level object.type:",
@@ -796,11 +1578,31 @@ def _build_user_payload(
         "Inferred subject domains:",
         json.dumps(domains, ensure_ascii=False),
         "",
+        "Inferred subject family:",
+        json.dumps(subject_family, ensure_ascii=False),
+        "",
         "Component cards (domain relevant):",
         json.dumps(cards, ensure_ascii=False, indent=2),
         "",
+        "Components catalog (from llm_constraints/specs/components_catalog.json):",
+        json.dumps(components_catalog, ensure_ascii=False, indent=2),
+        "",
         "Component params whitelist:",
         json.dumps(_physics_param_catalog(), ensure_ascii=False, indent=2),
+        "",
+        "Constraint whitelist (LLM must only use these constraint types/args):",
+        json.dumps(constraint_display, ensure_ascii=False, indent=2),
+        "",
+        "Allowed constraint types:",
+        json.dumps(constraint_bundle["allowed_constraint_types"], ensure_ascii=False),
+        "",
+        "Anchors dictionary (for current allowed part types):",
+        json.dumps(constraint_bundle["anchors_dictionary"], ensure_ascii=False, indent=2),
+        "",
+        "Drawing protocol bundle (append-only guidance from llm_constraints/*.md):",
+        json.dumps(protocol_bundle["files"], ensure_ascii=False),
+        "",
+        "Keep original prompt requirements, and additionally satisfy these protocol docs:",
         "",
         "Teaching content item catalog (from LLM1 scene_packets):",
         json.dumps(
@@ -823,6 +1625,9 @@ def _build_user_payload(
         ),
         "",
     ]
+
+    for filename, content in protocol_bundle["docs"].items():
+        lines.extend([f"[{filename}]", content, ""])
 
     if compact_teaching_plan is not None:
         lines.extend(
@@ -883,7 +1688,7 @@ def _build_user_payload(
                                 "parts": [
                                     {
                                         "id": "p_plane",
-                                        "type": "InclinedPlane",
+                                        "type": "Wall",
                                         "params": {"angle": 30, "length": 8.0},
                                         "style": {},
                                         "seed_pose": {"x": 0, "y": 0, "theta": 0, "scale": 1.0},
@@ -914,8 +1719,8 @@ def _build_user_payload(
             "problem.md:",
             problem.strip(),
             "",
-            "explanation.txt:",
-            explanation.strip(),
+            "teaching_plan.json:",
+            json.dumps(compact_teaching_plan, ensure_ascii=False, indent=2) if compact_teaching_plan is not None else "{}",
             "",
             "Output contract:",
             "1) Output strict JSON only.",
@@ -929,6 +1734,13 @@ def _build_user_payload(
             "9) Formula.params.latex must be pure formula (no CJK).",
             "10) Respect cognitive budget: max 4 formulas per scene.",
             "11) If teaching_plan is provided, preserve teaching flow and scene focus.",
+            "12) CompositeObject.graph.constraints[].type must be in Allowed constraint types.",
+            "13) Constraint args must follow Constraint whitelist.",
+            "14) Any anchor name used by constraints must come from Anchors dictionary.",
+            "14.1) Do not assume bbox anchors (left_center/right_center/...) exist for every part.",
+            "15) For dynamic process scenes, include graph.motions (not only on_track_pose).",
+            "16) on_track_schedule.segments must be continuous in u, and timeline must be valid.",
+            "17) If switching tracks in schedule, switch only across attached/connected parts.",
             "",
             "Minimal example:",
             json.dumps(example, ensure_ascii=False, indent=2),
@@ -953,7 +1765,6 @@ def _render_error_lines(errors: list[str], *, limit: int = 40) -> str:
 def _build_repair_payload(
     *,
     problem: str,
-    explanation: str,
     teaching_plan: dict[str, Any] | None,
     allowed_object_types: set[str],
     raw_content: str,
@@ -961,7 +1772,7 @@ def _build_repair_payload(
     round_index: int,
 ) -> str:
     top_level_allowed = [x for x in _TOP_LEVEL_OBJECT_TYPES if x in allowed_object_types]
-    domains = _infer_domains(problem, explanation)
+    subject_family, domains = _resolve_domains_for_components(problem, teaching_plan)
     cards = _build_component_cards(domains)
     domain_types = set(cards.keys())
     part_types = sorted(
@@ -971,6 +1782,10 @@ def _build_repair_payload(
     )
 
     compact_teaching_plan = _compact_teaching_plan(teaching_plan)
+    constraint_bundle = _build_constraint_prompt_bundle(part_types=part_types, domains=domains)
+    components_catalog = _build_components_catalog_for_prompt(part_types, domains)
+    constraint_display = _constraints_for_prompt_display(constraint_bundle["constraints_whitelist"])
+    protocol_bundle = _build_protocol_bundle_for_prompt(domains)
 
     lines = [
         f"This is repair round {round_index}. Fix scene_draft.json with minimal changes.",
@@ -985,16 +1800,39 @@ def _build_repair_payload(
         "Inferred subject domains:",
         json.dumps(domains, ensure_ascii=False),
         "",
+        "Inferred subject family:",
+        json.dumps(subject_family, ensure_ascii=False),
+        "",
         "Component cards:",
         json.dumps(cards, ensure_ascii=False, indent=2),
         "",
+        "Components catalog (from llm_constraints/specs/components_catalog.json):",
+        json.dumps(components_catalog, ensure_ascii=False, indent=2),
+        "",
         "Component params whitelist:",
         json.dumps(_physics_param_catalog(), ensure_ascii=False, indent=2),
+        "",
+        "Constraint whitelist (LLM must only use these constraint types/args):",
+        json.dumps(constraint_display, ensure_ascii=False, indent=2),
+        "",
+        "Allowed constraint types:",
+        json.dumps(constraint_bundle["allowed_constraint_types"], ensure_ascii=False),
+        "",
+        "Anchors dictionary (for current allowed part types):",
+        json.dumps(constraint_bundle["anchors_dictionary"], ensure_ascii=False, indent=2),
+        "",
+        "Drawing protocol bundle (append-only guidance from llm_constraints/*.md):",
+        json.dumps(protocol_bundle["files"], ensure_ascii=False),
+        "",
+        "Repair must keep existing requirements and additionally satisfy these protocol docs:",
         "",
         "Validation errors to fix:",
         _render_error_lines(errors),
         "",
     ]
+
+    for filename, content in protocol_bundle["docs"].items():
+        lines.extend([f"[{filename}]", content, ""])
 
     if compact_teaching_plan is not None:
         lines.extend(
@@ -1012,8 +1850,8 @@ def _build_repair_payload(
             "problem.md:",
             problem.strip(),
             "",
-            "explanation.txt:",
-            explanation.strip(),
+            "teaching_plan.json:",
+            json.dumps(compact_teaching_plan, ensure_ascii=False, indent=2) if compact_teaching_plan is not None else "{}",
             "",
             "Raw content to repair:",
             raw_content.strip(),
@@ -1024,6 +1862,12 @@ def _build_repair_payload(
             "- cognitive_budget.max_text_chars >= 60.",
             "- TextBlock latex fragments must be inside $...$.",
             "- Max 4 Formula objects per scene.",
+            "- constraints[].type must be in Allowed constraint types.",
+            "- Constraint args must satisfy Constraint whitelist.",
+            "- All anchor names must come from Anchors dictionary.",
+            "- Do not assume bbox anchors exist for every part.",
+            "- Dynamic process scenes must define graph.motions.",
+            "- on_track_schedule requires continuous segments and valid timeline.",
             "- Output JSON only, no explanations.",
         ]
     )
@@ -1057,7 +1901,6 @@ def main() -> int:
 
     case_dir = Path(args.case)
     problem = (case_dir / "problem.md").read_text(encoding="utf-8")
-    explanation = (case_dir / "explanation.txt").read_text(encoding="utf-8")
     out_path = case_dir / "scene_draft.json"
     errors_path = case_dir / "llm2_validation_errors.txt"
 
@@ -1065,16 +1908,17 @@ def main() -> int:
     allowed_object_types = set(enums["object_types"])
     prompt = load_prompt("llm2_scene_draft.md")
     teaching_plan_path = case_dir / "teaching_plan.json"
-    teaching_plan = None
-    if teaching_plan_path.exists():
-        try:
-            teaching_plan = json.loads(teaching_plan_path.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
-            teaching_plan = None
+    if not teaching_plan_path.exists():
+        print(f"Missing required input for LLM2: {teaching_plan_path}", file=sys.stderr)
+        return 2
+    try:
+        teaching_plan = json.loads(teaching_plan_path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        print(f"Invalid teaching_plan.json: {exc}", file=sys.stderr)
+        return 2
 
     user_payload = _build_user_payload(
         problem=problem,
-        explanation=explanation,
         teaching_plan=teaching_plan,
         allowed_object_types=allowed_object_types,
     )
@@ -1116,7 +1960,6 @@ def main() -> int:
         for round_index in range(1, max(1, args.repair_rounds) + 1):
             repair_payload = _build_repair_payload(
                 problem=problem,
-                explanation=explanation,
                 teaching_plan=teaching_plan,
                 allowed_object_types=allowed_object_types,
                 raw_content=current_content,

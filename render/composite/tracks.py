@@ -64,9 +64,11 @@ def _arc_point_tangent(data: dict[str, Any], s: float) -> tuple[tuple[float, flo
     px = cx + radius * math.cos(angle_rad)
     py = cy + radius * math.sin(angle_rad)
 
-    # Tangent direction for increasing angle.
-    tx = -math.sin(angle_rad)
-    ty = math.cos(angle_rad)
+    # Base tangent assumes increasing angle. If the arc is traversed with
+    # decreasing angle (end < start), flip tangent direction.
+    direction = 1.0 if end_deg >= start_deg else -1.0
+    tx = direction * (-math.sin(angle_rad))
+    ty = direction * math.cos(angle_rad)
     tx, ty = _norm(tx, ty)
     return (px, py), (tx, ty)
 

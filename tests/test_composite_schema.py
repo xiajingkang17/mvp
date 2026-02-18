@@ -4,7 +4,7 @@ from pipeline.validate_plan import validate_plan
 from schema.scene_plan_models import ScenePlan
 
 
-def _make_plan_with_object(obj: dict) -> ScenePlan:
+def _make_plan_with_object(obj: dict, *, actions: list[dict] | None = None) -> ScenePlan:
     raw = {
         "version": "0.1",
         "meta": {},
@@ -13,7 +13,7 @@ def _make_plan_with_object(obj: dict) -> ScenePlan:
             {
                 "id": "S1",
                 "layout": {"type": "hero_side", "slots": {"hero": "o1"}, "params": {}},
-                "actions": [],
+                "actions": actions or [],
                 "keep": [],
             }
         ],
@@ -27,14 +27,14 @@ def _valid_graph() -> dict:
         "parts": [
             {
                 "id": "p1",
-                "type": "InclinedPlane",
+                "type": "Wall",
                 "params": {"angle": 30, "length": 5.0},
                 "style": {},
                 "seed_pose": {"x": 0, "y": 0, "theta": 0, "scale": 1.0},
             }
         ],
         "tracks": [{"id": "t1", "type": "segment", "data": {"x1": -2, "y1": 1, "x2": 3, "y2": 0}}],
-        "constraints": [{"id": "c1", "type": "on_segment", "args": {"part_id": "p1", "track_id": "t1"}, "hard": True}],
+        "constraints": [{"id": "c1", "type": "on_track_pose", "args": {"part_id": "p1", "track_id": "t1"}, "hard": True}],
         "motions": [],
     }
 
@@ -108,3 +108,79 @@ def test_validate_rejects_broken_graph_references():
     errors = validate_plan(plan)
     assert any("CompositeObject invalid params.graph" in e.message for e in errors)
     assert any("unknown part id" in e.message for e in errors)
+
+
+def test_validate_rejects_motion_scene_without_explicit_play_duration():
+    graph = _valid_graph()
+    graph["motions"] = [
+        {
+            "id": "m1",
+            "type": "on_track",
+            "args": {"part_id": "p1", "track_id": "t1"},
+            "timeline": [{"t": 0.0, "s": 0.0}, {"t": 2.0, "s": 1.0}],
+        }
+    ]
+    plan = _make_plan_with_object(
+        {
+            "type": "CompositeObject",
+            "params": {"graph": graph},
+            "style": {},
+            "priority": 1,
+        },
+        actions=[{"op": "play", "anim": "fade_in", "targets": ["o1"]}, {"op": "wait", "duration": 2.2}],
+    )
+    errors = validate_plan(plan)
+    assert any(".duration required when scene has graph.motions" in e.message for e in errors)
+
+
+def test_validate_rejects_motion_scene_when_action_duration_too_short():
+    graph = _valid_graph()
+    graph["motions"] = [
+        {
+            "id": "m1",
+            "type": "on_track",
+            "args": {"part_id": "p1", "track_id": "t1"},
+            "timeline": [{"t": 0.0, "s": 0.0}, {"t": 3.0, "s": 1.0}],
+        }
+    ]
+    plan = _make_plan_with_object(
+        {
+            "type": "CompositeObject",
+            "params": {"graph": graph},
+            "style": {},
+            "priority": 1,
+        },
+        actions=[
+            {"op": "play", "anim": "fade_in", "targets": ["o1"], "duration": 0.5},
+            {"op": "wait", "duration": 0.5},
+        ],
+    )
+    errors = validate_plan(plan)
+    assert any("shorter than motion span" in e.message for e in errors)
+
+
+def test_validate_accepts_motion_scene_with_sufficient_action_duration():
+    graph = _valid_graph()
+    graph["motions"] = [
+        {
+            "id": "m1",
+            "type": "on_track",
+            "args": {"part_id": "p1", "track_id": "t1"},
+            "timeline": [{"t": 0.0, "s": 0.0}, {"t": 3.0, "s": 1.0}],
+        }
+    ]
+    plan = _make_plan_with_object(
+        {
+            "type": "CompositeObject",
+            "params": {"graph": graph},
+            "style": {},
+            "priority": 1,
+        },
+        actions=[
+            {"op": "play", "anim": "fade_in", "targets": ["o1"], "duration": 1.0},
+            {"op": "wait", "duration": 2.1},
+        ],
+    )
+    errors = validate_plan(plan)
+    assert not any("shorter than motion span" in e.message for e in errors)
+    assert not any(".duration required when scene has graph.motions" in e.message for e in errors)

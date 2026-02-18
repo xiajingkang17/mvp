@@ -54,6 +54,12 @@ class ActionEngine:
             self.scene.wait(duration)
         self.state.timeline_seconds += duration
 
+    def _timeline_now(self) -> float:
+        clock = getattr(self.state, "timeline_clock", None)
+        if clock is not None:
+            return float(clock.get_value())
+        return float(self.state.timeline_seconds)
+
     def advance_timeline(self, duration: float) -> None:
         self._play_with_timeline([], duration=duration)
 
@@ -73,6 +79,16 @@ class ActionEngine:
         duration = float(action.duration or self.ctx.defaults.action_duration)
 
         if action.anim in {"fade_in", "fade_out", "write", "create", "indicate"}:
+            if action.anim in {"fade_in", "write", "create"}:
+                now_t = self._timeline_now()
+                for object_id in action.targets:
+                    if object_id in self.state.visible:
+                        continue
+                    mobj = self.state.objects[object_id]
+                    reset = getattr(mobj, "composite_reset_time_origin", None)
+                    if callable(reset):
+                        reset(now_t)
+
             anims = []
             for object_id in action.targets:
                 mobj = self.state.objects[object_id]

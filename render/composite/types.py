@@ -25,7 +25,8 @@ class PartGeometry:
         key = (name or "center").strip().lower()
         if key in self.anchors:
             return self.anchors[key]
-        return self.anchors.get("center", (0.0, 0.0))
+        available = ", ".join(sorted(self.anchors.keys()))
+        raise KeyError(f"Unknown anchor '{key}' for part '{self.part_id}'. Available: {available}")
 
 
 @dataclass(frozen=True)

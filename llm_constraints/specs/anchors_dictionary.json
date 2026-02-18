@@ -1,0 +1,138 @@
+{
+  "version": "0.1",
+  "scope": "mechanics_only",
+  "components": {
+    "Block": {
+      "anchors": [
+        "center",
+        "top_center",
+        "bottom_center",
+        "left_center",
+        "right_center",
+        "top_left",
+        "top_right",
+        "bottom_left",
+        "bottom_right"
+      ]
+    },
+    "Cart": {
+      "anchors": [
+        "center",
+        "top_center",
+        "left_center",
+        "right_center",
+        "top_left",
+        "top_right",
+        "bottom_left",
+        "bottom_right",
+        "axle_left",
+        "axle_right",
+        "wheel_left_contact",
+        "wheel_right_contact"
+      ]
+    },
+    "Wall": {
+      "anchors": [
+        "center",
+        "start",
+        "end",
+        "low_end",
+        "high_end"
+      ]
+    },
+    "FixedPulley": {
+      "anchors": [
+        "center",
+        "left",
+        "right",
+        "support_top"
+      ]
+    },
+    "Rod": {
+      "anchors": [
+        "center",
+        "start",
+        "end"
+      ]
+    },
+    "Rope": {
+      "anchors": [
+        "center",
+        "start",
+        "end"
+      ]
+    },
+    "Spring": {
+      "anchors": [
+        "center",
+        "start",
+        "end",
+        "coil_start",
+        "coil_end"
+      ]
+    },
+    "QuarterCart": {
+      "anchors": [
+        "center",
+        "corner",
+        "end_x",
+        "end_y",
+        "arc_mid",
+        "axle",
+        "wheel_contact",
+        "support_corner"
+      ]
+    },
+    "SemicircleCart": {
+      "anchors": [
+        "center",
+        "left_end",
+        "right_end",
+        "top",
+        "arc_mid",
+        "base_mid",
+        "axle_left",
+        "axle_right",
+        "wheel_left_contact",
+        "wheel_right_contact"
+      ]
+    },
+    "SemicircleGroove": {
+      "anchors": [
+        "center",
+        "start",
+        "end",
+        "mid",
+        "left_end",
+        "right_end",
+        "top",
+        "bottom"
+      ]
+    },
+    "QuarterCircleGroove": {
+      "anchors": [
+        "center",
+        "start",
+        "end",
+        "mid"
+      ]
+    },
+    "ArcTrack": {
+      "anchors": [
+        "center",
+        "start",
+        "end",
+        "mid"
+      ]
+    }
+  },
+  "pending_components": [
+    "InclinedPlaneGroup",
+    "Weight",
+    "Pulley",
+    "MovablePulley",
+    "Hinge",
+    "CircularGroove",
+    "SpringScale"
+  ]
+}

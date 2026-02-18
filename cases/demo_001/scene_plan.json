@@ -11,64 +11,30 @@
           "version": "0.1",
           "space": {
             "x_range": [
-              -8,
-              12
+              -5,
+              5
             ],
             "y_range": [
-              -5,
-              8
+              -3,
+              3
             ],
-            "unit": "scene_unit",
+            "unit": "m",
             "angle_unit": "deg",
             "origin": "center"
           },
           "parts": [
             {
-              "id": "p_incline",
-              "type": "InclinedPlane",
+              "id": "p_wall",
+              "type": "Wall",
               "params": {
+                "length": 6.0,
                 "angle": 37,
-                "length": 5.0,
-                "show_angle": true
+                "rise_to": "left"
               },
               "style": {},
               "seed_pose": {
-                "x": -5.0,
-                "y": 3.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_rough",
-              "type": "Rod",
-              "params": {
-                "length": 4.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#888888"
-              },
-              "seed_pose": {
-                "x": 0.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_smooth",
-              "type": "Rod",
-              "params": {
-                "length": 5.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#CCCCCC"
-              },
-              "seed_pose": {
-                "x": 4.0,
-                "y": 0.0,
+                "x": 0,
+                "y": 0,
                 "theta": 0,
                 "scale": 1.0
               }
@@ -77,71 +43,71 @@
               "id": "p_spring",
               "type": "Spring",
               "params": {
-                "length": 2.0,
-                "height": 0.6,
-                "num_coils": 8,
-                "end_length": 0.2
+                "length": 1.5,
+                "height": 0.4,
+                "num_coils": 8
               },
               "style": {},
               "seed_pose": {
-                "x": 6.0,
-                "y": 0.0,
+                "x": 0,
+                "y": 0,
                 "theta": 0,
                 "scale": 1.0
               }
             },
             {
-              "id": "p_wall",
-              "type": "Wall",
-              "params": {
-                "length": 3.0,
-                "angle": 90
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 9.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_block_P",
+              "id": "p_block",
               "type": "Block",
               "params": {
                 "width": 0.8,
-                "height": 0.6,
-                "label": "P",
-                "label_color": "#000000"
+                "height": 0.5,
+                "label": "m"
               },
               "style": {},
               "seed_pose": {
-                "x": -3.5,
-                "y": 2.1,
-                "theta": 37,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_block_Q",
-              "type": "Block",
-              "params": {
-                "width": 1.0,
-                "height": 0.8,
-                "label": "Q",
-                "label_color": "#000000"
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 4.0,
-                "y": 0.4,
+                "x": 0,
+                "y": 0,
                 "theta": 0,
                 "scale": 1.0
               }
             }
           ],
-          "tracks": [],
-          "constraints": [],
+          "tracks": [
+            {
+              "id": "t_incline",
+              "type": "line",
+              "data": {
+                "part_id": "p_wall",
+                "anchor_a": "start",
+                "anchor_b": "end"
+              }
+            }
+          ],
+          "constraints": [
+            {
+              "id": "c_spring_wall",
+              "type": "attach",
+              "args": {
+                "part_a": "p_spring",
+                "anchor_a": "start",
+                "part_b": "p_wall",
+                "anchor_b": "low_end",
+                "rigid": true
+              },
+              "hard": true
+            },
+            {
+              "id": "c_block_track",
+              "type": "on_track_pose",
+              "args": {
+                "part_id": "p_block",
+                "track_id": "t_incline",
+                "anchor": "bottom_center",
+                "s": 0.4,
+                "angle_mode": "tangent"
+              }
+            }
+          ],
           "motions": []
         }
       },
@@ -155,7 +121,7 @@
     "o_text_s1": {
       "type": "TextBlock",
       "params": {
-        "text": "已知：$\\theta=37^\\circ, h=2.5\\text{m}, L=4.0\\text{m}, \\mu=0.25, k=300\\text{N/m}$"
+        "text": "已知：$m=1\\mathrm{kg}, \\theta=37^\\circ, x_0=0.4\\mathrm{m}, \\mu=0.25$"
       },
       "style": {
         "size_level": "S"
@@ -171,137 +137,103 @@
           "version": "0.1",
           "space": {
             "x_range": [
-              -8,
-              12
+              -5,
+              5
             ],
             "y_range": [
-              -5,
-              8
+              -3,
+              3
             ],
-            "unit": "scene_unit",
+            "unit": "m",
             "angle_unit": "deg",
             "origin": "center"
           },
           "parts": [
             {
-              "id": "p_incline",
-              "type": "InclinedPlane",
-              "params": {
-                "angle": 37,
-                "length": 5.0,
-                "show_angle": true
-              },
-              "style": {},
-              "seed_pose": {
-                "x": -5.0,
-                "y": 3.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_rough",
-              "type": "Rod",
-              "params": {
-                "length": 4.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#888888"
-              },
-              "seed_pose": {
-                "x": 0.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_smooth",
-              "type": "Rod",
-              "params": {
-                "length": 5.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#CCCCCC"
-              },
-              "seed_pose": {
-                "x": 4.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_spring",
-              "type": "Spring",
-              "params": {
-                "length": 2.0,
-                "height": 0.6,
-                "num_coils": 8,
-                "end_length": 0.2
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 6.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_wall",
+              "id": "p_wall_s2",
               "type": "Wall",
               "params": {
-                "length": 3.0,
-                "angle": 90
+                "length": 6.0,
+                "angle": 37,
+                "rise_to": "left"
               },
               "style": {},
               "seed_pose": {
-                "x": 9.0,
-                "y": 0.0,
+                "x": 0,
+                "y": 0,
                 "theta": 0,
                 "scale": 1.0
               }
             },
             {
-              "id": "p_block_P",
+              "id": "p_spring_s2",
+              "type": "Spring",
+              "params": {
+                "length": 1.5,
+                "height": 0.4,
+                "num_coils": 8
+              },
+              "style": {},
+              "seed_pose": {
+                "x": 0,
+                "y": 0,
+                "theta": 0,
+                "scale": 1.0
+              }
+            },
+            {
+              "id": "p_block_s2",
               "type": "Block",
               "params": {
                 "width": 0.8,
-                "height": 0.6,
-                "label": "P",
-                "label_color": "#000000"
+                "height": 0.5,
+                "label": "m"
               },
               "style": {},
               "seed_pose": {
-                "x": 3.9,
-                "y": 0.4,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_block_Q",
-              "type": "Block",
-              "params": {
-                "width": 1.0,
-                "height": 0.8,
-                "label": "Q",
-                "label_color": "#000000"
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 4.0,
-                "y": 0.4,
+                "x": 0,
+                "y": 0,
                 "theta": 0,
                 "scale": 1.0
               }
             }
           ],
-          "tracks": [],
-          "constraints": [],
+          "tracks": [
+            {
+              "id": "t_incline_s2",
+              "type": "line",
+              "data": {
+                "part_id": "p_wall_s2",
+                "anchor_a": "start",
+                "anchor_b": "end"
+              }
+            }
+          ],
+          "constraints": [
+            {
+              "id": "c_spring_wall_s2",
+              "type": "attach",
+              "args": {
+                "part_a": "p_spring_s2",
+                "anchor_a": "start",
+                "part_b": "p_wall_s2",
+                "anchor_b": "low_end",
+                "rigid": true
+              },
+              "hard": true
+            },
+            {
+              "id": "c_block_track_s2",
+              "type": "on_track_pose",
+              "args": {
+                "part_id": "p_block_s2",
+                "track_id": "t_incline_s2",
+                "anchor": "bottom_center",
+                "s": 0.0,
+                "angle_mode": "tangent"
+              }
+            }
+          ],
           "motions": []
         }
       },
@@ -315,7 +247,7 @@
     "o_eq_s2": {
       "type": "Formula",
       "params": {
-        "latex": "mgh - \\mu m g L = \\frac{1}{2} m v_{P0}^2"
+        "latex": "mg\\sin\\theta - \\mu mg\\cos\\theta = ma"
       },
       "style": {
         "size_level": "M"
@@ -324,10 +256,10 @@
       "anchor": null,
       "z_index": null
     },
-    "o_text_s2": {
+    "o_res_s2": {
       "type": "TextBlock",
       "params": {
-        "text": "解得 $v_{P0} = \\sqrt{30} \\approx 5.48 \\text{m/s}$"
+        "text": "解得：$a = 4.0\\mathrm{m/s^2}$，方向沿斜面向下"
       },
       "style": {
         "size_level": "M"
@@ -343,137 +275,103 @@
           "version": "0.1",
           "space": {
             "x_range": [
-              -8,
-              12
+              -5,
+              5
             ],
             "y_range": [
-              -5,
-              8
+              -3,
+              3
             ],
-            "unit": "scene_unit",
+            "unit": "m",
             "angle_unit": "deg",
             "origin": "center"
           },
           "parts": [
             {
-              "id": "p_incline",
-              "type": "InclinedPlane",
-              "params": {
-                "angle": 37,
-                "length": 5.0,
-                "show_angle": true
-              },
-              "style": {},
-              "seed_pose": {
-                "x": -5.0,
-                "y": 3.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_rough",
-              "type": "Rod",
-              "params": {
-                "length": 4.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#888888"
-              },
-              "seed_pose": {
-                "x": 0.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_smooth",
-              "type": "Rod",
-              "params": {
-                "length": 5.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#CCCCCC"
-              },
-              "seed_pose": {
-                "x": 4.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_spring",
-              "type": "Spring",
-              "params": {
-                "length": 2.0,
-                "height": 0.6,
-                "num_coils": 8,
-                "end_length": 0.2
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 6.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_wall",
+              "id": "p_wall_s3",
               "type": "Wall",
               "params": {
-                "length": 3.0,
-                "angle": 90
+                "length": 6.0,
+                "angle": 37,
+                "rise_to": "left"
               },
               "style": {},
               "seed_pose": {
-                "x": 9.0,
-                "y": 0.0,
+                "x": 0,
+                "y": 0,
                 "theta": 0,
                 "scale": 1.0
               }
             },
             {
-              "id": "p_block_P",
+              "id": "p_spring_s3",
+              "type": "Spring",
+              "params": {
+                "length": 1.3,
+                "height": 0.4,
+                "num_coils": 8
+              },
+              "style": {},
+              "seed_pose": {
+                "x": 0,
+                "y": 0,
+                "theta": 0,
+                "scale": 1.0
+              }
+            },
+            {
+              "id": "p_block_s3",
               "type": "Block",
               "params": {
                 "width": 0.8,
-                "height": 0.6,
-                "label": "P",
-                "label_color": "#000000"
+                "height": 0.5,
+                "label": "m"
               },
               "style": {},
               "seed_pose": {
-                "x": 3.8,
-                "y": 0.4,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_block_Q",
-              "type": "Block",
-              "params": {
-                "width": 1.0,
-                "height": 0.8,
-                "label": "Q",
-                "label_color": "#000000"
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 4.1,
-                "y": 0.4,
+                "x": 0,
+                "y": 0,
                 "theta": 0,
                 "scale": 1.0
               }
             }
           ],
-          "tracks": [],
-          "constraints": [],
+          "tracks": [
+            {
+              "id": "t_incline_s3",
+              "type": "line",
+              "data": {
+                "part_id": "p_wall_s3",
+                "anchor_a": "start",
+                "anchor_b": "end"
+              }
+            }
+          ],
+          "constraints": [
+            {
+              "id": "c_spring_wall_s3",
+              "type": "attach",
+              "args": {
+                "part_a": "p_spring_s3",
+                "anchor_a": "start",
+                "part_b": "p_wall_s3",
+                "anchor_b": "low_end",
+                "rigid": true
+              },
+              "hard": true
+            },
+            {
+              "id": "c_block_track_s3",
+              "type": "on_track_pose",
+              "args": {
+                "part_id": "p_block_s3",
+                "track_id": "t_incline_s3",
+                "anchor": "bottom_center",
+                "s": -0.2,
+                "angle_mode": "tangent"
+              }
+            }
+          ],
           "motions": []
         }
       },
@@ -484,10 +382,10 @@
       "anchor": null,
       "z_index": null
     },
-    "o_eq_s3_1": {
+    "o_eq_s3": {
       "type": "Formula",
       "params": {
-        "latex": "m_1 v_{P0} = m_1 v_{P1} + m_2 v_{Q1}"
+        "latex": "mg(x_0+x_m)\\sin\\theta = \\frac{1}{2}kx_m^2 + \\mu mg(x_0+x_m)\\cos\\theta"
       },
       "style": {
         "size_level": "M"
@@ -496,22 +394,10 @@
       "anchor": null,
       "z_index": null
     },
-    "o_eq_s3_2": {
-      "type": "Formula",
-      "params": {
-        "latex": "\\frac{1}{2} m_1 v_{P0}^2 = \\frac{1}{2} m_1 v_{P1}^2 + \\frac{1}{2} m_2 v_{Q1}^2"
-      },
-      "style": {
-        "size_level": "M"
-      },
-      "priority": 2,
-      "anchor": null,
-      "z_index": null
-    },
-    "o_text_s3": {
+    "o_res_s3": {
       "type": "TextBlock",
       "params": {
-        "text": "解得：$v_{P1} = -\\frac{\\sqrt{30}}{2}$ (向左), $v_{Q1} = \\frac{\\sqrt{30}}{2}$ (向右)"
+        "text": "解得：$k = 120\\mathrm{N/m}$"
       },
       "style": {
         "size_level": "M"
@@ -527,137 +413,103 @@
           "version": "0.1",
           "space": {
             "x_range": [
-              -8,
-              12
+              -5,
+              5
             ],
             "y_range": [
-              -5,
-              8
+              -3,
+              3
             ],
-            "unit": "scene_unit",
+            "unit": "m",
             "angle_unit": "deg",
             "origin": "center"
           },
           "parts": [
             {
-              "id": "p_incline",
-              "type": "InclinedPlane",
-              "params": {
-                "angle": 37,
-                "length": 5.0,
-                "show_angle": true
-              },
-              "style": {},
-              "seed_pose": {
-                "x": -5.0,
-                "y": 3.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_rough",
-              "type": "Rod",
-              "params": {
-                "length": 4.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#888888"
-              },
-              "seed_pose": {
-                "x": 0.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_smooth",
-              "type": "Rod",
-              "params": {
-                "length": 5.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#CCCCCC"
-              },
-              "seed_pose": {
-                "x": 4.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_spring",
-              "type": "Spring",
-              "params": {
-                "length": 1.7,
-                "height": 0.6,
-                "num_coils": 8,
-                "end_length": 0.2
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 5.7,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_wall",
+              "id": "p_wall_s4",
               "type": "Wall",
               "params": {
-                "length": 3.0,
-                "angle": 90
+                "length": 6.0,
+                "angle": 37,
+                "rise_to": "left"
               },
               "style": {},
               "seed_pose": {
-                "x": 9.0,
-                "y": 0.0,
+                "x": 0,
+                "y": 0,
                 "theta": 0,
                 "scale": 1.0
               }
             },
             {
-              "id": "p_block_P",
+              "id": "p_spring_s4",
+              "type": "Spring",
+              "params": {
+                "length": 1.5,
+                "height": 0.4,
+                "num_coils": 8
+              },
+              "style": {},
+              "seed_pose": {
+                "x": 0,
+                "y": 0,
+                "theta": 0,
+                "scale": 1.0
+              }
+            },
+            {
+              "id": "p_block_s4",
               "type": "Block",
               "params": {
                 "width": 0.8,
-                "height": 0.6,
-                "label": "P",
-                "label_color": "#000000"
+                "height": 0.5,
+                "label": "m"
               },
               "style": {},
               "seed_pose": {
-                "x": 3.5,
-                "y": 0.4,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_block_Q",
-              "type": "Block",
-              "params": {
-                "width": 1.0,
-                "height": 0.8,
-                "label": "Q",
-                "label_color": "#000000"
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 5.7,
-                "y": 0.4,
+                "x": 0,
+                "y": 0,
                 "theta": 0,
                 "scale": 1.0
               }
             }
           ],
-          "tracks": [],
-          "constraints": [],
+          "tracks": [
+            {
+              "id": "t_incline_s4",
+              "type": "line",
+              "data": {
+                "part_id": "p_wall_s4",
+                "anchor_a": "start",
+                "anchor_b": "end"
+              }
+            }
+          ],
+          "constraints": [
+            {
+              "id": "c_spring_wall_s4",
+              "type": "attach",
+              "args": {
+                "part_a": "p_spring_s4",
+                "anchor_a": "start",
+                "part_b": "p_wall_s4",
+                "anchor_b": "low_end",
+                "rigid": true
+              },
+              "hard": true
+            },
+            {
+              "id": "c_block_track_s4",
+              "type": "on_track_pose",
+              "args": {
+                "part_id": "p_block_s4",
+                "track_id": "t_incline_s4",
+                "anchor": "bottom_center",
+                "s": 0.0,
+                "angle_mode": "tangent"
+              }
+            }
+          ],
           "motions": []
         }
       },
@@ -671,7 +523,7 @@
     "o_eq_s4": {
       "type": "Formula",
       "params": {
-        "latex": "\\frac{1}{2} m_2 v_{Q1}^2 = \\frac{1}{2} k x_{\\max}^2"
+        "latex": "\\frac{1}{2}kx_m^2 = \\frac{1}{2}mv_O^2 + \\mu mgx_m\\cos\\theta"
       },
       "style": {
         "size_level": "M"
@@ -680,10 +532,10 @@
       "anchor": null,
       "z_index": null
     },
-    "o_text_s4": {
+    "o_res_s4": {
       "type": "TextBlock",
       "params": {
-        "text": "解得 $x_{\\max} = 0.15 \\text{m}$"
+        "text": "解得：$v_O = 2.0\\mathrm{m/s}$"
       },
       "style": {
         "size_level": "M"
@@ -699,137 +551,103 @@
           "version": "0.1",
           "space": {
             "x_range": [
-              -8,
-              12
+              -5,
+              5
             ],
             "y_range": [
-              -5,
-              8
+              -3,
+              3
             ],
-            "unit": "scene_unit",
+            "unit": "m",
             "angle_unit": "deg",
             "origin": "center"
           },
           "parts": [
             {
-              "id": "p_incline",
-              "type": "InclinedPlane",
-              "params": {
-                "angle": 37,
-                "length": 5.0,
-                "show_angle": true
-              },
-              "style": {},
-              "seed_pose": {
-                "x": -5.0,
-                "y": 3.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_rough",
-              "type": "Rod",
-              "params": {
-                "length": 4.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#888888"
-              },
-              "seed_pose": {
-                "x": 0.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_smooth",
-              "type": "Rod",
-              "params": {
-                "length": 5.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#CCCCCC"
-              },
-              "seed_pose": {
-                "x": 4.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_spring",
-              "type": "Spring",
-              "params": {
-                "length": 2.0,
-                "height": 0.6,
-                "num_coils": 8,
-                "end_length": 0.2
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 6.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_wall",
+              "id": "p_wall_s5",
               "type": "Wall",
               "params": {
-                "length": 3.0,
-                "angle": 90
+                "length": 6.0,
+                "angle": 37,
+                "rise_to": "left"
               },
               "style": {},
               "seed_pose": {
-                "x": 9.0,
-                "y": 0.0,
+                "x": 0,
+                "y": 0,
                 "theta": 0,
                 "scale": 1.0
               }
             },
             {
-              "id": "p_block_P",
+              "id": "p_spring_s5",
+              "type": "Spring",
+              "params": {
+                "length": 1.3,
+                "height": 0.4,
+                "num_coils": 8
+              },
+              "style": {},
+              "seed_pose": {
+                "x": 0,
+                "y": 0,
+                "theta": 0,
+                "scale": 1.0
+              }
+            },
+            {
+              "id": "p_block_s5",
               "type": "Block",
               "params": {
                 "width": 0.8,
-                "height": 0.6,
-                "label": "P",
-                "label_color": "#000000"
+                "height": 0.5,
+                "label": "m"
               },
               "style": {},
               "seed_pose": {
-                "x": 3.0,
-                "y": 0.4,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_block_Q",
-              "type": "Block",
-              "params": {
-                "width": 1.0,
-                "height": 0.8,
-                "label": "Q",
-                "label_color": "#000000"
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 4.0,
-                "y": 0.4,
+                "x": 0,
+                "y": 0,
                 "theta": 0,
                 "scale": 1.0
               }
             }
           ],
-          "tracks": [],
-          "constraints": [],
+          "tracks": [
+            {
+              "id": "t_incline_s5",
+              "type": "line",
+              "data": {
+                "part_id": "p_wall_s5",
+                "anchor_a": "start",
+                "anchor_b": "end"
+              }
+            }
+          ],
+          "constraints": [
+            {
+              "id": "c_spring_wall_s5",
+              "type": "attach",
+              "args": {
+                "part_a": "p_spring_s5",
+                "anchor_a": "start",
+                "part_b": "p_wall_s5",
+                "anchor_b": "low_end",
+                "rigid": true
+              },
+              "hard": true
+            },
+            {
+              "id": "c_block_track_s5",
+              "type": "on_track_pose",
+              "args": {
+                "part_id": "p_block_s5",
+                "track_id": "t_incline_s5",
+                "anchor": "bottom_center",
+                "s": -0.2,
+                "angle_mode": "tangent"
+              }
+            }
+          ],
           "motions": []
         }
       },
@@ -843,7 +661,7 @@
     "o_eq_s5": {
       "type": "Formula",
       "params": {
-        "latex": "\\Delta t = \\frac{T}{2} = \\pi \\sqrt{\\frac{m_2}{k}}"
+        "latex": "mg(x_0+x)\\sin\\theta = \\frac{1}{2}kx^2 + \\mu mg(x_0+x)\\cos\\theta"
       },
       "style": {
         "size_level": "M"
@@ -852,372 +670,15 @@
       "anchor": null,
       "z_index": null
     },
-    "o_text_s5": {
+    "o_res_s5": {
       "type": "TextBlock",
       "params": {
-        "text": "解得 $\\Delta t = \\frac{\\pi}{10} \\approx 0.314 \\text{s}$"
+        "text": "解得：$x = 0.2\\mathrm{m}$"
       },
       "style": {
         "size_level": "M"
       },
       "priority": 3,
-      "anchor": null,
-      "z_index": null
-    },
-    "o_diagram_s6": {
-      "type": "CompositeObject",
-      "params": {
-        "graph": {
-          "version": "0.1",
-          "space": {
-            "x_range": [
-              -8,
-              12
-            ],
-            "y_range": [
-              -5,
-              8
-            ],
-            "unit": "scene_unit",
-            "angle_unit": "deg",
-            "origin": "center"
-          },
-          "parts": [
-            {
-              "id": "p_incline",
-              "type": "InclinedPlane",
-              "params": {
-                "angle": 37,
-                "length": 5.0,
-                "show_angle": true
-              },
-              "style": {},
-              "seed_pose": {
-                "x": -5.0,
-                "y": 3.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_rough",
-              "type": "Rod",
-              "params": {
-                "length": 4.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#888888"
-              },
-              "seed_pose": {
-                "x": 0.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_smooth",
-              "type": "Rod",
-              "params": {
-                "length": 5.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#CCCCCC"
-              },
-              "seed_pose": {
-                "x": 4.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_spring",
-              "type": "Spring",
-              "params": {
-                "length": 2.0,
-                "height": 0.6,
-                "num_coils": 8,
-                "end_length": 0.2
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 6.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_wall",
-              "type": "Wall",
-              "params": {
-                "length": 3.0,
-                "angle": 90
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 9.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_block_P",
-              "type": "Block",
-              "params": {
-                "width": 0.8,
-                "height": 0.6,
-                "label": "P",
-                "label_color": "#000000"
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 2.8,
-                "y": 0.4,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_block_Q",
-              "type": "Block",
-              "params": {
-                "width": 1.0,
-                "height": 0.8,
-                "label": "Q",
-                "label_color": "#000000"
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 3.8,
-                "y": 0.4,
-                "theta": 0,
-                "scale": 1.0
-              }
-            }
-          ],
-          "tracks": [],
-          "constraints": [],
-          "motions": []
-        }
-      },
-      "style": {
-        "size_level": "XL"
-      },
-      "priority": 1,
-      "anchor": null,
-      "z_index": null
-    },
-    "o_eq_s6": {
-      "type": "Formula",
-      "params": {
-        "latex": "\\Delta t' = \\frac{|x_P|}{v_Q - v_P}"
-      },
-      "style": {
-        "size_level": "M"
-      },
-      "priority": 2,
-      "anchor": null,
-      "z_index": null
-    },
-    "o_text_s6": {
-      "type": "TextBlock",
-      "params": {
-        "text": "相遇点距C $0.24\\text{m}$，此时 $v_P \\approx -0.86\\text{m/s}, v_Q \\approx 1.1\\text{m/s}$"
-      },
-      "style": {
-        "size_level": "M"
-      },
-      "priority": 3,
-      "anchor": null,
-      "z_index": null
-    },
-    "o_diagram_s7": {
-      "type": "CompositeObject",
-      "params": {
-        "graph": {
-          "version": "0.1",
-          "space": {
-            "x_range": [
-              -8,
-              12
-            ],
-            "y_range": [
-              -5,
-              8
-            ],
-            "unit": "scene_unit",
-            "angle_unit": "deg",
-            "origin": "center"
-          },
-          "parts": [
-            {
-              "id": "p_incline",
-              "type": "InclinedPlane",
-              "params": {
-                "angle": 37,
-                "length": 5.0,
-                "show_angle": true
-              },
-              "style": {},
-              "seed_pose": {
-                "x": -5.0,
-                "y": 3.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_rough",
-              "type": "Rod",
-              "params": {
-                "length": 4.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#888888"
-              },
-              "seed_pose": {
-                "x": 0.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_floor_smooth",
-              "type": "Rod",
-              "params": {
-                "length": 5.0,
-                "thickness": 0.2
-              },
-              "style": {
-                "color": "#CCCCCC"
-              },
-              "seed_pose": {
-                "x": 4.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_spring",
-              "type": "Spring",
-              "params": {
-                "length": 2.0,
-                "height": 0.6,
-                "num_coils": 8,
-                "end_length": 0.2
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 6.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_wall",
-              "type": "Wall",
-              "params": {
-                "length": 3.0,
-                "angle": 90
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 9.0,
-                "y": 0.0,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_block_P",
-              "type": "Block",
-              "params": {
-                "width": 0.8,
-                "height": 0.6,
-                "label": "P",
-                "label_color": "#000000"
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 1.5,
-                "y": 0.4,
-                "theta": 0,
-                "scale": 1.0
-              }
-            },
-            {
-              "id": "p_block_Q",
-              "type": "Block",
-              "params": {
-                "width": 1.0,
-                "height": 0.8,
-                "label": "Q",
-                "label_color": "#000000"
-              },
-              "style": {},
-              "seed_pose": {
-                "x": 1.5,
-                "y": 0.4,
-                "theta": 0,
-                "scale": 1.0
-              }
-            }
-          ],
-          "tracks": [],
-          "constraints": [],
-          "motions": []
-        }
-      },
-      "style": {
-        "size_level": "XL"
-      },
-      "priority": 1,
-      "anchor": null,
-      "z_index": null
-    },
-    "o_eq_s7": {
-      "type": "Formula",
-      "params": {
-        "latex": "\\frac{1}{2} m v^2 = \\mu m g s"
-      },
-      "style": {
-        "size_level": "M"
-      },
-      "priority": 2,
-      "anchor": null,
-      "z_index": null
-    },
-    "o_text_s7": {
-      "type": "TextBlock",
-      "params": {
-        "text": "解得：两者均停在距B点 $2.5\\text{m}$ 处"
-      },
-      "style": {
-        "size_level": "M"
-      },
-      "priority": 3,
-      "anchor": null,
-      "z_index": null
-    },
-    "o_text_s7_check": {
-      "type": "TextBlock",
-      "params": {
-        "text": "检查：位置在BC段内，且两者位置相同，符合弹性碰撞特定质量比下的对称性。"
-      },
-      "style": {
-        "size_level": "S",
-        "color": "#666666"
-      },
-      "priority": 4,
       "anchor": null,
       "z_index": null
     }
@@ -1225,7 +686,7 @@
   "scenes": [
     {
       "id": "S1",
-      "intent": "展示题意结构与已知条件",
+      "intent": "展示题目结构与已知条件",
       "layout": {
         "type": "left_right",
         "slots": {
@@ -1235,11 +696,11 @@
         "params": {
           "slot_scales": {
             "left": {
-              "w": 0.95,
-              "h": 0.9
+              "w": 0.6,
+              "h": 0.8
             },
             "right": {
-              "w": 0.9,
+              "w": 0.35,
               "h": 0.3
             }
           }
@@ -1248,7 +709,7 @@
       "actions": [
         {
           "op": "play",
-          "anim": "fade_in",
+          "anim": "create",
           "targets": [
             "o_diagram"
           ],
@@ -1259,11 +720,11 @@
         },
         {
           "op": "wait",
-          "duration": 0.5
+          "duration": 1.0
         },
         {
           "op": "play",
-          "anim": "write",
+          "anim": "fade_in",
           "targets": [
             "o_text_s1"
           ],
@@ -1271,14 +732,15 @@
           "dst": null,
           "duration": null,
           "kwargs": {}
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
         }
       ],
-      "keep": [
-        "o_diagram",
-        "o_text_s1"
-      ],
+      "keep": [],
       "notes": null,
-      "goal": "构建斜面、粗糙段、弹簧及物块P、Q的初始位置图",
+      "goal": "构建斜面-弹簧-物块模型，明确A、O位置及已知量",
       "modules": [
         "diagram",
         "model"
@@ -1288,15 +750,15 @@
         "o_text_s1": "support_eq"
       },
       "new_symbols": [
-        "theta",
-        "h",
-        "L"
+        "m",
+        "θ",
+        "x0"
       ],
       "is_check_scene": false
     },
     {
       "id": "S2",
-      "intent": "求解P到达C点碰前速度",
+      "intent": "求解接触弹簧瞬间的加速度",
       "layout": {
         "type": "left_right",
         "slots": {
@@ -1306,11 +768,11 @@
         "params": {
           "slot_scales": {
             "left": {
-              "w": 0.9,
-              "h": 0.9
+              "w": 0.5,
+              "h": 0.8
             },
             "right": {
-              "w": 0.9,
+              "w": 0.45,
               "h": 0.3
             }
           }
@@ -1319,7 +781,7 @@
       "actions": [
         {
           "op": "play",
-          "anim": "fade_in",
+          "anim": "create",
           "targets": [
             "o_diagram_s2"
           ],
@@ -1330,7 +792,7 @@
         },
         {
           "op": "wait",
-          "duration": 0.4
+          "duration": 0.5
         },
         {
           "op": "play",
@@ -1340,7 +802,7 @@
           ],
           "src": null,
           "dst": null,
-          "duration": null,
+          "duration": 1.5,
           "kwargs": {}
         },
         {
@@ -1349,23 +811,23 @@
         },
         {
           "op": "play",
-          "anim": "write",
+          "anim": "fade_in",
           "targets": [
-            "o_text_s2"
+            "o_res_s2"
           ],
           "src": null,
           "dst": null,
           "duration": null,
           "kwargs": {}
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
         }
       ],
-      "keep": [
-        "o_diagram_s2",
-        "o_eq_s2",
-        "o_text_s2"
-      ],
+      "keep": [],
       "notes": null,
-      "goal": "利用动能定理计算$v_{P0}$",
+      "goal": "分析受力，列出牛顿第二定律方程并求解",
       "modules": [
         "equation",
         "solve"
@@ -1373,31 +835,31 @@
       "roles": {
         "o_diagram_s2": "diagram",
         "o_eq_s2": "core_eq",
-        "o_text_s2": "conclusion"
+        "o_res_s2": "conclusion"
       },
       "new_symbols": [
-        "v_P0"
+        "a"
       ],
       "is_check_scene": false
     },
     {
       "id": "S3",
-      "intent": "分析弹性碰撞过程",
+      "intent": "求解弹簧劲度系数",
       "layout": {
         "type": "left_right",
         "slots": {
           "left": "o_diagram_s3",
-          "right": "o_eq_s3_1"
+          "right": "o_eq_s3"
         },
         "params": {
           "slot_scales": {
             "left": {
-              "w": 0.9,
-              "h": 0.9
+              "w": 0.5,
+              "h": 0.8
             },
             "right": {
-              "w": 0.9,
-              "h": 0.25
+              "w": 0.45,
+              "h": 0.4
             }
           }
         }
@@ -1405,7 +867,7 @@
       "actions": [
         {
           "op": "play",
-          "anim": "fade_in",
+          "anim": "create",
           "targets": [
             "o_diagram_s3"
           ],
@@ -1416,32 +878,17 @@
         },
         {
           "op": "wait",
-          "duration": 0.4
+          "duration": 0.5
         },
         {
           "op": "play",
           "anim": "write",
           "targets": [
-            "o_eq_s3_1"
+            "o_eq_s3"
           ],
           "src": null,
           "dst": null,
-          "duration": null,
-          "kwargs": {}
-        },
-        {
-          "op": "wait",
-          "duration": 0.3
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_eq_s3_2"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
+          "duration": 2.0,
           "kwargs": {}
         },
         {
@@ -1450,43 +897,42 @@
         },
         {
           "op": "play",
-          "anim": "write",
+          "anim": "fade_in",
           "targets": [
-            "o_text_s3"
+            "o_res_s3"
           ],
           "src": null,
           "dst": null,
           "duration": null,
           "kwargs": {}
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
         }
       ],
-      "keep": [
-        "o_diagram_s3",
-        "o_eq_s3_1",
-        "o_eq_s3_2",
-        "o_text_s3"
-      ],
+      "keep": [],
       "notes": null,
-      "goal": "利用动量与能量守恒求碰后速度",
+      "goal": "利用全过程能量守恒求k",
       "modules": [
+        "diagram",
         "equation",
         "solve"
       ],
       "roles": {
         "o_diagram_s3": "diagram",
-        "o_eq_s3_1": "core_eq",
-        "o_eq_s3_2": "support_eq",
-        "o_text_s3": "conclusion"
+        "o_eq_s3": "core_eq",
+        "o_res_s3": "conclusion"
       },
       "new_symbols": [
-        "v_P1",
-        "v_Q1"
+        "k",
+        "xm"
       ],
       "is_check_scene": false
     },
     {
       "id": "S4",
-      "intent": "求解弹簧最大压缩量",
+      "intent": "求解回到O点时的速度",
       "layout": {
         "type": "left_right",
         "slots": {
@@ -1496,11 +942,11 @@
         "params": {
           "slot_scales": {
             "left": {
-              "w": 0.9,
-              "h": 0.9
+              "w": 0.5,
+              "h": 0.8
             },
             "right": {
-              "w": 0.9,
+              "w": 0.45,
               "h": 0.3
             }
           }
@@ -1509,7 +955,7 @@
       "actions": [
         {
           "op": "play",
-          "anim": "fade_in",
+          "anim": "create",
           "targets": [
             "o_diagram_s4"
           ],
@@ -1520,7 +966,7 @@
         },
         {
           "op": "wait",
-          "duration": 0.4
+          "duration": 0.5
         },
         {
           "op": "play",
@@ -1530,7 +976,7 @@
           ],
           "src": null,
           "dst": null,
-          "duration": null,
+          "duration": 1.5,
           "kwargs": {}
         },
         {
@@ -1539,40 +985,41 @@
         },
         {
           "op": "play",
-          "anim": "write",
+          "anim": "fade_in",
           "targets": [
-            "o_text_s4"
+            "o_res_s4"
           ],
           "src": null,
           "dst": null,
           "duration": null,
           "kwargs": {}
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
         }
       ],
-      "keep": [
-        "o_diagram_s4",
-        "o_eq_s4",
-        "o_text_s4"
-      ],
+      "keep": [],
       "notes": null,
-      "goal": "利用能量守恒求$x_{\\max}$",
+      "goal": "利用能量守恒求v_O",
       "modules": [
+        "diagram",
         "equation",
         "solve"
       ],
       "roles": {
         "o_diagram_s4": "diagram",
         "o_eq_s4": "core_eq",
-        "o_text_s4": "conclusion"
+        "o_res_s4": "conclusion"
       },
       "new_symbols": [
-        "x_max"
+        "vO"
       ],
       "is_check_scene": false
     },
     {
       "id": "S5",
-      "intent": "求解Q在弹簧区运动时间",
+      "intent": "求解最终停止位置",
       "layout": {
         "type": "left_right",
         "slots": {
@@ -1582,12 +1029,12 @@
         "params": {
           "slot_scales": {
             "left": {
-              "w": 0.9,
-              "h": 0.9
+              "w": 0.5,
+              "h": 0.8
             },
             "right": {
-              "w": 0.9,
-              "h": 0.3
+              "w": 0.45,
+              "h": 0.4
             }
           }
         }
@@ -1595,7 +1042,7 @@
       "actions": [
         {
           "op": "play",
-          "anim": "fade_in",
+          "anim": "create",
           "targets": [
             "o_diagram_s5"
           ],
@@ -1606,7 +1053,7 @@
         },
         {
           "op": "wait",
-          "duration": 0.4
+          "duration": 0.5
         },
         {
           "op": "play",
@@ -1616,7 +1063,7 @@
           ],
           "src": null,
           "dst": null,
-          "duration": null,
+          "duration": 2.0,
           "kwargs": {}
         },
         {
@@ -1625,232 +1072,44 @@
         },
         {
           "op": "play",
-          "anim": "write",
+          "anim": "fade_in",
           "targets": [
-            "o_text_s5"
+            "o_res_s5"
           ],
           "src": null,
           "dst": null,
           "duration": null,
           "kwargs": {}
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
         }
       ],
-      "keep": [
-        "o_diagram_s5",
-        "o_eq_s5",
-        "o_text_s5"
-      ],
+      "keep": [],
       "notes": null,
-      "goal": "利用简谐运动周期公式求$\\Delta t$",
+      "goal": "利用全过程能量守恒求最终静止位置x",
       "modules": [
+        "diagram",
         "equation",
         "solve"
       ],
       "roles": {
         "o_diagram_s5": "diagram",
         "o_eq_s5": "core_eq",
-        "o_text_s5": "conclusion"
+        "o_res_s5": "conclusion"
       },
       "new_symbols": [
-        "Delta_t"
+        "x"
       ],
       "is_check_scene": false
-    },
-    {
-      "id": "S6",
-      "intent": "判断追及并求相遇位置",
-      "layout": {
-        "type": "left_right",
-        "slots": {
-          "left": "o_diagram_s6",
-          "right": "o_eq_s6"
-        },
-        "params": {
-          "slot_scales": {
-            "left": {
-              "w": 0.9,
-              "h": 0.9
-            },
-            "right": {
-              "w": 0.9,
-              "h": 0.3
-            }
-          }
-        }
-      },
-      "actions": [
-        {
-          "op": "play",
-          "anim": "fade_in",
-          "targets": [
-            "o_diagram_s6"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
-        },
-        {
-          "op": "wait",
-          "duration": 0.4
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_eq_s6"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
-        },
-        {
-          "op": "wait",
-          "duration": 0.5
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_text_s6"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
-        }
-      ],
-      "keep": [
-        "o_diagram_s6",
-        "o_eq_s6",
-        "o_text_s6"
-      ],
-      "notes": null,
-      "goal": "分析相对运动，计算相遇点及速度",
-      "modules": [
-        "diagram",
-        "equation",
-        "solve"
-      ],
-      "roles": {
-        "o_diagram_s6": "diagram",
-        "o_eq_s6": "core_eq",
-        "o_text_s6": "conclusion"
-      },
-      "new_symbols": [],
-      "is_check_scene": false
-    },
-    {
-      "id": "S7",
-      "intent": "计算最终停止位置",
-      "layout": {
-        "type": "left_right",
-        "slots": {
-          "left": "o_diagram_s7",
-          "right": "o_eq_s7"
-        },
-        "params": {
-          "slot_scales": {
-            "left": {
-              "w": 0.9,
-              "h": 0.9
-            },
-            "right": {
-              "w": 0.9,
-              "h": 0.25
-            }
-          }
-        }
-      },
-      "actions": [
-        {
-          "op": "play",
-          "anim": "fade_in",
-          "targets": [
-            "o_diagram_s7"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
-        },
-        {
-          "op": "wait",
-          "duration": 0.4
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_eq_s7"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
-        },
-        {
-          "op": "wait",
-          "duration": 0.5
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_text_s7"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
-        },
-        {
-          "op": "wait",
-          "duration": 0.3
-        },
-        {
-          "op": "play",
-          "anim": "write",
-          "targets": [
-            "o_text_s7_check"
-          ],
-          "src": null,
-          "dst": null,
-          "duration": null,
-          "kwargs": {}
-        }
-      ],
-      "keep": [
-        "o_diagram_s7",
-        "o_eq_s7",
-        "o_text_s7",
-        "o_text_s7_check"
-      ],
-      "notes": null,
-      "goal": "利用动能定理求停止位置",
-      "modules": [
-        "diagram",
-        "equation",
-        "solve",
-        "check"
-      ],
-      "roles": {
-        "o_diagram_s7": "diagram",
-        "o_eq_s7": "core_eq",
-        "o_text_s7": "conclusion",
-        "o_text_s7_check": "check"
-      },
-      "new_symbols": [],
-      "is_check_scene": true
     }
   ],
   "pedagogy_plan": {
-    "difficulty": "hard",
+    "difficulty": "medium",
     "need_single_goal": true,
-    "need_check_scene": true,
+    "need_check_scene": false,
     "check_types": [
-      "feasibility",
       "reasonableness"
     ],
     "cognitive_budget": {
@@ -1864,8 +1123,7 @@
       "model",
       "equation",
       "solve",
-      "conclusion",
-      "check"
+      "conclusion"
     ]
   }
 }

@@ -101,7 +101,7 @@ def _parse_and_validate(content: str) -> tuple[dict[str, Any] | None, list[str]]
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="LLM1: generate teaching_plan.json + explanation.txt")
+    parser = argparse.ArgumentParser(description="LLM1: generate teaching_plan.json")
     parser.add_argument("--case", default="cases/demo_001", help="Case directory, e.g. cases/demo_001")
     parser.add_argument("--problem", default=None, help="Optional problem file path (default: case/problem.md)")
     parser.add_argument("--no-repair", action="store_true", help="Skip repair when parse/validation fails")
@@ -205,15 +205,7 @@ def main() -> int:
     teaching_plan_path = case_dir / "teaching_plan.json"
     teaching_plan_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
-    explanation_full = str(data.get("explanation_full", "")).strip()
-    explanation_path = case_dir / "explanation.txt"
-    explanation_path.write_text(explanation_full + "\n", encoding="utf-8")
-
-    explanation_full_path = case_dir / "explanation_full.md"
-    explanation_full_path.write_text(explanation_full + "\n", encoding="utf-8")
-
     print(str(teaching_plan_path))
-    print(str(explanation_path))
     return 0
 
 

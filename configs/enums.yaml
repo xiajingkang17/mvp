@@ -17,6 +17,7 @@ object_types:
   - Rod
   - Hinge
   - CircularGroove
+  - ArcTrack
   - SemicircleGroove
   - QuarterCircleGroove
   - SemicircleCart

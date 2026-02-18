@@ -1,0 +1,38 @@
+{
+  "name": "block_on_arc_track",
+  "description": "A block constrained on an arc track using on_track_pose.",
+  "parts": [
+    {"id": "p_arc", "type": "ArcTrack"},
+    {"id": "p_block", "type": "Block"}
+  ],
+  "tracks": [
+    {
+      "id": "t_arc",
+      "type": "arc",
+      "data": {
+        "cx": 0.0,
+        "cy": 0.0,
+        "r": 2.0,
+        "start_deg": 180.0,
+        "end_deg": 0.0
+      }
+    }
+  ],
+  "constraints": [
+    {
+      "id": "c_block_on_arc",
+      "type": "on_track_pose",
+      "args": {
+        "part_id": "p_block",
+        "track_id": "t_arc",
+        "anchor": "bottom_center",
+        "s": 0.25,
+        "contact_side": "outer",
+        "clearance": 0.0,
+        "angle_mode": "tangent"
+      },
+      "hard": true
+    }
+  ],
+  "motions": []
+}

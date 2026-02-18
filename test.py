@@ -1,185 +1,216 @@
-from manim import *
-import numpy as np
+from __future__ import annotations
 
-class TrackMotion(Scene):
+import math
+
+from manim import DEGREES, Scene, ValueTracker, linear
+
+from components.base import ComponentDefaults
+from components.physics.object_components import build_physics_components
+from render.composite.anchors import geometry_from_mobject
+from render.composite.solver import SolveOptions, solve_static
+from render.composite.types import Pose
+from schema.composite_graph_models import CompositeGraph
+from schema.scene_plan_models import ObjectSpec
+
+
+def _apply_pose(mobj, pose: Pose) -> None:
+    if pose.scale != 1.0:
+        mobj.scale(float(pose.scale), about_point=mobj.get_center())
+    if pose.theta != 0.0:
+        mobj.rotate(float(pose.theta) * DEGREES, about_point=mobj.get_center())
+    mobj.move_to([float(pose.x), float(pose.y), float(pose.z)])
+
+
+class CompositeAnchorConstraintSlide(Scene):
+    """
+    Demo: one slider moves along incline -> flat -> arc -> flat.
+    The rail geometry is assembled by anchor-based constraints.
+    """
+
     def construct(self):
-        # -------------------------
-        # 1) 轨道参数（可改）
-        # -------------------------
-        y_high = 1.8       # 第一段高处水平高度
-        y_low  = -1.0      # 低处水平高度（半圆直径所在水平线）
-        L1 = 4.2           # 高处水平长度
-        L2 = 2.8           # 低处水平（半圆前）长度
-        L3 = 3.2           # 半圆后水平长度
-        R  = 1.3           # 半圆半径（向下半圆）
-        x0 = -6.0          # 整体左移量
+        graph = CompositeGraph.model_validate(
+            {
+                "version": "0.1",
+                "parts": [
+                    {
+                        "id": "p_incline",
+                        "type": "Wall",
+                        "params": {"length": 4.0, "angle": 30, "rise_to": "left"},
+                        "seed_pose": {"x": -4.2, "y": -0.2, "theta": 0.0, "scale": 1.0},
+                    },
+                    {
+                        "id": "p_flat_left",
+                        "type": "Rod",
+                        "params": {"length": 3.0, "thickness": 0.1},
+                        "seed_pose": {"x": -1.0, "y": -1.2, "theta": 0.0, "scale": 1.0},
+                    },
+                    {
+                        "id": "p_arc",
+                        "type": "ArcTrack",
+                        "params": {
+                            "center": [0.0, 0.0, 0.0],
+                            "radius": 1.5,
+                            "start_angle": 180.0,
+                            "end_angle": 360.0,
+                            "stroke_width": 4.0,
+                        },
+                        "seed_pose": {"x": 2.0, "y": -1.2, "theta": 0.0, "scale": 1.0},
+                    },
+                    {
+                        "id": "p_flat_right",
+                        "type": "Rod",
+                        "params": {"length": 3.0, "thickness": 0.1},
+                        "seed_pose": {"x": 5.0, "y": -1.2, "theta": 0.0, "scale": 1.0},
+                    },
+                    {
+                        "id": "p_slider",
+                        "type": "Block",
+                        "params": {"width": 0.9, "height": 0.55, "label": "P"},
+                        "seed_pose": {"x": -5.7, "y": 0.7, "theta": 0.0, "scale": 1.0},
+                    },
+                ],
+                "tracks": [
+                    {
+                        "id": "t_incline",
+                        "type": "line",
+                        "data": {"part_id": "p_incline", "anchor_a": "start", "anchor_b": "end"},
+                    },
+                    {
+                        "id": "t_flat_left",
+                        "type": "line",
+                        "data": {"part_id": "p_flat_left", "anchor_a": "start", "anchor_b": "end"},
+                    },
+                    {
+                        "id": "t_arc",
+                        "type": "arc",
+                        "data": {"cx": 2.0, "cy": -1.2, "r": 1.5, "start_deg": 180.0, "end_deg": 360.0},
+                    },
+                    {
+                        "id": "t_flat_right",
+                        "type": "line",
+                        "data": {"part_id": "p_flat_right", "anchor_a": "start", "anchor_b": "end"},
+                    },
+                ],
+                "constraints": [
+                    {
+                        "id": "c_attach_flat_left_to_arc_start",
+                        "type": "attach",
+                        "args": {
+                            "part_a": "p_flat_left",
+                            "anchor_a": "end",
+                            "part_b": "p_arc",
+                            "anchor_b": "start",
+                            "mode": "b_to_a",
+                            "rigid": True,
+                        },
+                        "hard": True,
+                    },
+                    {
+                        "id": "c_attach_flat_right_to_arc_end",
+                        "type": "attach",
+                        "args": {
+                            "part_a": "p_flat_right",
+                            "anchor_a": "start",
+                            "part_b": "p_arc",
+                            "anchor_b": "end",
+                            "mode": "b_to_a",
+                            "rigid": True,
+                        },
+                        "hard": True,
+                    },
+                    {
+                        "id": "c_attach_incline_to_flat_left",
+                        "type": "attach",
+                        "args": {
+                            "part_a": "p_incline",
+                            "anchor_a": "end",
+                            "part_b": "p_flat_left",
+                            "anchor_b": "start",
+                            "mode": "b_to_a",
+                            "rigid": True,
+                        },
+                        "hard": True,
+                    },
+                    {
+                        "id": "c_pose_slider",
+                        "type": "on_track_pose",
+                        "args": {
+                            "part_id": "p_slider",
+                            "track_id": "t_incline",
+                            "anchor": "bottom_center",
+                            "s": 0.0,
+                            "angle_mode": "tangent",
+                            "contact_side": "outer",
+                            "clearance": 0.0,
+                        },
+                        "hard": True,
+                    },
+                ],
+                "motions": [],
+            }
+        )
 
-        # -------------------------
-        # 2) 构造轨道关键点
-        # -------------------------
-        pA = np.array([x0,              y_high, 0.0])                 # 高水平起点
-        pB = np.array([x0 + L1,         y_high, 0.0])                 # 高水平终点/斜面上端
-        pC = np.array([x0 + L1 + 2.2,   y_low,  0.0])                 # 斜面下端/低水平起点
-        pD = np.array([pC[0] + L2,      y_low,  0.0])                 # 低水平终点=半圆左端点
-        pE = np.array([pD[0] + 2*R,     y_low,  0.0])                 # 半圆右端点=后水平起点
-        pF = np.array([pE[0] + L3,      y_low,  0.0])                 # 最后水平终点
+        defaults = ComponentDefaults(font="Arial", text_font_size=30, bullet_font_size=24, formula_font_size=34)
+        component_map = build_physics_components()
+        part_order = [part.id for part in graph.parts]
+        templates: dict[str, object] = {}
+        geometries = {}
+        for part in graph.parts:
+            builder = component_map[part.type]
+            spec = ObjectSpec(type=part.type, params=dict(part.params), style={}, priority=1)
+            template = builder.build(spec, defaults=defaults)
+            template.move_to([0.0, 0.0, 0.0])
+            templates[part.id] = template
+            geometries[part.id] = geometry_from_mobject(part.id, template)
 
-        # -------------------------
-        # 3) 轨道分段（线 + 圆弧）
-        # -------------------------
-        seg1 = Line(pA, pB)                 # 高处水平
-        seg2 = Line(pB, pC)                 # 斜面
-        seg3 = Line(pC, pD)                 # 低处水平（半圆前）
+        rendered = {part_id: templates[part_id].copy() for part_id in part_order}
+        self.add(*[rendered[part_id] for part_id in part_order])
 
-        arc_center = np.array([pD[0] + R, y_low, 0.0])
-        # 下半圆：从左端(PI)走到右端(2PI)，会经过最低点(3PI/2)
-        seg4 = Arc(radius=R, start_angle=PI, angle=PI, arc_center=arc_center)
+        options = SolveOptions(max_iters=120, tolerance=1e-4)
+        pose_constraint = next(c for c in graph.constraints if c.id == "c_pose_slider")
 
-        seg5 = Line(pE, pF)                 # 半圆后水平
+        len_incline = 4.0
+        len_flat_left = 3.0
+        len_arc = math.pi * 1.5
+        len_flat_right = 3.0
+        total_len = len_incline + len_flat_left + len_arc + len_flat_right
+        b1 = len_incline
+        b2 = b1 + len_flat_left
+        b3 = b2 + len_arc
 
-        track = VGroup(seg1, seg2, seg3, seg4, seg5).set_stroke(width=8)
-        track.set_z_index(0)
+        def _render_state() -> None:
+            result = solve_static(graph, geometries=geometries, options=options)
+            for part_id in part_order:
+                mobj = templates[part_id].copy()
+                _apply_pose(mobj, result.poses[part_id])
+                rendered[part_id].become(mobj)
 
-        ground = Line([-7, y_low - 1.2, 0], [7, y_low - 1.2, 0]).set_stroke(width=2, opacity=0.3)
-        ground.set_z_index(-1)
+        progress = ValueTracker(0.0)
 
-        self.add(ground, track)
+        def _update(_mobj, _dt: float = 0.0) -> None:
+            traveled = float(progress.get_value()) * total_len
+            if traveled <= b1:
+                track_id = "t_incline"
+                s = traveled / max(len_incline, 1e-9)
+            elif traveled <= b2:
+                track_id = "t_flat_left"
+                s = (traveled - b1) / max(len_flat_left, 1e-9)
+            elif traveled <= b3:
+                track_id = "t_arc"
+                s = (traveled - b2) / max(len_arc, 1e-9)
+            else:
+                track_id = "t_flat_right"
+                s = (traveled - b3) / max(len_flat_right, 1e-9)
 
-        # -------------------------
-        # 4) 用弧长参数 s 驱动整条轨道
-        # -------------------------
-        Ls = [
-            seg1.get_length(),
-            seg2.get_length(),
-            seg3.get_length(),
-            R * PI,                 # 半圆弧长
-            seg5.get_length()
-        ]
-        total_len = sum(Ls)
+            pose_constraint.args["track_id"] = track_id
+            pose_constraint.args["s"] = float(max(0.0, min(1.0, s)))
+            _render_state()
 
-        # 分段边界（累计长度）
-        b1 = Ls[0]
-        b2 = b1 + Ls[1]
-        b3 = b2 + Ls[2]
-        b4 = b3 + Ls[3]             # 弧段结束
+        driver = rendered["p_slider"]
+        driver.add_updater(_update)
+        _render_state()
 
-        def point_from_s(s: float) -> np.ndarray:
-            """沿轨道累计距离 s 对应的点坐标"""
-            s = float(np.clip(s, 0.0, total_len))
-
-            if s <= b1:
-                a = s / Ls[0]
-                return interpolate(pA, pB, a)
-
-            if s <= b2:
-                s2 = s - b1
-                a = s2 / Ls[1]
-                return interpolate(pB, pC, a)
-
-            if s <= b3:
-                s3 = s - b2
-                a = s3 / Ls[2]
-                return interpolate(pC, pD, a)
-
-            if s <= b4:
-                s4 = s - b3
-                a = s4 / Ls[3]      # 0..1
-                theta = PI + a * PI
-                return arc_center + R * np.array([np.cos(theta), np.sin(theta), 0.0])
-
-            s5 = s - b4
-            a = s5 / Ls[4] if Ls[4] > 1e-9 else 1.0
-            return interpolate(pE, pF, np.clip(a, 0.0, 1.0))
-
-        def tangent_from_s(s: float) -> np.ndarray:
-            """数值差分估计切向方向"""
-            s = float(np.clip(s, 0.0, total_len))
-            p1 = point_from_s(s)
-            p2 = point_from_s(min(s + 0.03, total_len))
-            v = p2 - p1
-            n = np.linalg.norm(v)
-            return v / n if n > 1e-9 else RIGHT
-
-        def normal_from_s(s: float) -> np.ndarray:
-            """
-            支撑法向（滑块应该位于轨道的哪一侧）
-            - 圆弧：取指向圆心（滑块在“碗里”贴弧面）
-            - 线段：取切向旋转 90° 后更“向上”的那一侧
-            """
-            s = float(np.clip(s, 0.0, total_len))
-            pos = point_from_s(s)
-
-            # 圆弧段：径向（指向圆心）
-            if b3 <= s <= b4:
-                v = arc_center - pos
-                n = np.linalg.norm(v)
-                return v / n if n > 1e-9 else UP
-
-            # 线段：切向旋转得到法向，取 y 更大的（更像“轨道上方”）
-            tan = tangent_from_s(s)
-            n1 = rotate_vector(tan, PI / 2)
-            n2 = -n1
-            pick = n1 if n1[1] >= n2[1] else n2
-            return pick / np.linalg.norm(pick)
-
-        # -------------------------
-        # 5) 滑块：投影贴合（不会穿模）
-        # -------------------------
-        s_tracker = ValueTracker(0.0)
-
-        block = RoundedRectangle(width=0.7, height=0.45, corner_radius=0.12)
-        # 用灰色便于肉眼确认贴合（确认后你可以改回白色）
-        block.set_fill(GREY_B, opacity=1.0).set_stroke(WHITE, width=2)
-        block.set_z_index(10)
-
-        block._theta = 0.0     # 手动记录当前角度（避免 get_angle 报错）
-        gap = 0.02             # 与轨道线留一点点缝，视觉更干净
-
-        def place_block_on_track(mob: Mobject, s: float):
-            pos = point_from_s(s)
-            tan = tangent_from_s(s)
-            nor = normal_from_s(s)
-
-            # (1) 旋到切线方向：增量旋转 + 手动记角度
-            target_theta = angle_of_vector(tan)
-            mob.rotate(target_theta - mob._theta)
-            mob._theta = target_theta
-
-            # (2) 临时把中心放到轨道点
-            mob.move_to(pos)
-
-            # (3) 投影找出：滑块在 -nor 方向上最“靠轨道”的极值距离 d
-            pts = mob.get_all_points()
-            c = mob.get_center()
-            d = 0.0
-            for p in pts:
-                d = max(d, float(np.dot(p - c, -nor)))
-
-            # (4) 抬起中心：让“最靠轨道的点”正好落在轨道点上（+gap）
-            mob.move_to(pos + nor * (d + gap))
-
-        def update_block(mob: Mobject):
-            place_block_on_track(mob, s_tracker.get_value())
-
-        block.add_updater(update_block)
-
-        # 速度箭头（切向）
-        vel_arrow = always_redraw(lambda: Arrow(
-            start=block.get_center(),
-            end=block.get_center() + 0.9 * tangent_from_s(s_tracker.get_value()),
-            buff=0,
-            max_tip_length_to_length_ratio=0.25
-        ).set_stroke(width=6).set_z_index(11))
-
-        vel_label = always_redraw(lambda: MathTex("v").scale(0.6).next_to(
-            vel_arrow.get_end(), UP, buff=0.1
-        ).set_z_index(11))
-
-        self.add(block, vel_arrow, vel_label)
-
-        # -------------------------
-        # 6) 动画：匀速走完整条轨道（演示用）
-        # -------------------------
         self.wait(0.2)
-        self.play(s_tracker.animate.set_value(total_len), run_time=10, rate_func=linear)
-        self.wait(0.8)
+        self.play(progress.animate(rate_func=linear).set_value(1.0), run_time=8.0)
+        driver.remove_updater(_update)
+        self.wait(0.4)

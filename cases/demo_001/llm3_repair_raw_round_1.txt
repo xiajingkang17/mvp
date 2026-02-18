@@ -1,0 +1,240 @@
+{
+  "scenes": [
+    {
+      "id": "S1",
+      "layout": {
+        "type": "hero_side",
+        "slots": {
+          "hero": "o_diagram",
+          "side": "o_text_s1"
+        },
+        "params": {
+          "slot_scales": {
+            "hero": {
+              "w": 0.8,
+              "h": 0.9
+            },
+            "side": {
+              "w": 0.8,
+              "h": 0.2
+            }
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "o_diagram"
+          ],
+          "duration": 1.0
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_text_s1"
+          ],
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_diagram"
+          ],
+          "duration": 3.0
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        }
+      ],
+      "keep": []
+    },
+    {
+      "id": "S2",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "o_eq_s2_1",
+          "right": "o_eq_s2_2"
+        },
+        "params": {
+          "slot_scales": {
+            "left": {
+              "w": 0.9,
+              "h": 0.4
+            },
+            "right": {
+              "w": 0.9,
+              "h": 0.4
+            }
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_eq_s2_1"
+          ],
+          "duration": 1.5
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_eq_s2_2"
+          ],
+          "duration": 1.0
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_text_s2"
+          ],
+          "duration": 0.5
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
+        }
+      ],
+      "keep": []
+    },
+    {
+      "id": "S3",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "o_eq_s3_1",
+          "right": "o_eq_s3_2"
+        },
+        "params": {
+          "slot_scales": {
+            "left": {
+              "w": 0.9,
+              "h": 0.4
+            },
+            "right": {
+              "w": 0.9,
+              "h": 0.4
+            }
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_eq_s3_1"
+          ],
+          "duration": 1.5
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_eq_s3_2"
+          ],
+          "duration": 1.0
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_text_s3"
+          ],
+          "duration": 0.5
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
+        }
+      ],
+      "keep": []
+    },
+    {
+      "id": "S4",
+      "layout": {
+        "type": "left_right",
+        "slots": {
+          "left": "o_eq_s4_1",
+          "right": "o_eq_s4_2"
+        },
+        "params": {
+          "slot_scales": {
+            "left": {
+              "w": 0.9,
+              "h": 0.4
+            },
+            "right": {
+              "w": 0.9,
+              "h": 0.4
+            }
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "o_eq_s4_1"
+          ],
+          "duration": 1.5
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_eq_s4_2"
+          ],
+          "duration": 1.0
+        },
+        {
+          "op": "wait",
+          "duration": 0.5
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "targets": [
+            "o_text_s4"
+          ],
+          "duration": 0.5
+        },
+        {
+          "op": "wait",
+          "duration": 1.0
+        }
+      ],
+      "keep": []
+    }
+  ]
+}
