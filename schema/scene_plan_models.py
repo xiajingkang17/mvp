@@ -16,11 +16,22 @@ class ObjectSpec(BaseModel):
     z_index: int | None = None
 
 
+class PlacementSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    cx: float = Field(ge=0.0, le=1.0)
+    cy: float = Field(ge=0.0, le=1.0)
+    w: float = Field(gt=0.0, le=1.0)
+    h: float = Field(gt=0.0, le=1.0)
+    anchor: str = Field(default="C", min_length=1)
+
+
 class LayoutSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     type: str = Field(min_length=1)
     slots: dict[str, str] = Field(default_factory=dict)
+    placements: dict[str, PlacementSpec] = Field(default_factory=dict)
     params: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -71,6 +82,7 @@ class SceneSpec(BaseModel):
 
     id: str = Field(min_length=1)
     intent: str | None = None
+    narrative: str | None = None
     layout: LayoutSpec
     actions: list[ActionSpec] = Field(default_factory=list)
     keep: list[str] = Field(default_factory=list)

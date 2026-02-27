@@ -5,6 +5,24 @@ from __future__ import annotations
 # These names map directly to constructor kwargs in components/physics/*.py.
 PHYSICS_OBJECT_PARAM_SPECS: dict[str, tuple[str, ...]] = {
     # Mechanics
+    "Axes2D": (
+        "x_min",
+        "x_max",
+        "y_min",
+        "y_max",
+        "x_step",
+        "y_step",
+        "x_length",
+        "y_length",
+        "show_ticks",
+        "show_numbers",
+        "show_labels",
+        "label_x",
+        "label_y",
+        "label_color",
+        "color",
+        "stroke_width",
+    ),
     "InclinedPlaneGroup": (
         "angle",
         "length",
@@ -14,7 +32,9 @@ PHYSICS_OBJECT_PARAM_SPECS: dict[str, tuple[str, ...]] = {
         "show_angle",
     ),
     "Wall": ("length", "angle", "rise_to", "hatch_spacing", "hatch_length", "contact_offset_y", "color", "stroke_width"),
+    "Arrow": ("length", "angle", "head_length", "head_angle", "color", "stroke_width"),
     "Block": ("width", "height", "label", "label_color", "color", "stroke_width"),
+    "Ball": ("radius", "label", "label_color", "color", "stroke_width"),
     "Cart": ("width", "height", "wheel_radius", "color", "stroke_width"),
     "Weight": ("width", "height", "hook_radius", "color", "stroke_width"),
     "Pulley": ("radius", "rod_angle", "color", "stroke_width"),
@@ -25,7 +45,7 @@ PHYSICS_OBJECT_PARAM_SPECS: dict[str, tuple[str, ...]] = {
     "Rod": ("length", "thickness", "color", "stroke_width"),
     "Hinge": ("radius", "color", "stroke_width"),
     "CircularGroove": ("radius", "groove_width", "color", "stroke_width"),
-    "ArcTrack": ("center", "radius", "start_angle", "end_angle", "color", "stroke_width"),
+    "ArcTrack": ("center", "radius", "start", "end", "color", "stroke_width"),
     "SemicircleGroove": ("center", "radius", "start_angle", "end_angle", "groove_width", "color", "stroke_width"),
     "QuarterCircleGroove": ("center", "radius", "start_angle", "end_angle", "groove_width", "corner", "color", "stroke_width"),
     "SemicircleCart": ("height", "wheel_radius", "color", "stroke_width"),
@@ -73,4 +93,6 @@ PHYSICS_OBJECT_PARAM_SPECS: dict[str, tuple[str, ...]] = {
     ),
     "Inductor": ("num_loops", "radius", "wire_length", "color", "stroke_width"),
     "LED": ("side_length", "wire_length", "arrow_size", "arrow_offset", "color", "stroke_width"),
+    "Particle": ("radius", "label", "label_color", "color", "stroke_width", "fill_color", "fill_opacity"),
+    "FieldCross": ("size", "angle", "color", "stroke_width"),
 }

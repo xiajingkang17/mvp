@@ -14,8 +14,8 @@ class ArcTrack(VGroup):
         self,
         center: tuple[float, float, float] = (0.0, 0.0, 0.0),
         radius: float = 1.0,
-        start_angle: float = 0.0,
-        end_angle: float = 90.0,
+        start: float = 0.0,
+        end: float = 90.0,
         color: str = WHITE,
         stroke_width: float = 4.0,
         **kwargs,
@@ -24,8 +24,8 @@ class ArcTrack(VGroup):
         self._anchor_points: Dict[str, VectorizedPoint] = {}
 
         center_arr = self._to_center3(center)
-        start_rad = math.radians(start_angle)
-        end_rad = math.radians(end_angle)
+        start_rad = math.radians(start)
+        end_rad = math.radians(end)
         sweep = end_rad - start_rad
         if sweep <= 0:
             sweep += 2.0 * math.pi

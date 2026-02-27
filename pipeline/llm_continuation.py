@@ -4,7 +4,7 @@ from typing import Callable
 
 from pipeline.json_utils import strip_code_fences
 from pipeline.llm.types import ChatMessage
-from pipeline.llm.zhipu import chat_completion
+from pipeline.llm.zhipu import ZhipuConfig, chat_completion
 
 
 _CONTINUATION_INSTRUCTION = (
@@ -52,6 +52,7 @@ def continue_json_output(
     user_payload: str,
     parse_fn: Callable[[str], object],
     max_rounds: int = 2,
+    llm_cfg: ZhipuConfig | None = None,
 ) -> tuple[str, list[str]]:
     merged = content
     chunks: list[str] = []
@@ -71,7 +72,8 @@ def continue_json_output(
                 ChatMessage(role="user", content=user_payload),
                 ChatMessage(role="assistant", content=merged),
                 ChatMessage(role="user", content=_CONTINUATION_INSTRUCTION),
-            ]
+            ],
+            cfg=llm_cfg,
         )
         if not continuation.strip():
             break

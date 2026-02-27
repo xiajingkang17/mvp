@@ -1,0 +1,12 @@
+﻿{
+  "base": "stages/llm1/base_system.md",
+  "always": [
+    "fragments/llm1/hard_contract.md",
+    "fragments/llm1/rkt_alignment.md",
+    "fragments/llm1/math_enhancement.md",
+    "fragments/llm1/teaching_structure.md",
+    "fragments/llm1/pre_output_check.md",
+    "fragments/llm1/json_example.md"
+  ],
+  "conditional": []
+}

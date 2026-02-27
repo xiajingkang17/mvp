@@ -3,10 +3,13 @@ object_types:
   - BulletPanel
   - Formula
   - CompositeObject
+  - CustomObject
   - InclinedPlaneGroup
   - Wall
+  - Arrow
   - InclinedPlane
   - Block
+  - Ball
   - Cart
   - Weight
   - Pulley
@@ -40,6 +43,7 @@ object_types:
   - LED
 
 layout_types:
+  - free
   - hero_side
   - left_right
   - left3_right3

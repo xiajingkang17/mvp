@@ -1,412 +1,635 @@
 ```json
 {
-  "pedagogy_plan": {
-    "difficulty": "medium",
-    "need_single_goal": true,
-    "need_check_scene": false,
-    "check_types": [
-      "reasonableness"
-    ],
-    "cognitive_budget": {
-      "max_visible_objects": 5,
-      "max_new_formula": 3,
-      "max_new_symbols": 2,
-      "max_text_chars": 80
-    },
-    "module_order": [
-      "diagram",
-      "model",
-      "equation",
-      "solve",
-      "conclusion"
-    ]
-  },
+  "version": "0.1",
   "scenes": [
     {
       "id": "S1",
-      "intent": "展示题目结构与已知条件",
-      "goal": "构建斜面-平面-圆弧轨道示意图，标注关键点与已知量",
-      "modules": [
-        "diagram",
-        "model"
-      ],
-      "roles": {
-        "o_diagram": "diagram",
-        "o_text_s1": "support_eq"
-      },
-      "new_symbols": [
-        "h",
-        "R",
-        "theta"
-      ],
-      "is_check_scene": false,
+      "intent": "建立能量守恒模型，明确 A 点到 B 点的几何关系与守恒条件。",
+      "goal": "展示圆弧轨道示意图，标注高度差 h，确认机械能守恒适用条件。",
+      "notes": "elements: 圆弧轨道、小球、高度标注线、地面。\ncolors: 轨道为灰色，小球为红色，标注线为蓝色，地面为黑色。\ngeometry_elements: 一段四分之一圆弧轨道，最低点 B 切线水平，最高点 A 与 B 高度差为 h。小球位于 A 点。\ngeometry_construction: 先绘制水平地面，再在左侧构建圆弧轨道，使其最低点 B 位于地面上方 H 处。在 A 点正下方 B 点高度处画水平参考线，连接 A 到参考线的垂线表示高度 h。\ngeometry_relations: A 点与 B 点在同一竖直圆弧上，B 点切线水平。高度 h 为 A 点相对于 B 点的竖直距离。\ntransitions: 从题目描述自然过渡到物理模型图，静态展示初始状态。\ncamera_movement: none\nlayout: 轨道位于左侧偏上，占据主要视觉区域，右侧留白用于后续公式展示。\nduration: 10s",
       "objects": [
         {
-          "id": "o_diagram",
+          "id": "track_sys",
           "type": "CompositeObject",
           "params": {
-            "graph": {
-              "version": "0.1",
-              "space": {
-                "x_range": [
-                  -10,
-                  10
-                ],
-                "y_range": [
-                  -6,
-                  6
-                ],
-                "unit": "scene_unit",
-                "angle_unit": "deg",
-                "origin": "center"
-              },
-              "parts": [
-                {
-                  "id": "p_incline",
-                  "type": "Wall",
-                  "params": {
-                    "length": 6.0,
-                    "angle": 30,
-                    "rise_to": "left"
-                  },
-                  "style": {},
-                  "seed_pose": {
-                    "x": -4.0,
-                    "y": -2.0,
-                    "theta": 0,
-                    "scale": 1.0
-                  }
-                },
-                {
-                  "id": "p_flat",
-                  "type": "Rod",
-                  "params": {
-                    "length": 4.0,
-                    "thickness": 0.1
-                  },
-                  "style": {},
-                  "seed_pose": {
-                    "x": 0,
-                    "y": 0,
-                    "theta": 0,
-                    "scale": 1.0
-                  }
-                },
-                {
-                  "id": "p_arc",
-                  "type": "ArcTrack",
-                  "params": {
-                    "radius": 3.0,
-                    "start_angle": 0,
-                    "end_angle": 90
-                  },
-                  "style": {},
-                  "seed_pose": {
-                    "x": 4.0,
-                    "y": 0,
-                    "theta": 0,
-                    "scale": 1.0
-                  }
-                },
-                {
-                  "id": "p_block",
-                  "type": "Block",
-                  "params": {
-                    "width": 0.8,
-                    "height": 0.5,
-                    "label": "P"
-                  },
-                  "style": {},
-                  "seed_pose": {
-                    "x": -3.0,
-                    "y": 1.0,
-                    "theta": 0,
-                    "scale": 1.0
-                  }
-                }
-              ],
-              "tracks": [
-                {
-                  "id": "t_incline",
-                  "type": "line",
-                  "data": {
-                    "part_id": "p_incline",
-                    "anchor_a": "start",
-                    "anchor_b": "end"
-                  }
-                },
-                {
-                  "id": "t_flat",
-                  "type": "segment",
-                  "data": {
-                    "part_id": "p_flat",
-                    "anchor_a": "start",
-                    "anchor_b": "end"
-                  }
-                },
-                {
-                  "id": "t_arc",
-                  "type": "arc",
-                  "data": {
-                    "part_id": "p_arc",
-                    "center_anchor": "center",
-                    "radius_local": 3.0,
-                    "start_deg_local": 0,
-                    "end_deg_local": 90
-                  }
-                }
-              ],
-              "constraints": [
-                {
-                  "id": "c_attach_incline_flat",
-                  "type": "attach",
-                  "args": {
-                    "part_a": "p_incline",
-                    "anchor_a": "low_end",
-                    "part_b": "p_flat",
-                    "anchor_b": "start",
-                    "rigid": true
-                  },
-                  "hard": true
-                },
-                {
-                  "id": "c_attach_flat_arc",
-                  "type": "attach",
-                  "args": {
-                    "part_a": "p_flat",
-                    "anchor_a": "end",
-                    "part_b": "p_arc",
-                    "anchor_b": "start",
-                    "rigid": true
-                  },
-                  "hard": true
-                },
-                {
-                  "id": "c_block_pose",
-                  "type": "on_track_pose",
-                  "args": {
-                    "part_id": "p_block",
-                    "track_id": "t_incline",
-                    "s": 0.2,
-                    "angle_mode": "tangent"
-                  }
-                }
-              ],
-              "motions": [
-                {
-                  "id": "m_full_path",
-                  "type": "on_track_schedule",
-                  "args": {
-                    "part_id": "p_block",
-                    "segments": [
-                      {
-                        "track_id": "t_incline",
-                        "u0": 0.0,
-                        "u1": 1.0
-                      },
-                      {
-                        "track_id": "t_flat",
-                        "u0": 0.0,
-                        "u1": 1.0
-                      },
-                      {
-                        "track_id": "t_arc",
-                        "u0": 0.0,
-                        "u1": 1.0
-                      }
-                    ]
-                  },
-                  "timeline": [
-                    {
-                      "t": 0,
-                      "u": 0
-                    },
-                    {
-                      "t": 3,
-                      "u": 1
-                    }
-                  ]
-                }
-              ]
-            }
+            "semantic_intent": "构建光滑圆弧轨道与支撑结构",
+            "geometry_prompt": "使用 ArcTrack 表示轨道，Wall 表示地面支撑。轨道为 1/4 圆弧，B 点切线水平向右。",
+            "motion_prompt": "静止不动，作为背景参考。",
+            "must_have_parts": [
+              "ArcTrack",
+              "Wall"
+            ],
+            "forbidden_parts": [
+              "InclinedPlane"
+            ]
           },
           "style": {
-            "size_level": "XL"
-          },
-          "priority": 1
+            "color": "GRAY",
+            "position_hint": "LEFT"
+          }
         },
         {
-          "id": "o_text_s1",
-          "type": "TextBlock",
+          "id": "ball",
+          "type": "CompositeObject",
           "params": {
-            "text": "已知：光滑轨道，释放高度 $h$，圆弧半径 $R$"
+            "semantic_intent": "表示质点小球",
+            "geometry_prompt": "使用 Ball 表示小球，半径适中。",
+            "motion_prompt": "初始静止在 A 点。",
+            "must_have_parts": [
+              "Ball"
+            ]
           },
           "style": {
-            "size_level": "S"
+            "color": "RED",
+            "position_hint": "UP"
+          }
+        },
+        {
+          "id": "label_h",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "标注高度差 h",
+            "geometry_prompt": "使用 Arrow 绘制从 A 点到 B 点水平面的竖直虚线，并标注文本 h。",
+            "motion_prompt": "静态显示。",
+            "must_have_parts": [
+              "Arrow"
+            ]
           },
-          "priority": 2
+          "style": {
+            "color": "BLUE",
+            "position_hint": "LEFT"
+          }
+        },
+        {
+          "id": "text_assumption",
+          "type": "TextBlock",
+          "params": {
+            "text": "光滑轨道，不计阻力，机械能守恒"
+          },
+          "style": {
+            "color": "WHITE",
+            "position_hint": "RIGHT"
+          }
         }
-      ]
+      ],
+      "narrative_storyboard": {
+        "bridge_from_prev": "题目描述了小球从圆弧轨道滑下并做平抛运动的情景，我们首先分析第一阶段的运动。",
+        "intro": "小球从 A 点由静止释放，沿光滑圆弧轨道下滑至 B 点。由于只有重力做功，系统机械能守恒。",
+        "key_formulae": [
+          {
+            "latex": "E_A = E_B",
+            "color": "YELLOW",
+            "position_hint": "RIGHT"
+          }
+        ],
+        "animation_steps": [
+          {
+            "id": "step_1",
+            "description": "Create 轨道系统与地面，建立几何背景。",
+            "targets": [
+              "track_sys"
+            ],
+            "duration_s": 2.0
+          },
+          {
+            "id": "step_2",
+            "description": "FadeIn 小球至 A 点位置，展示初始状态。",
+            "targets": [
+              "ball"
+            ],
+            "duration_s": 1.5
+          },
+          {
+            "id": "step_3",
+            "description": "Write 高度差标注 h，明确几何关系。",
+            "targets": [
+              "label_h"
+            ],
+            "duration_s": 2.0
+          },
+          {
+            "id": "step_4",
+            "description": "FadeIn 文字说明，强调守恒条件（光滑、不计阻力）。",
+            "targets": [
+              "text_assumption"
+            ],
+            "duration_s": 2.0
+          },
+          {
+            "id": "step_5",
+            "description": "Write 机械能守恒总式 E_A=E_B，为推导做准备。",
+            "targets": [
+              "key_formulae"
+            ],
+            "duration_s": 2.5
+          }
+        ],
+        "bridge_to_next": "确认守恒条件后，我们列出具体的能量方程来求解 B 点速度。"
+      }
     },
     {
       "id": "S2",
-      "intent": "求解到达C点的速度",
-      "goal": "利用机械能守恒推导并计算 $v_C$",
-      "modules": [
-        "equation",
-        "solve"
-      ],
-      "roles": {
-        "o_eq_s2_1": "core_equation",
-        "o_eq_s2_2": "substitute_compute",
-        "o_text_s2": "conclusion"
-      },
-      "new_symbols": [
-        "v_C"
-      ],
-      "is_check_scene": false,
+      "intent": "利用机械能守恒定律推导并计算 B 点速度。",
+      "goal": "展示能量转化过程，代入数值计算 vB。",
+      "notes": "elements: 势能公式、动能公式、等号、数值。\ncolors: 公式为白色，数字为黄色。\ngeometry_elements: 文本与公式布局。\ngeometry_construction: 左侧显示 mgh，中间等号，右侧显示 1/2mvB^2。下方显示代入数值后的计算过程。\ngeometry_relations: 公式水平对齐，等号居中。\ntransitions: 从守恒总式过渡到具体表达式。\ncamera_movement: none\nlayout: 画面中心为公式推导区，上方或侧方保留轨道简图作为记忆辅助。\nduration: 15s",
       "objects": [
         {
-          "id": "o_eq_s2_1",
+          "id": "formula_energy",
           "type": "Formula",
           "params": {
-            "latex": "mgh = \\frac{1}{2}mv_C^2"
+            "latex": "mgh = \\frac{1}{2}mv_B^2"
           },
           "style": {
-            "size_level": "L"
-          },
-          "priority": 1
+            "color": "WHITE",
+            "position_hint": "ORIGIN"
+          }
         },
         {
-          "id": "o_eq_s2_2",
+          "id": "formula_calc",
           "type": "Formula",
           "params": {
-            "latex": "v_C = \\sqrt{2gh}"
+            "latex": "v_B = \\sqrt{2gh} = \\sqrt{2 \\times 10 \\times 0.8} = 4\\text{ m/s}"
           },
           "style": {
-            "size_level": "L"
-          },
-          "priority": 1
+            "color": "YELLOW",
+            "position_hint": "DOWN"
+          }
         },
         {
-          "id": "o_text_s2",
+          "id": "label_vB",
           "type": "TextBlock",
           "params": {
-            "text": "到达C点速度为 $\\sqrt{2gh}$，与倾角 $\\theta$ 无关"
+            "text": "B 点速度: $v_B = 4 \\text{ m/s}$"
           },
           "style": {
-            "size_level": "M"
-          },
-          "priority": 2
+            "color": "GREEN",
+            "position_hint": "RIGHT"
+          }
         }
-      ]
+      ],
+      "narrative_storyboard": {
+        "bridge_from_prev": "确认了机械能守恒后，我们将 A 点的重力势能完全转化为 B 点的动能。",
+        "intro": "选取 B 点所在水平面为零势能面，A 点势能为 mgh，B 点动能为 1/2mvB^2。联立方程可解得 vB。",
+        "key_formulae": [
+          {
+            "latex": "mgh = \\frac{1}{2}mv_B^2",
+            "color": "WHITE",
+            "position_hint": "ORIGIN"
+          },
+          {
+            "latex": "v_B = \\sqrt{2gh}",
+            "color": "YELLOW",
+            "position_hint": "DOWN"
+          }
+        ],
+        "animation_steps": [
+          {
+            "id": "step_1",
+            "description": "Transform 从 E_A=E_B 变换为具体能量公式 mgh = 1/2mvB^2。",
+            "targets": [
+              "formula_energy"
+            ],
+            "duration_s": 3.0
+          },
+          {
+            "id": "step_2",
+            "description": "Write 消去质量 m 的过程（或直接写出变换后的 vB 表达式）。",
+            "targets": [
+              "formula_calc"
+            ],
+            "duration_s": 3.0
+          },
+          {
+            "id": "step_3",
+            "description": "Write 代入数值 g=10, h=0.8 的计算步骤。",
+            "targets": [
+              "formula_calc"
+            ],
+            "duration_s": 4.0
+          },
+          {
+            "id": "step_4",
+            "description": "FadeIn 最终结果 vB=4m/s，高亮显示。",
+            "targets": [
+              "label_vB"
+            ],
+            "duration_s": 2.0
+          },
+          {
+            "id": "step_5",
+            "description": "展示小球在 B 点获得水平向右的速度示意（如有空间）。",
+            "targets": [
+              "label_vB"
+            ],
+            "duration_s": 3.0
+          }
+        ],
+        "bridge_to_next": "获得 B 点速度后，小球将以 4m/s 的初速度水平飞出，进入平抛运动阶段。"
+      }
     },
     {
       "id": "S3",
-      "intent": "求解圆弧上的最大高度",
-      "goal": "分析滑块在圆弧上的能量转化，得出 $H_{max}$",
-      "modules": [
-        "equation",
-        "solve"
-      ],
-      "roles": {
-        "o_eq_s3_1": "core_equation",
-        "o_eq_s3_2": "substitute_compute",
-        "o_text_s3": "conclusion"
-      },
-      "new_symbols": [
-        "H_max"
-      ],
-      "is_check_scene": false,
+      "intent": "分解平抛运动，展示水平与竖直方向的运动独立性。",
+      "goal": "绘制平抛轨迹，标注水平速度和竖直加速度。",
+      "notes": "elements: 平抛轨迹曲线、速度矢量箭头、加速度矢量箭头。\ncolors: 轨迹为白色，水平速度为红色，重力加速度为绿色。\ngeometry_elements: 抛物线轨迹，起点 B，终点地面。\ngeometry_construction: 从 B 点向右下方绘制抛物线。在 B 点画水平向右箭头表示 vB，在轨迹旁画竖直向下箭头表示 g。\ngeometry_relations: 水平速度保持不变，竖直方向仅受重力。\ntransitions: 从 B 点速度计算结果过渡到运动分解图。\ncamera_movement: none\nlayout: 轨迹占据画面中央，矢量箭头清晰可见。\nduration: 12s",
       "objects": [
         {
-          "id": "o_eq_s3_1",
-          "type": "Formula",
+          "id": "projectile_sys",
+          "type": "CompositeObject",
           "params": {
-            "latex": "\\frac{1}{2}mv_C^2 = mgH_{max}"
+            "semantic_intent": "构建平抛运动模型",
+            "geometry_prompt": "使用 Arrow 表示轨迹线或使用虚线描绘抛物线路径。包含 Wall 表示地面。",
+            "motion_prompt": "静态展示轨迹与矢量。",
+            "must_have_parts": [
+              "Arrow",
+              "Wall"
+            ]
           },
           "style": {
-            "size_level": "L"
-          },
-          "priority": 1
+            "color": "WHITE",
+            "position_hint": "ORIGIN"
+          }
         },
         {
-          "id": "o_eq_s3_2",
-          "type": "Formula",
+          "id": "vector_vx",
+          "type": "CompositeObject",
           "params": {
-            "latex": "H_{max} = \\frac{v_C^2}{2g} = h"
+            "semantic_intent": "水平分速度",
+            "geometry_prompt": "使用 Arrow 绘制水平向右箭头，标注 vB。",
+            "motion_prompt": "静态显示。",
+            "must_have_parts": [
+              "Arrow"
+            ]
           },
           "style": {
-            "size_level": "L"
-          },
-          "priority": 1
+            "color": "RED",
+            "position_hint": "ORIGIN"
+          }
         },
         {
-          "id": "o_text_s3",
+          "id": "vector_g",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "竖直加速度",
+            "geometry_prompt": "使用 Arrow 绘制竖直向下箭头，标注 g。",
+            "motion_prompt": "静态显示。",
+            "must_have_parts": [
+              "Arrow"
+            ]
+          },
+          "style": {
+            "color": "GREEN",
+            "position_hint": "DOWN"
+          }
+        },
+        {
+          "id": "text_decompose",
           "type": "TextBlock",
           "params": {
-            "text": "相对C点最大上升高度 $H_{max} = h$"
+            "text": "水平匀速: $v_x = v_B$; 竖直自由落体: $a_y = g$"
           },
           "style": {
-            "size_level": "M"
-          },
-          "priority": 2
+            "color": "WHITE",
+            "position_hint": "RIGHT"
+          }
         }
-      ]
+      ],
+      "narrative_storyboard": {
+        "bridge_from_prev": "小球离开 B 点后，只受重力作用，做平抛运动。",
+        "intro": "我们将平抛运动分解为水平方向的匀速直线运动和竖直方向的自由落体运动。水平速度保持 vB 不变，竖直加速度为 g。",
+        "key_formulae": [
+          {
+            "latex": "v_x = v_B",
+            "color": "RED",
+            "position_hint": "RIGHT"
+          },
+          {
+            "latex": "a_y = g",
+            "color": "GREEN",
+            "position_hint": "RIGHT"
+          }
+        ],
+        "animation_steps": [
+          {
+            "id": "step_1",
+            "description": "Create 平抛轨迹与地面，展示运动路径。",
+            "targets": [
+              "projectile_sys"
+            ],
+            "duration_s": 3.0
+          },
+          {
+            "id": "step_2",
+            "description": "Write 水平速度矢量 vB（红色），强调水平匀速。",
+            "targets": [
+              "vector_vx"
+            ],
+            "duration_s": 2.0
+          },
+          {
+            "id": "step_3",
+            "description": "Write 竖直加速度矢量 g（绿色），强调竖直加速。",
+            "targets": [
+              "vector_g"
+            ],
+            "duration_s": 2.0
+          },
+          {
+            "id": "step_4",
+            "description": "FadeIn 运动分解文字说明。",
+            "targets": [
+              "text_decompose"
+            ],
+            "duration_s": 2.0
+          },
+          {
+            "id": "step_5",
+            "description": "高亮显示水平方向公式 vx=vB。",
+            "targets": [
+              "key_formulae"
+            ],
+            "duration_s": 3.0
+          }
+        ],
+        "bridge_to_next": "明确了运动分解后，我们先处理竖直方向，利用高度 H 求解下落时间 t。"
+      }
     },
     {
       "id": "S4",
-      "intent": "判断能否到达D点并求解速度",
-      "goal": "比较能量与几何限制，分情况讨论 $v_D$",
-      "modules": [
-        "equation",
-        "solve",
-        "conclusion"
-      ],
-      "roles": {
-        "o_eq_s4_1": "core_equation",
-        "o_eq_s4_2": "substitute_compute",
-        "o_text_s4": "conclusion"
-      },
-      "new_symbols": [
-        "v_D"
-      ],
-      "is_check_scene": false,
+      "intent": "利用竖直方向运动规律求解下落时间 t。",
+      "goal": "列出竖直位移公式，代入 H 和 g 计算时间。",
+      "notes": "elements: 竖直轴线标注、自由落体公式、计算过程。\ncolors: 公式为白色，关键数值为黄色。\ngeometry_elements: 竖直高度 H 标注线。\ngeometry_construction: 在 B 点正下方到地面之间画竖直箭头标注 H。\ngeometry_relations: H 为竖直位移，对应自由落体公式。\ntransitions: 从运动分解图聚焦到竖直方向。\ncamera_movement: none\nlayout: 左侧保留竖直示意图，右侧展示公式推导。\nduration: 15s",
       "objects": [
         {
-          "id": "o_eq_s4_1",
-          "type": "Formula",
+          "id": "label_H",
+          "type": "CompositeObject",
           "params": {
-            "latex": "mgh = \\frac{1}{2}mv_D^2 + mgR"
+            "semantic_intent": "标注下落高度 H",
+            "geometry_prompt": "使用 Arrow 绘制从 B 点到地面的竖直线，标注 H。",
+            "motion_prompt": "静态显示。",
+            "must_have_parts": [
+              "Arrow"
+            ]
           },
           "style": {
-            "size_level": "L"
-          },
-          "priority": 1
+            "color": "BLUE",
+            "position_hint": "LEFT"
+          }
         },
         {
-          "id": "o_eq_s4_2",
+          "id": "formula_vertical",
           "type": "Formula",
           "params": {
-            "latex": "v_D = \\sqrt{2g(h-R)}"
+            "latex": "H = \\frac{1}{2}gt^2"
           },
           "style": {
-            "size_level": "L"
-          },
-          "priority": 1
+            "color": "WHITE",
+            "position_hint": "RIGHT"
+          }
         },
         {
-          "id": "o_text_s4",
-          "type": "TextBlock",
+          "id": "calc_t",
+          "type": "Formula",
           "params": {
-            "text": "若 $h \\ge R$，能到达D点，速度为 $\\sqrt{2g(h-R)}$；若 $h < R$，无法到达"
+            "latex": "t = \\sqrt{\\frac{2H}{g}} = \\sqrt{\\frac{2 \\times 1.25}{10}} = 0.5\\text{ s}"
           },
           "style": {
-            "size_level": "M"
-          },
-          "priority": 2
+            "color": "YELLOW",
+            "position_hint": "DOWN"
+          }
         }
-      ]
+      ],
+      "narrative_storyboard": {
+        "bridge_from_prev": "竖直方向上，小球做初速度为 0 的匀加速直线运动，加速度为 g。",
+        "intro": "根据自由落体位移公式 H=1/2gt^2，我们可以求出小球在空中的飞行时间 t。",
+        "key_formulae": [
+          {
+            "latex": "H = \\frac{1}{2}gt^2",
+            "color": "WHITE",
+            "position_hint": "RIGHT"
+          }
+        ],
+        "animation_steps": [
+          {
+            "id": "step_1",
+            "description": "Write 高度标注 H，明确竖直位移。",
+            "targets": [
+              "label_H"
+            ],
+            "duration_s": 2.0
+          },
+          {
+            "id": "step_2",
+            "description": "Write 竖直方向位移公式 H=1/2gt^2。",
+            "targets": [
+              "formula_vertical"
+            ],
+            "duration_s": 3.0
+          },
+          {
+            "id": "step_3",
+            "description": "Write 变形公式 t = sqrt(2H/g)。",
+            "targets": [
+              "calc_t"
+            ],
+            "duration_s": 3.0
+          },
+          {
+            "id": "step_4",
+            "description": "Write 代入数值 H=1.25, g=10 的计算过程。",
+            "targets": [
+              "calc_t"
+            ],
+            "duration_s": 4.0
+          },
+          {
+            "id": "step_5",
+            "description": "高亮结果 t=0.5s。",
+            "targets": [
+              "calc_t"
+            ],
+            "duration_s": 3.0
+          }
+        ],
+        "bridge_to_next": "已知下落时间 t=0.5s，结合水平速度 vB，即可计算水平飞行的距离 x。"
+      }
+    },
+    {
+      "id": "S5",
+      "intent": "计算水平位移 x。",
+      "goal": "应用水平匀速运动公式求解 x。",
+      "notes": "elements: 水平距离标注、水平运动公式、计算过程。\ncolors: 距离 x 为橙色，公式为白色。\ngeometry_elements: 地面上的水平距离线段。\ngeometry_construction: 从 B 点正下方（投影点）到落地点画水平箭头，标注 x。\ngeometry_relations: x = vB * t。\ntransitions: 从竖直计算结果过渡到水平计算。\ncamera_movement: none\nlayout: 地面水平距离清晰标注，公式在右侧。\nduration: 12s",
+      "objects": [
+        {
+          "id": "label_x",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "标注水平射程 x",
+            "geometry_prompt": "使用 Arrow 在地面上绘制从 B 点投影到落点的水平线，标注 x。",
+            "motion_prompt": "静态显示。",
+            "must_have_parts": [
+              "Arrow"
+            ]
+          },
+          "style": {
+            "color": "ORANGE",
+            "position_hint": "DOWN"
+          }
+        },
+        {
+          "id": "formula_x",
+          "type": "Formula",
+          "params": {
+            "latex": "x = v_B t"
+          },
+          "style": {
+            "color": "WHITE",
+            "position_hint": "RIGHT"
+          }
+        },
+        {
+          "id": "calc_x",
+          "type": "Formula",
+          "params": {
+            "latex": "x = 4 \\times 0.5 = 2\\text{ m}"
+          },
+          "style": {
+            "color": "YELLOW",
+            "position_hint": "DOWN"
+          }
+        }
+      ],
+      "narrative_storyboard": {
+        "bridge_from_prev": "水平方向不受力，小球以速度 vB 做匀速直线运动。",
+        "intro": "水平位移 x 等于水平速度 vB 乘以飞行时间 t。代入之前求得的结果即可求解。",
+        "key_formulae": [
+          {
+            "latex": "x = v_B t",
+            "color": "WHITE",
+            "position_hint": "RIGHT"
+          }
+        ],
+        "animation_steps": [
+          {
+            "id": "step_1",
+            "description": "Write 水平距离标注 x。",
+            "targets": [
+              "label_x"
+            ],
+            "duration_s": 2.0
+          },
+          {
+            "id": "step_2",
+            "description": "Write 水平位移公式 x=vB*t。",
+            "targets": [
+              "formula_x"
+            ],
+            "duration_s": 2.0
+          },
+          {
+            "id": "step_3",
+            "description": "Write 代入数值 vB=4, t=0.5 的计算过程。",
+            "targets": [
+              "calc_x"
+            ],
+            "duration_s": 4.0
+          },
+          {
+            "id": "step_4",
+            "description": "高亮最终结果 x=2m。",
+            "targets": [
+              "calc_x"
+            ],
+            "duration_s": 2.0
+          },
+          {
+            "id": "step_5",
+            "description": "展示落点位置，确认距离。",
+            "targets": [
+              "label_x"
+            ],
+            "duration_s": 2.0
+          }
+        ],
+        "bridge_to_next": "计算完成，我们汇总所有物理量进行校验。"
+      }
+    },
+    {
+      "id": "S6",
+      "intent": "综合校验结果，展示完整物理过程。",
+      "goal": "列出最终答案清单，回顾完整轨迹。",
+      "notes": "elements: 完整轨迹图、结果汇总面板。\ncolors: 结果数值为黄色，轨迹为白色。\ngeometry_elements: 从 A 到 B 再到落点的完整路径。\ngeometry_construction: 重绘或保留之前的圆弧与抛物线，连接成完整路径。\ngeometry_relations: 轨迹连续，能量守恒与运动分解逻辑闭环。\ntransitions: 画面整合，强调全局视角。\ncamera_movement: none\nlayout: 完整轨迹居中，结果清单在侧边。\nduration: 10s",
+      "objects": [
+        {
+          "id": "full_path",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "完整运动轨迹",
+            "geometry_prompt": "组合 ArcTrack 和抛物线轨迹，形成 A-B-落点的连续路径。",
+            "motion_prompt": "静态展示完整路径。",
+            "must_have_parts": [
+              "ArcTrack"
+            ]
+          },
+          "style": {
+            "color": "WHITE",
+            "position_hint": "LEFT"
+          }
+        },
+        {
+          "id": "result_panel",
+          "type": "BulletPanel",
+          "params": {
+            "bullet_points": [
+              "B 点速度: $v_B = 4 \\text{ m/s}$",
+              "下落时间: $t = 0.5 \\text{ s}$",
+              "水平距离: $x = 2 \\text{ m}$"
+            ]
+          },
+          "style": {
+            "color": "WHITE",
+            "position_hint": "RIGHT"
+          }
+        }
+      ],
+      "narrative_storyboard": {
+        "bridge_from_prev": "我们分别求出了 vB、t 和 x，现在进行最终汇总。",
+        "intro": "回顾全过程：小球由机械能守恒获得初速度，经运动分解求得时间，最后算出水平位移。结果符合物理规律。",
+        "key_formulae": [
+          {
+            "latex": "v_B=4\\text{m/s}, \\quad t=0.5\\text{s}, \\quad x=2\\text{m}",
+            "color": "YELLOW",
+            "position_hint": "RIGHT"
+          }
+        ],
+        "animation_steps": [
+          {
+            "id": "step_1",
+            "description": "FadeIn 完整运动轨迹（圆弧+平抛），展示全局。",
+            "targets": [
+              "full_path"
+            ],
+            "duration_s": 3.0
+          },
+          {
+            "id": "step_2",
+            "description": "Write 结果汇总面板，列出三个关键物理量。",
+            "targets": [
+              "result_panel"
+            ],
+            "duration_s": 4.0
+          },
+          {
+            "id": "step_3",
+            "description": "高亮显示单位，确认量纲正确。",
+            "targets": [
+              "result_panel"
+            ],
+            "duration_s": 3.0
+          }
+        ],
+        "bridge_to_next": ""
+      }
     }
   ]
 }

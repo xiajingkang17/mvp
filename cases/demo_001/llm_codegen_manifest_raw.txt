@@ -1,0 +1,208 @@
+{
+  "version": "1.0",
+  "objects": [
+    {
+      "object_id": "projectile_path",
+      "code_key": "projectile_path",
+      "spec": {
+        "dsl_version": "1.0",
+        "kind": "complex_effect",
+        "geometry": {
+          "elements": [
+            "dashed_parabola_curve",
+            "vertical_arrow",
+            "horizontal_arrow"
+          ],
+          "layout": {
+            "start_point": "B_point",
+            "end_point": "ground_impact_point",
+            "height_H": 1.25,
+            "horizontal_distance_x": 2.0
+          }
+        },
+        "style": {
+          "palette": {
+            "curve_color": "#FFFFFF",
+            "vertical_arrow_color": "#FF4444",
+            "horizontal_arrow_color": "#44FF44"
+          },
+          "sizes": {
+            "stroke_width": 2.0,
+            "dash_length": 0.1,
+            "arrow_scale": 0.5
+          }
+        },
+        "motion": {
+          "sequence": [
+            "draw_curve_from_B",
+            "show_decomposition_arrows"
+          ],
+          "timing": {
+            "draw_duration_s": 1.5,
+            "arrow_fade_in_s": 0.5
+          }
+        },
+        "effects": {},
+        "meta": {
+          "design_brief_cn": "绘制从B点到地面的虚线抛物线，并分解显示重力方向和惯性方向箭头。",
+          "latex_items": [
+            "H = \\frac{1}{2}gt^2"
+          ],
+          "sequence_cn": [
+            "首先绘制虚线抛物线轨迹",
+            "然后显示竖直向下红色箭头和水平向右绿色箭头"
+          ],
+          "continuity_note": "小球位于B点，轨迹起点与B点位置精确对齐。"
+        }
+      },
+      "motion_span_s": 2.0,
+      "notes": null
+    },
+    {
+      "object_id": "projectile_path_S5",
+      "code_key": "projectile_path_s5",
+      "spec": {
+        "dsl_version": "1.0",
+        "kind": "complex_effect",
+        "geometry": {
+          "elements": [
+            "static_dashed_parabola",
+            "static_arrows"
+          ],
+          "layout": {
+            "visibility": "maintain_previous"
+          }
+        },
+        "style": {
+          "palette": {
+            "curve_color": "#FFFFFF",
+            "vertical_arrow_color": "#FF4444",
+            "horizontal_arrow_color": "#44FF44"
+          },
+          "sizes": {
+            "stroke_width": 2.0
+          }
+        },
+        "motion": {
+          "sequence": [
+            "hold_state"
+          ],
+          "timing": {}
+        },
+        "effects": {},
+        "meta": {
+          "design_brief_cn": "保持S4中绘制的轨迹和分解箭头显示，无新增运动。",
+          "latex_items": [
+            "t = \\sqrt{2H/g}"
+          ],
+          "sequence_cn": [
+            "保持显示"
+          ],
+          "continuity_note": "完全复用S4的视觉状态，确保位置和颜色一致。"
+        }
+      },
+      "motion_span_s": null,
+      "notes": null
+    },
+    {
+      "object_id": "projectile_path_S6",
+      "code_key": "projectile_path_s6",
+      "spec": {
+        "dsl_version": "1.0",
+        "kind": "complex_effect",
+        "geometry": {
+          "elements": [
+            "static_parabola",
+            "ground_distance_arrow"
+          ],
+          "layout": {
+            "ground_line_y": -1.25,
+            "arrow_start_x": 0.0,
+            "arrow_end_x": 2.0
+          }
+        },
+        "style": {
+          "palette": {
+            "curve_color": "#FFFFFF",
+            "distance_arrow_color": "#AA00FF"
+          },
+          "sizes": {
+            "stroke_width": 2.0,
+            "arrow_tip_length": 0.2
+          }
+        },
+        "motion": {
+          "sequence": [
+            "show_ground_distance_arrow"
+          ],
+          "timing": {
+            "fade_in_s": 0.5
+          }
+        },
+        "effects": {},
+        "meta": {
+          "design_brief_cn": "显示完整抛物线轨迹，并在地面上标注水平距离x。",
+          "latex_items": [
+            "x = v_B t"
+          ],
+          "sequence_cn": [
+            "显示轨迹",
+            "在地面画出紫色双向箭头标注距离"
+          ],
+          "continuity_note": "轨迹保持不变，新增地面距离标注。"
+        }
+      },
+      "motion_span_s": null,
+      "notes": null
+    },
+    {
+      "object_id": "final_path",
+      "code_key": "final_path",
+      "spec": {
+        "dsl_version": "1.0",
+        "kind": "complex_effect",
+        "geometry": {
+          "elements": [
+            "complete_orbit",
+            "complete_parabola",
+            "ground_system"
+          ],
+          "layout": {
+            "orbit_height_h": 0.8,
+            "drop_height_H": 1.25,
+            "horizontal_distance_x": 2.0
+          }
+        },
+        "style": {
+          "palette": {
+            "orbit_color": "#00AAFF",
+            "parabola_color": "#FFFFFF",
+            "ground_color": "#888888"
+          },
+          "sizes": {
+            "stroke_width": 3.0
+          }
+        },
+        "motion": {
+          "sequence": [
+            "assemble_full_system"
+          ],
+          "timing": {}
+        },
+        "effects": {},
+        "meta": {
+          "design_brief_cn": "汇总显示完整轨道、平抛轨迹和地面系统，用于总结全题。",
+          "latex_items": [
+            "x = 4 \\times 0.5 = 2"
+          ],
+          "sequence_cn": [
+            "显示完整轨道和轨迹"
+          ],
+          "continuity_note": "整合所有先前元素，形成最终全景图。"
+        }
+      },
+      "motion_span_s": null,
+      "notes": null
+    }
+  ]
+}

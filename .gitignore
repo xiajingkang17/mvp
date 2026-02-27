@@ -46,6 +46,9 @@ partial_movie_files/
 *.log
 manim.cfg
 
+# MVP runs (generated artifacts)
+MVP/runs/
+
 # Tooling caches / coverage
 .mypy_cache/
 .ruff_cache/

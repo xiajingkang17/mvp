@@ -1,224 +1,273 @@
 {
-  "explanation_full": "第一问：物块从A点下滑到接触弹簧O点，受重力沿斜面分量和滑动摩擦力。根据牛顿第二定律，加速度 a = g*sinθ - μ*g*cosθ。代入数值计算得 a = 10*0.6 - 0.25*10*0.8 = 6 - 2 = 4 m/s²，方向沿斜面向下。\n\n第二问：全过程应用能量守恒定律。从A点释放到弹簧压缩最大（速度为0），重力势能减少量等于摩擦力做功与弹簧弹性势能增加量之和。即 mg(x0+xm)sinθ = μmg(x0+xm)cosθ + 1/2 k xm²。代入数值：1*10*(0.4+0.2)*0.6 = 0.25*1*10*(0.4+0.2)*0.8 + 0.5*k*0.2²。解得 3.6 = 1.2 + 0.02k，即 0.02k = 2.4，k = 120 N/m。\n\n第三问：物块从最大压缩处弹回至O点，此过程弹簧释放弹性势能，克服摩擦力做功并转化为动能。根据能量守恒：1/2 k xm² = μmg xm cosθ + 1/2 m v_O²。代入数值：0.5*120*0.2² = 0.25*1*10*0.2*0.8 + 0.5*1*v_O²。解得 2.4 = 0.4 + 0.5v_O²，即 0.5v_O² = 2.0，v_O² = 4，v_O = 2 m/s。\n\n第四问：物块最终停止在O点下方某处，此时弹簧压缩量为x。全过程能量守恒：重力势能减少量等于摩擦力做功与弹簧弹性势能之和。mg(x0+x)sinθ = μmg(x0+x)cosθ + 1/2 k x²。代入数值并整理：10*0.6*(0.4+x) = 0.25*10*0.8*(0.4+x) + 60x²。化简得 6(0.4+x) = 2(0.4+x) + 60x²，即 4(0.4+x) = 60x²，1.6 + 4x = 60x²。整理为 15x² - x - 0.4 = 0。解方程得 x = [1 ± √(1 + 24)]/30 = [1 ± 5]/30。取正值 x = 6/30 = 0.2 m。即最终停止在距离O点0.2m处（恰好是最大压缩量处）。",
+  "explanation_full": "粒子在正交的匀强电场E和匀强磁场B中运动，初始静止。电场力F_E=qE向右，洛伦兹力F_L=qvB与速度方向垂直。由于初始速度为零，洛伦兹力为零，粒子在电场力作用下开始向右加速。随着速度增加，洛伦兹力出现并使轨迹偏转。当速度达到v0=E/B时，电场力与洛伦兹力平衡（qE=qv0B），此时合力为零，加速度为零，速度达到最大值vmax=v0。此后粒子在洛伦兹力作用下做匀速圆周运动，速度大小保持v0不变。轨迹的最大曲率半径出现在速度最大时，即Rmax=mv0/qB。运动具有周期性，周期由匀速圆周运动的周期决定，即T=2πm/qB。",
   "global_symbols": [
-    {"name": "m", "meaning": "物块质量", "unit": "kg"},
-    {"name": "θ", "meaning": "斜面倾角", "unit": "°"},
-    {"name": "μ", "meaning": "动摩擦因数", "unit": "无"},
-    {"name": "k", "meaning": "弹簧劲度系数", "unit": "N/m"},
-    {"name": "g", "meaning": "重力加速度", "unit": "m/s²"},
-    {"name": "x0", "meaning": "初始释放点A到O的距离", "unit": "m"},
-    {"name": "xm", "meaning": "弹簧最大压缩量", "unit": "m"}
+    {
+      "name": "m",
+      "meaning": "粒子质量",
+      "unit": "kg"
+    },
+    {
+      "name": "q",
+      "meaning": "粒子电荷量",
+      "unit": "C"
+    },
+    {
+      "name": "E",
+      "meaning": "匀强电场强度",
+      "unit": "N/C"
+    },
+    {
+      "name": "B",
+      "meaning": "匀强磁感应强度",
+      "unit": "T"
+    },
+    {
+      "name": "v",
+      "meaning": "粒子瞬时速率",
+      "unit": "m/s"
+    },
+    {
+      "name": "v0",
+      "meaning": "平衡速度（E/B）",
+      "unit": "m/s"
+    },
+    {
+      "name": "R",
+      "meaning": "轨迹曲率半径",
+      "unit": "m"
+    },
+    {
+      "name": "T",
+      "meaning": "运动周期",
+      "unit": "s"
+    }
   ],
   "sub_questions": [
     {
       "id": "Q1",
-      "question": "物块刚接触弹簧瞬间的加速度大小与方向",
-      "goal": "求加速度a的大小和方向",
+      "question": "求粒子运动过程中的最大速率 vmax",
+      "goal": "确定粒子速度的最大值及其出现条件",
       "device_scene_needed": true,
-      "variable_annotations": ["m", "θ", "μ", "g"],
-      "given_conditions": ["斜面光滑（注：题目后文给出μ=0.25，此处应理解为除弹簧外斜面粗糙）", "物块由静止释放"],
+      "variable_annotations": [
+        "v",
+        "vmax",
+        "E",
+        "B"
+      ],
+      "given_conditions": [
+        "正交电磁场",
+        "重力不计",
+        "从静止释放"
+      ],
       "method_choice": {
-        "method": "Newton's Second Law",
-        "reason": "接触弹簧前物块做匀加速直线运动，合力恒定，直接由牛二定律求解加速度最简便"
+        "method": "kinematics_dynamics",
+        "reason": "基于牛顿第二定律分析受力，利用速度选择器平衡条件确定加速度为零的时刻，对应速度极值。"
       },
       "derivation_steps": [
         {
-          "type": "equation",
-          "content": "沿斜面方向建立牛顿第二定律方程：mg sinθ - f = ma"
+          "type": "reasoning",
+          "content": "粒子受水平向右电场力 F_E=qE 和垂直于速度方向的洛伦兹力 F_L=qvB。初始时刻 v=0，F_L=0，粒子向右加速。"
+        },
+        {
+          "type": "reasoning",
+          "content": "随着速度 v 增加，洛伦兹力 F_L 增大，其方向使轨迹偏转，导致电场力方向与速度方向夹角变大，切向加速度减小。"
         },
         {
           "type": "equation",
-          "content": "滑动摩擦力 f = μmg cosθ，代入得：mg sinθ - μmg cosθ = ma"
+          "content": "当速度达到 v0 时，若满足 qE = qv0B，即 v0 = E/B，则电场力与洛伦兹力平衡，合力为零。"
+        },
+        {
+          "type": "reasoning",
+          "content": "此时切向加速度为零，速度不再增加，达到最大值。"
         },
         {
           "type": "compute",
-          "content": "消去m，代入数值：a = 10×0.6 - 0.25×10×0.8 = 6 - 2 = 4 m/s²"
+          "content": "vmax = v0 = E/B"
         }
       ],
       "result": {
-        "expression": "a=4.0",
-        "unit": "m/s²",
-        "text": "加速度大小为4.0 m/s²，方向沿斜面向下"
+        "expression": "vmax = E/B",
+        "unit": "m/s"
       },
       "sanity_checks": [
-        "单位正确(m/s²)",
-        "a > 0 表示沿斜面向下加速，符合重力分量大于摩擦力的物理情景"
+        "单位检查：E单位N/C，B单位N/(A·m)=N·s/C·m，E/B单位为m/s，正确",
+        "极限检查：若E=0，则vmax=0，符合纯磁场中静止粒子不动的物理事实"
       ],
-      "transition": "利用此加速度过程求出接触速度，或直接对全过程应用能量守恒求解劲度系数",
+      "transition": "获得最大速度后，粒子将以此速度进入后续的圆周运动阶段，用于计算曲率半径。",
       "scene_packets": [
         {
-          "content_items": ["diagram", "goal", "knowns"],
+          "content_items": [
+            "diagram",
+            "goal",
+            "knowns"
+          ],
           "primary_item": "diagram"
         },
         {
-          "content_items": ["principle", "core_equation", "derive_step"],
+          "content_items": [
+            "principle",
+            "core_equation",
+            "derive_step"
+          ],
           "primary_item": "core_equation"
         },
         {
-          "content_items": ["substitute_compute", "conclusion", "check_sanity"],
+          "content_items": [
+            "conclusion",
+            "check_sanity",
+            "transition"
+          ],
           "primary_item": "conclusion"
         }
       ]
     },
     {
       "id": "Q2",
-      "question": "弹簧的劲度系数 k",
-      "goal": "求劲度系数k",
+      "question": "求粒子运动轨迹的最大曲率半径 Rmax",
+      "goal": "计算轨迹曲率半径的最大值",
       "device_scene_needed": true,
-      "variable_annotations": ["k", "xm", "x0"],
-      "given_conditions": ["最大压缩量xm=0.2m", "全过程能量守恒"],
+      "variable_annotations": [
+        "R",
+        "Rmax",
+        "vmax",
+        "m",
+        "q",
+        "B"
+      ],
+      "given_conditions": [
+        "洛伦兹力提供向心力",
+        "速度最大时曲率半径最大"
+      ],
       "method_choice": {
-        "method": "Energy Conservation",
-        "reason": "涉及重力势能、弹性势能和摩擦力做功，且初末状态动能均为0，适用能量守恒定律"
+        "method": "circular_dynamics",
+        "reason": "利用洛伦兹力提供向心力的公式，结合上一问求得的最大速度求解。"
       },
       "derivation_steps": [
         {
-          "type": "equation",
-          "content": "从A点到最大压缩点B，重力做功等于摩擦力做功与弹性势能增量之和：W_G = W_f + ΔE_p"
+          "type": "reasoning",
+          "content": "粒子在磁场中运动时，洛伦兹力提供向心力。曲率半径公式为 R = mv/(qB)。"
         },
         {
           "type": "equation",
-          "content": "mg(x0+xm)sinθ = μmg(x0+xm)cosθ + 1/2 k xm²"
+          "content": "R = mv / (qB)"
+        },
+        {
+          "type": "reasoning",
+          "content": "由于 m, q, B 为常量，曲率半径 R 与速率 v 成正比。"
         },
         {
           "type": "compute",
-          "content": "代入数值：1*10*0.6*0.6 = 0.25*1*10*0.8*0.6 + 0.5*k*0.04，解得 3.6 = 1.2 + 0.02k，k = 120 N/m"
+          "content": "当 v = vmax = E/B 时，R 达到最大值 Rmax。"
+        },
+        {
+          "type": "equation",
+          "content": "Rmax = m * (E/B) / (qB) = mE / (qB^2)"
         }
       ],
       "result": {
-        "expression": "k=120",
-        "unit": "N/m",
-        "text": "弹簧的劲度系数为120 N/m"
+        "expression": "Rmax = mE / (qB^2)",
+        "unit": "m"
       },
       "sanity_checks": [
-        "单位正确(N/m)",
-        "k为正值，符合物理规律"
+        "单位检查：m(kg) * E(N/C) / (q(C) * B^2(T^2)) = (kg·m/s^2) / (C·N^2/C^2·s^2/m^2) = m，正确",
+        "趋势检查：质量 m 越大，惯性越大，半径越大；磁场 B 越强，偏转越强，半径越小，符合物理直觉"
       ],
-      "transition": "已知k和xm，可计算最大压缩处的弹性势能，进而分析弹回过程",
+      "transition": "已知最大半径和速度，进一步分析运动的周期性特征。",
       "scene_packets": [
         {
-          "content_items": ["diagram", "goal", "assumption"],
-          "primary_item": "diagram"
-        },
-        {
-          "content_items": ["principle", "core_equation"],
+          "content_items": [
+            "hook_question",
+            "principle",
+            "core_equation"
+          ],
           "primary_item": "core_equation"
         },
         {
-          "content_items": ["derive_step", "substitute_compute", "intermediate_result"],
+          "content_items": [
+            "derive_step",
+            "substitute_compute",
+            "intermediate_result"
+          ],
           "primary_item": "substitute_compute"
         },
         {
-          "content_items": ["conclusion", "check_sanity", "transition"],
+          "content_items": [
+            "conclusion",
+            "check_sanity",
+            "transition"
+          ],
           "primary_item": "conclusion"
         }
       ]
     },
     {
       "id": "Q3",
-      "question": "物块从被弹回至恰好回到 O 点时的速度大小",
-      "goal": "求回到O点时的速度v_O",
-      "device_scene_needed": false,
-      "variable_annotations": ["v_O", "xm"],
-      "given_conditions": ["从最大压缩处弹回至O点", "O点弹簧原长"],
-      "method_choice": {
-        "method": "Energy Conservation",
-        "reason": "过程涉及弹性势能转化为动能和克服摩擦做功，初态动能为0，末态弹性势能为0"
-      },
-      "derivation_steps": [
-        {
-          "type": "equation",
-          "content": "最大压缩处弹性势能 = 回到O点动能 + 克服摩擦力做功：1/2 k xm² = 1/2 m v_O² + μmg xm cosθ"
-        },
-        {
-          "type": "equation",
-          "content": "0.5 * 120 * 0.2² = 0.5 * 1 * v_O² + 0.25 * 1 * 10 * 0.2 * 0.8"
-        },
-        {
-          "type": "compute",
-          "content": "2.4 = 0.5 v_O² + 0.4，解得 0.5 v_O² = 2.0，v_O² = 4，v_O = 2 m/s"
-        }
-      ],
-      "result": {
-        "expression": "v_O=2.0",
-        "unit": "m/s",
-        "text": "回到O点时的速度大小为2.0 m/s"
-      },
-      "sanity_checks": [
-        "单位正确(m/s)",
-        "速度小于下滑到O点的速度（因摩擦力持续做负功），合理"
-      ],
-      "transition": "物块将以2m/s的速度冲过O点向上滑行，最终停止",
-      "scene_packets": [
-        {
-          "content_items": ["goal", "knowns", "diagram"],
-          "primary_item": "goal"
-        },
-        {
-          "content_items": ["principle", "core_equation", "derive_step"],
-          "primary_item": "core_equation"
-        },
-        {
-          "content_items": ["substitute_compute", "conclusion", "check_sanity"],
-          "primary_item": "conclusion"
-        }
-      ]
-    },
-    {
-      "id": "Q4",
-      "question": "物块最终停止的位置到 O 点的距离",
-      "goal": "求最终停止位置到O点的距离x",
+      "question": "说明粒子运动的周期性，并求出运动周期 T",
+      "goal": "论证运动的周期性并计算周期",
       "device_scene_needed": true,
-      "variable_annotations": ["x"],
-      "given_conditions": ["物块最终静止", "弹簧被压缩"],
+      "variable_annotations": [
+        "T",
+        "m",
+        "q",
+        "B"
+      ],
+      "given_conditions": [
+        "粒子达到最大速度后做匀速圆周运动"
+      ],
       "method_choice": {
-        "method": "Energy Conservation",
-        "reason": "全过程从释放到最终静止，初末动能均为0，重力势能减少量等于摩擦产生的热量与弹簧弹性势能之和"
+        "method": "periodic_analysis",
+        "reason": "基于匀速圆周运动的周期公式，结合速度选择器条件下的运动状态分析。"
       },
       "derivation_steps": [
         {
-          "type": "equation",
-          "content": "全过程能量守恒：mg(x0+x)sinθ = μmg(x0+x)cosθ + 1/2 k x²"
+          "type": "reasoning",
+          "content": "粒子从静止加速到 vmax 的过程是非周期性的（仅发生一次）。达到 vmax 后，电场力与洛伦兹力平衡，合力仅由洛伦兹力提供，且大小不变，方向始终指向圆心。"
+        },
+        {
+          "type": "reasoning",
+          "content": "因此，粒子随后进入匀速圆周运动状态，速度大小不变，方向周期性变化，轨迹为闭合圆周。"
         },
         {
           "type": "equation",
-          "content": "代入数值：10*0.6*(0.4+x) = 0.25*10*0.8*(0.4+x) + 0.5*120*x²"
+          "content": "匀速圆周运动周期公式：T = 2πm / (qB)"
         },
         {
           "type": "compute",
-          "content": "化简得 6(0.4+x) = 2(0.4+x) + 60x²，即 4(0.4+x) = 60x²，整理得 15x² - x - 0.4 = 0"
-        },
-        {
-          "type": "compute",
-          "content": "解方程：x = [1 ± √(1+24)]/30 = [1 ± 5]/30，取正值 x = 0.2 m"
+          "content": "代入参数，得 T = 2πm / (qB)"
         }
       ],
       "result": {
-        "expression": "x=0.2",
-        "unit": "m",
-        "text": "物块最终停止在距离O点0.2m处"
+        "expression": "T = 2πm / (qB)",
+        "unit": "s"
       },
       "sanity_checks": [
-        "距离为正值且小于最大压缩量（若大于则矛盾），此处恰好等于最大压缩量",
-        "物理意义：物块在O点下方0.2m处受力平衡，mg sinθ = kx + μmg cosθ，即 6 = 120*0.2 + 2 = 26，此处计算有误，实际上能量守恒解出的位置是动能耗尽的位置，并非受力平衡位置。但根据题目给定的数值，解出的x=0.2m是方程的数学解。"
+        "单位检查：kg / (C * T) = kg / (C * N/(A·m)) = kg / (C * (kg·m/s^2)/(C·s/m)) = s，正确",
+        "物理可行性：周期与速度 v 无关，回旋加速器原理与此一致"
       ],
-      "transition": "解题结束",
+      "transition": "至此，我们完整求解了粒子的最大速率、最大曲率半径及运动周期。",
       "scene_packets": [
         {
-          "content_items": ["diagram", "goal", "knowns"],
-          "primary_item": "diagram"
+          "content_items": [
+            "hook_question",
+            "assumption",
+            "principle"
+          ],
+          "primary_item": "principle"
         },
         {
-          "content_items": ["principle", "core_equation", "derive_step"],
+          "content_items": [
+            "core_equation",
+            "derive_step",
+            "conclusion"
+          ],
           "primary_item": "core_equation"
         },
         {
-          "content_items": ["substitute_compute", "intermediate_result"],
-          "primary_item": "substitute_compute"
-        },
-        {
-          "content_items": ["conclusion", "check_sanity"],
-          "primary_item": "conclusion"
+          "content_items": [
+            "check_sanity",
+            "transition"
+          ],
+          "primary_item": "check_sanity"
         }
       ]
     }

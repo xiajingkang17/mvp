@@ -7,6 +7,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from typing import Any, Literal
 
 from pipeline.config import CONFIG_DIR, load_yaml
 from pipeline.env import load_dotenv
@@ -25,6 +26,35 @@ class ZhipuConfig:
     retry_backoff_s: float
     base_url: str
     enable_thinking: bool
+
+
+def _load_zhipu_raw() -> dict[str, Any]:
+    raw = load_yaml(CONFIG_DIR / "llm.yaml") or {}
+    return raw.get("zhipu", {}) or {}
+
+
+def _build_zhipu_config(base_cfg: ZhipuConfig, overrides: dict[str, Any]) -> ZhipuConfig:
+    model = str(overrides.get("model", base_cfg.model))
+    temperature = float(overrides.get("temperature", base_cfg.temperature))
+    top_p = float(overrides.get("top_p", base_cfg.top_p))
+    max_tokens = int(overrides.get("max_tokens", base_cfg.max_tokens))
+    timeout_s = int(overrides.get("timeout_s", base_cfg.timeout_s))
+    retries = int(overrides.get("retries", base_cfg.retries))
+    retry_backoff_s = float(overrides.get("retry_backoff_s", base_cfg.retry_backoff_s))
+    base_url = str(overrides.get("base_url", base_cfg.base_url))
+    enable_thinking = _to_bool(overrides.get("enable_thinking"), base_cfg.enable_thinking)
+
+    return ZhipuConfig(
+        model=model,
+        temperature=temperature,
+        top_p=top_p,
+        max_tokens=max_tokens,
+        timeout_s=timeout_s,
+        retries=max(0, retries),
+        retry_backoff_s=max(0.1, retry_backoff_s),
+        base_url=base_url,
+        enable_thinking=enable_thinking,
+    )
 
 
 def _to_bool(value: str | bool | None, default: bool) -> bool:
@@ -48,8 +78,7 @@ def load_zhipu_config() -> ZhipuConfig:
     3) built-in defaults
     """
 
-    raw = load_yaml(CONFIG_DIR / "llm.yaml") or {}
-    zhipu = raw.get("zhipu", {}) or {}
+    zhipu = _load_zhipu_raw()
 
     model = os.environ.get("ZHIPU_MODEL") or str(zhipu.get("model", "glm-4.7"))
     temperature = float(os.environ.get("ZHIPU_TEMPERATURE") or zhipu.get("temperature", 0.3))
@@ -75,6 +104,37 @@ def load_zhipu_config() -> ZhipuConfig:
         base_url=base_url,
         enable_thinking=enable_thinking,
     )
+
+
+def load_zhipu_stage_config(
+    stage: str,
+    mode: Literal["generate", "continue", "repair"],
+    *,
+    base_cfg: ZhipuConfig | None = None,
+) -> ZhipuConfig:
+    """
+    Load stage/mode-specific config from `configs/llm.yaml`.
+
+    Expected shape:
+    zhipu.stages.<stage>.<mode> = {temperature, top_p, ...}
+    """
+
+    base = base_cfg or load_zhipu_config()
+    zhipu = _load_zhipu_raw()
+
+    stages = zhipu.get("stages", {}) or {}
+    if not isinstance(stages, dict):
+        return base
+
+    stage_cfg = stages.get(stage, {}) or {}
+    if not isinstance(stage_cfg, dict):
+        return base
+
+    mode_cfg = stage_cfg.get(mode, {}) or {}
+    if not isinstance(mode_cfg, dict):
+        return base
+
+    return _build_zhipu_config(base, mode_cfg)
 
 
 def _get_api_key() -> str:

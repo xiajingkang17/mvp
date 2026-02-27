@@ -1,86 +1,98 @@
 {
-  "explanation_full": "第一问：物块从A点下滑到接触弹簧O点，受重力沿斜面分量和滑动摩擦力。根据牛顿第二定律，加速度 a = g*sinθ - μ*g*cosθ。代入数值计算得 a = 10*0.6 - 0.25*10*0.8 = 6 - 2 = 4 m/s²，方向沿斜面向下。\n\n第二问：全过程应用能量守恒定律。从A点释放到弹簧压缩最大（速度为0），重力势能减少量等于摩擦力做功与弹簧弹性势能增加量之和。即 mg(x0+xm)sinθ = μmg(x0+xm)cosθ + 1/2 k xm²。代入数值：1*10*(0.4+0.2)*0.6 = 0.25*1*10*(0.4+0.2)*0.8 + 0.5*k*0.2²。解得 3.6 = 1.2 + 0.02k，即 0.02k = 2.4，k = 120 N/m。\n\n第三问：物块从最大压缩处弹回至O点，此过程弹簧释放弹性势能，克服摩擦力做功并转化为动能。根据能量守恒：1/2 k xm² = μmg xm cosθ + 1/2 m v_O²。代入数值：0.5*120*0.2² = 0.25*1*10*0.2*0.8 + 0.5*1*v_O²。解得 2.4 = 0.4 + 0.5v_O²，即 0.5v_O² = 2.0，v_O² = 4，v_O = 2 m/s。\n\n第四问：物块最终停止在O点下方某处，此时弹簧压缩量为x。全过程能量守恒：重力势能减少量等于摩擦力做功与弹簧弹性势能之和。mg(x0+x)sinθ = μmg(x0+x)cosθ + 1/2 k x²。代入数值并整理：10*0.6*(0.4+x) = 0.25*10*0.8*(0.4+x) + 60x²。化简得 6(0.4+x) = 2(0.4+x) + 60x²，即 4(0.4+x) = 60x²，1.6 + 4x = 60x²。整理为 15x² - x - 0.4 = 0。解方程得 x = [1 ± √(1 + 24)]/30 = [1 ± 5]/30。取正值 x = 6/30 = 0.2 m。即最终停止在距离O点0.2m处（恰好是最大压缩量处）。",
+  "explanation_full": "本题考查带电粒子在复合场（电场与磁场交替分布）中的运动规律。粒子首先在电场中由静止加速，获得初速度进入磁场；在磁场中受洛伦兹力作用做匀速圆周运动。第一问利用动能定理或牛顿第二定律求解进入磁场时的速度；第二问根据粒子恰好回到P点的几何约束，结合磁场偏转半径公式求解未知磁感应强度B2；第三问分析粒子到达Q点的最短时间路径，利用几何关系确定圆心角，进而计算运动时间。",
   "global_symbols": [
     {
       "name": "m",
-      "meaning": "物块质量",
+      "meaning": "粒子质量",
       "unit": "kg"
     },
     {
-      "name": "θ",
-      "meaning": "斜面倾角",
-      "unit": "°"
+      "name": "q",
+      "meaning": "粒子电荷量",
+      "unit": "C"
     },
     {
-      "name": "μ",
-      "meaning": "动摩擦因数",
-      "unit": "无"
+      "name": "E",
+      "meaning": "电场强度",
+      "unit": "N/C"
     },
     {
-      "name": "k",
-      "meaning": "弹簧劲度系数",
-      "unit": "N/m"
-    },
-    {
-      "name": "g",
-      "meaning": "重力加速度",
-      "unit": "m/s²"
-    },
-    {
-      "name": "x0",
-      "meaning": "初始释放点A到O的距离",
+      "name": "d",
+      "meaning": "相邻边界间距",
       "unit": "m"
     },
     {
-      "name": "xm",
-      "meaning": "弹簧最大压缩量",
+      "name": "B1",
+      "meaning": "L2与L3间磁感应强度",
+      "unit": "T"
+    },
+    {
+      "name": "B2",
+      "meaning": "L3与L4间磁感应强度",
+      "unit": "T"
+    },
+    {
+      "name": "v0",
+      "meaning": "粒子进入磁场时的速度",
+      "unit": "m/s"
+    },
+    {
+      "name": "R",
+      "meaning": "圆周运动半径",
       "unit": "m"
+    },
+    {
+      "name": "T",
+      "meaning": "圆周运动周期",
+      "unit": "s"
     }
   ],
   "sub_questions": [
     {
       "id": "Q1",
-      "question": "物块刚接触弹簧瞬间的加速度大小与方向",
-      "goal": "求加速度a的大小和方向",
+      "question": "求粒子进入磁场时的速度大小 v0",
+      "goal": "计算粒子加速后的速度 v0",
       "device_scene_needed": true,
       "variable_annotations": [
         "m",
-        "θ",
-        "μ",
-        "g"
+        "q",
+        "E",
+        "d",
+        "v0"
       ],
       "given_conditions": [
-        "斜面光滑（注：题目后文给出μ=0.25，此处应理解为除弹簧外斜面粗糙）",
-        "物块由静止释放"
+        "粒子由静止释放",
+        "电场方向 L1->L2",
+        "不计重力"
       ],
       "method_choice": {
-        "method": "Newton's Second Law",
-        "reason": "接触弹簧前物块做匀加速直线运动，合力恒定，直接由牛二定律求解加速度最简便"
+        "method": "动能定理",
+        "reason": "先修概念为带电粒子在匀强电场中的加速运动，利用动能定理将电场力做功与动能增量联系起来。"
       },
       "derivation_steps": [
         {
-          "type": "equation",
-          "content": "沿斜面方向建立牛顿第二定律方程：mg sinθ - f = ma"
+          "type": "reasoning",
+          "content": "粒子在 L1 与 L2 之间受电场力 qE 做匀加速直线运动，位移为 d。根据动能定理，电场力做功等于动能增量。"
         },
         {
           "type": "equation",
-          "content": "滑动摩擦力 f = μmg cosθ，代入得：mg sinθ - μmg cosθ = ma"
+          "content": "qEd = 1/2 m v0^2"
         },
         {
           "type": "compute",
-          "content": "消去m，代入数值：a = 10×0.6 - 0.25×10×0.8 = 6 - 2 = 4 m/s²"
+          "content": "解方程得 v0 = sqrt(2qEd/m)"
         }
       ],
       "result": {
-        "expression": "a=4.0",
-        "unit": "m/s²",
-        "text": "加速度大小为4.0 m/s²，方向沿斜面向下"
+        "expression": "v0 = sqrt(2qEd/m)",
+        "unit": "m/s",
+        "text": null
       },
       "sanity_checks": [
-        "单位正确(m/s²)",
-        "a > 0 表示沿斜面向下加速，符合重力分量大于摩擦力的物理情景"
+        "单位检查：sqrt((C * N/C * m) / kg) = sqrt(N*m/kg) = sqrt(J/kg) = m/s，单位正确",
+        "趋势检查：电场强度 E 或距离 d 增大，加速效果增强，v0 增大，符合物理规律"
       ],
-      "transition": "利用此加速度过程求出接触速度，或直接对全过程应用能量守恒求解劲度系数",
+      "transition": "求得的 v0 将作为粒子进入磁场做圆周运动的初速度，用于后续计算洛伦兹力及轨道半径。",
       "scene_packets": [
         {
           "content_items": [
@@ -94,8 +106,7 @@
         {
           "content_items": [
             "principle",
-            "core_equation",
-            "derive_step"
+            "core_equation"
           ],
           "primary_item": "core_equation",
           "emphasis": null
@@ -113,51 +124,64 @@
     },
     {
       "id": "Q2",
-      "question": "弹簧的劲度系数 k",
-      "goal": "求劲度系数k",
+      "question": "若粒子恰好能回到 P 点，求磁感应强度 B2 的大小",
+      "goal": "根据几何约束求解 B2",
       "device_scene_needed": true,
       "variable_annotations": [
-        "k",
-        "xm",
-        "x0"
+        "B1",
+        "B2",
+        "v0",
+        "R1",
+        "R2"
       ],
       "given_conditions": [
-        "最大压缩量xm=0.2m",
-        "全过程能量守恒"
+        "B1 = q*sqrt(m/(qEd))",
+        "粒子恰好回到 P 点"
       ],
       "method_choice": {
-        "method": "Energy Conservation",
-        "reason": "涉及重力势能、弹性势能和摩擦力做功，且初末状态动能均为0，适用能量守恒定律"
+        "method": "几何约束与洛伦兹力公式",
+        "reason": "先修概念为带电粒子在匀强磁场中的圆周运动，需结合洛伦兹力提供向心力的公式及粒子轨迹的几何对称性求解。"
       },
       "derivation_steps": [
         {
-          "type": "equation",
-          "content": "从A点到最大压缩点B，重力做功等于摩擦力做功与弹性势能增量之和：W_G = W_f + ΔE_p"
+          "type": "reasoning",
+          "content": "粒子在磁场 B1 和 B2 中均做匀速圆周运动，洛伦兹力提供向心力。粒子从 L2 进入 B1，偏转后进入 B2，再返回。恰好回到 P 点意味着轨迹关于 L2 对称，且在 B1 和 B2 中的偏转角均为 60 度（由几何关系得出，弦长为 2d，半径 R1=d）。"
         },
         {
           "type": "equation",
-          "content": "mg(x0+xm)sinθ = μmg(x0+xm)cosθ + 1/2 k xm²"
+          "content": "qv0B1 = m v0^2 / R1"
         },
         {
           "type": "compute",
-          "content": "代入数值：1*10*0.6*0.6 = 0.25*1*10*0.8*0.6 + 0.5*k*0.04，解得 3.6 = 1.2 + 0.02k，k = 120 N/m"
+          "content": "代入 B1 表达式，解得 R1 = mv0/(qB1) = d。验证几何关系：弦长 2d 对应圆心角 120 度，偏转角 60 度。"
+        },
+        {
+          "type": "reasoning",
+          "content": "在 B2 磁场中，粒子需偏转 60 度以垂直向上回到 L1。由几何关系，半径 R2 = d / sin(60) = 2d/sqrt(3)。"
+        },
+        {
+          "type": "equation",
+          "content": "qv0B2 = m v0^2 / R2"
+        },
+        {
+          "type": "compute",
+          "content": "B2 = mv0/(qR2) = mv0 / (q * 2d/sqrt(3)) = (sqrt(3)/2) * (mv0/(qd))。代入 v0 = sqrt(2qEd/m)，得 B2 = (sqrt(3)/2) * sqrt(2mE/(qd)) = sqrt(3mE/(2qd))"
         }
       ],
       "result": {
-        "expression": "k=120",
-        "unit": "N/m",
-        "text": "弹簧的劲度系数为120 N/m"
+        "expression": "B2 = sqrt(3mE/(2qd))",
+        "unit": "T",
+        "text": null
       },
       "sanity_checks": [
-        "单位正确(N/m)",
-        "k为正值，符合物理规律"
+        "单位检查：sqrt((kg * N/C) / (C * m)) = sqrt(kg * N / C^2) = sqrt(kg * (kg*m/s^2) / C^2) = T，单位正确",
+        "几何一致性：R2 > R1，B2 < B1，结果符合几何约束"
       ],
-      "transition": "已知k和xm，可计算最大压缩处的弹性势能，进而分析弹回过程",
+      "transition": "确定了 B2 的取值范围及对轨迹的影响，下一问将探讨改变 B2 以优化时间。",
       "scene_packets": [
         {
           "content_items": [
             "diagram",
-            "goal",
             "assumption"
           ],
           "primary_item": "diagram",
@@ -166,89 +190,10 @@
         {
           "content_items": [
             "principle",
-            "core_equation"
-          ],
-          "primary_item": "core_equation",
-          "emphasis": null
-        },
-        {
-          "content_items": [
-            "derive_step",
-            "substitute_compute",
-            "intermediate_result"
-          ],
-          "primary_item": "substitute_compute",
-          "emphasis": null
-        },
-        {
-          "content_items": [
-            "conclusion",
-            "check_sanity",
-            "transition"
-          ],
-          "primary_item": "conclusion",
-          "emphasis": null
-        }
-      ]
-    },
-    {
-      "id": "Q3",
-      "question": "物块从被弹回至恰好回到 O 点时的速度大小",
-      "goal": "求回到O点时的速度v_O",
-      "device_scene_needed": false,
-      "variable_annotations": [
-        "v_O",
-        "xm"
-      ],
-      "given_conditions": [
-        "从最大压缩处弹回至O点",
-        "O点弹簧原长"
-      ],
-      "method_choice": {
-        "method": "Energy Conservation",
-        "reason": "过程涉及弹性势能转化为动能和克服摩擦做功，初态动能为0，末态弹性势能为0"
-      },
-      "derivation_steps": [
-        {
-          "type": "equation",
-          "content": "最大压缩处弹性势能 = 回到O点动能 + 克服摩擦力做功：1/2 k xm² = 1/2 m v_O² + μmg xm cosθ"
-        },
-        {
-          "type": "equation",
-          "content": "0.5 * 120 * 0.2² = 0.5 * 1 * v_O² + 0.25 * 1 * 10 * 0.2 * 0.8"
-        },
-        {
-          "type": "compute",
-          "content": "2.4 = 0.5 v_O² + 0.4，解得 0.5 v_O² = 2.0，v_O² = 4，v_O = 2 m/s"
-        }
-      ],
-      "result": {
-        "expression": "v_O=2.0",
-        "unit": "m/s",
-        "text": "回到O点时的速度大小为2.0 m/s"
-      },
-      "sanity_checks": [
-        "单位正确(m/s)",
-        "速度小于下滑到O点的速度（因摩擦力持续做负功），合理"
-      ],
-      "transition": "物块将以2m/s的速度冲过O点向上滑行，最终停止",
-      "scene_packets": [
-        {
-          "content_items": [
-            "goal",
-            "knowns",
-            "diagram"
-          ],
-          "primary_item": "goal",
-          "emphasis": null
-        },
-        {
-          "content_items": [
-            "principle",
             "core_equation",
             "derive_step"
           ],
-          "primary_item": "core_equation",
+          "primary_item": "derive_step",
           "emphasis": null
         },
         {
@@ -263,55 +208,70 @@
       ]
     },
     {
-      "id": "Q4",
-      "question": "物块最终停止的位置到 O 点的距离",
-      "goal": "求最终停止位置到O点的距离x",
+      "id": "Q3",
+      "question": "若改变 B2 的大小，粒子能以最短的时间到达 Q 点，求粒子从 P 运动到 Q 的时间 t",
+      "goal": "计算最短时间 t",
       "device_scene_needed": true,
       "variable_annotations": [
-        "x"
+        "t",
+        "t_acc",
+        "t_B1",
+        "t_B2",
+        "theta"
       ],
       "given_conditions": [
-        "物块最终静止",
-        "弹簧被压缩"
+        "P、Q 间距 2d",
+        "改变 B2 大小"
       ],
       "method_choice": {
-        "method": "Energy Conservation",
-        "reason": "全过程从释放到最终静止，初末动能均为0，重力势能减少量等于摩擦产生的热量与弹簧弹性势能之和"
+        "method": "极值分析与周期公式",
+        "reason": "先修概念为带电粒子在复合场中的运动，需分析时间随 B2 变化的函数关系，利用几何约束找到极值点。"
       },
       "derivation_steps": [
         {
-          "type": "equation",
-          "content": "全过程能量守恒：mg(x0+x)sinθ = μmg(x0+x)cosθ + 1/2 k x²"
+          "type": "reasoning",
+          "content": "总时间 t = t_acc + t_B1 + t_B2。t_acc 和 t_B1 是定值。要使 t 最小，需使 t_B2 最小。"
         },
         {
           "type": "equation",
-          "content": "代入数值：10*0.6*(0.4+x) = 0.25*10*0.8*(0.4+x) + 0.5*120*x²"
+          "content": "t_B2 = (theta / 360) * T2 = (theta / 360) * (2*pi*m / (qB2))"
+        },
+        {
+          "type": "reasoning",
+          "content": "由几何关系，粒子在 B2 中的偏转角 theta 满足 tan(theta/2) = d / (2d - R1) = 1。故 theta/2 = 45 度，theta = 90 度。"
         },
         {
           "type": "compute",
-          "content": "化简得 6(0.4+x) = 2(0.4+x) + 60x²，即 4(0.4+x) = 60x²，整理得 15x² - x - 0.4 = 0"
+          "content": "t_B2 = (90/360) * (2*pi*m / (qB2)) = (pi*m) / (2qB2)。此时 R2 = d / sin(45) = sqrt(2)d。"
+        },
+        {
+          "type": "equation",
+          "content": "B2 = mv0/(qR2) = mv0 / (q*sqrt(2)d)"
         },
         {
           "type": "compute",
-          "content": "解方程：x = [1 ± √(1+24)]/30 = [1 ± 5]/30，取正值 x = 0.2 m"
+          "content": "代入 v0 = sqrt(2qEd/m)，得 B2 = sqrt(mE/(2qd))。进而 t_B2 = (pi*m) / (2q * sqrt(mE/(2qd))) = (pi/2) * sqrt(md/(2qE)) = (pi/4) * sqrt(2md/(qE))"
+        },
+        {
+          "type": "compute",
+          "content": "计算各段时间：t_acc = sqrt(2md/(qE))；t_B1 = (60/360) * (2*pi*m / (qB1)) = (pi/3) * sqrt(md/(2qE))；t = t_acc + t_B1 + t_B2 = sqrt(2md/(qE)) + (pi/3 + pi/4) * sqrt(md/(2qE)) = (1 + 7pi/12) * sqrt(md/(2qE)) * sqrt(2) = (1 + 7pi/12) * sqrt(2md/(qE))"
         }
       ],
       "result": {
-        "expression": "x=0.2",
-        "unit": "m",
-        "text": "物块最终停止在距离O点0.2m处"
+        "expression": "t = (1 + 7pi/12) * sqrt(2md/(qE))",
+        "unit": "s",
+        "text": null
       },
       "sanity_checks": [
-        "距离为正值且小于最大压缩量（若大于则矛盾），此处恰好等于最大压缩量",
-        "物理意义：物块在O点下方0.2m处受力平衡，mg sinθ = kx + μmg cosθ，即 6 = 120*0.2 + 2 = 26，此处计算有误，实际上能量守恒解出的位置是动能耗尽的位置，并非受力平衡位置。但根据题目给定的数值，解出的x=0.2m是方程的数学解。"
+        "单位检查：sqrt((kg*m)/(C*N/C)) = sqrt(kg*m^2/N) = sqrt(kg*m^2/(kg*m/s^2)) = s，单位正确",
+        "趋势检查：B2 增大导致周期减小，但偏转角受几何限制，存在最优解使时间最短"
       ],
-      "transition": "解题结束",
+      "transition": "本题结束，综合运用了电场加速、磁场偏转及几何极值分析。",
       "scene_packets": [
         {
           "content_items": [
-            "diagram",
-            "goal",
-            "knowns"
+            "hook_question",
+            "diagram"
           ],
           "primary_item": "diagram",
           "emphasis": null
@@ -319,18 +279,17 @@
         {
           "content_items": [
             "principle",
-            "core_equation",
             "derive_step"
           ],
-          "primary_item": "core_equation",
+          "primary_item": "derive_step",
           "emphasis": null
         },
         {
           "content_items": [
-            "substitute_compute",
-            "intermediate_result"
+            "core_equation",
+            "substitute_compute"
           ],
-          "primary_item": "substitute_compute",
+          "primary_item": "core_equation",
           "emphasis": null
         },
         {

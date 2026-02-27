@@ -6,14 +6,16 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from layout.templates import TEMPLATE_REGISTRY
 from pipeline.config import load_enums
 from pipeline.env import load_dotenv
 from pipeline.json_utils import load_json_from_llm
 from pipeline.llm.types import ChatMessage
-from pipeline.llm.zhipu import chat_completion
+from pipeline.llm.zhipu import chat_completion, load_zhipu_config, load_zhipu_stage_config
 from pipeline.llm_continuation import continue_json_output
-from pipeline.prompting import load_prompt
+from pipeline.prompting import compose_prompt, load_prompt
+
+
+_ALLOWED_PLACEMENT_ANCHORS = {"C", "U", "D", "L", "R", "UL", "UR", "DL", "DR"}
 
 
 def _write_continuation_chunks(case_dir: Path, stem: str, chunks: list[str]) -> None:
@@ -21,40 +23,26 @@ def _write_continuation_chunks(case_dir: Path, stem: str, chunks: list[str]) -> 
         (case_dir / f"{stem}_{idx}.txt").write_text(chunk.strip() + "\n", encoding="utf-8")
 
 
-def _template_slot_catalog() -> dict[str, list[str]]:
-    return {template_type: list(template.slot_order) for template_type, template in TEMPLATE_REGISTRY.items()}
-
-
-def _template_param_catalog() -> dict[str, dict]:
-    slot_scales_doc = {
-        "slot_scales": {
-            "type": "object",
-            "desc": "Per-slot width/height scale",
-            "value_schema": {"w": "float(0.2~1.0)", "h": "float(0.2~1.0)"},
-            "example": {"left1": {"w": 0.9, "h": 0.7}},
-        }
-    }
-    return {template_type: slot_scales_doc for template_type in TEMPLATE_REGISTRY}
-
-
 def _layout_strategy_hints() -> dict[str, Any]:
     return {
-        "count_based": {
-            "1-2": "hero_side or left_right",
-            "3-4": "grid_2x2",
-            "5-6": "left3_right3",
-            "7-8": "left4_right4",
-            "9": "grid_3x3",
+        "layout_type": "always use layout.type = free",
+        "placement_schema": {
+            "cx": "float in [0,1], normalized x in safe area",
+            "cy": "float in [0,1], normalized y in safe area",
+            "w": "float in (0,1], normalized width in safe area",
+            "h": "float in (0,1], normalized height in safe area",
+            "anchor": "one of C/U/D/L/R/UL/UR/DL/DR",
         },
-        "role_based": {
-            "contains_diagram_plus_text": "Prefer left_right (left=diagram, right=text/equation/conclusion)",
-            "single_main_object": "Prefer hero_side (hero=main object, side=support text)",
-            "multiple_equations": "Prefer left3_right3 and stack equations in right slots by reading order",
-        },
+        "composition_examples": [
+            "diagram + equation: diagram at (0.32,0.56,w=0.58,h=0.82), equation at (0.76,0.60,w=0.40,h=0.42)",
+            "equation + conclusion text: equation upper-middle, conclusion lower-middle, keep center lane clear",
+            "single hero object: centered wide hero, secondary text in corner with smaller area",
+        ],
         "readability": [
             "Keep one visual focus per scene.",
-            "Avoid packing too many formulas in one scene.",
-            "Reserve a dedicated slot for conclusion/check text when possible.",
+            "Avoid overlap between objects (unless intentional callout).",
+            "Respect reading flow from focus object to supporting objects.",
+            "Reserve visual breathing room around conclusion/check text.",
         ],
     }
 
@@ -178,6 +166,37 @@ def _scene_motion_span_map(draft: dict) -> dict[str, float]:
     return result
 
 
+def _compact_narrative_plan(narrative_plan: Any) -> dict[str, Any] | None:
+    if not isinstance(narrative_plan, dict):
+        return None
+
+    ordered = narrative_plan.get("ordered_concepts")
+    if not isinstance(ordered, list):
+        ordered = []
+
+    segments: list[dict[str, Any]] = []
+    for seg in narrative_plan.get("segments") or []:
+        if not isinstance(seg, dict):
+            continue
+        segments.append(
+            {
+                "id": str(seg.get("id", "")).strip(),
+                "concept_ref": str(seg.get("concept_ref", "")).strip(),
+                "scene_focus": str(seg.get("scene_focus", "")).strip(),
+                "transition_hook": str(seg.get("transition_hook", "")).strip()
+                if seg.get("transition_hook") is not None
+                else "",
+                "duration_hint_s": int(seg.get("duration_hint_s", 0)) if isinstance(seg.get("duration_hint_s"), int) else 0,
+            }
+        )
+
+    return {
+        "global_arc": str(narrative_plan.get("global_arc", "")).strip(),
+        "ordered_concepts": [str(x).strip() for x in ordered if str(x).strip()],
+        "segments": segments,
+    }
+
+
 def _render_error_lines(errors: list[str], *, limit: int = 60) -> str:
     if not errors:
         return "(no validation errors)"
@@ -185,6 +204,23 @@ def _render_error_lines(errors: list[str], *, limit: int = 60) -> str:
     if len(errors) > limit:
         lines.append(f"- ... and {len(errors) - limit} more errors")
     return "\n".join(lines)
+
+
+def _focus_object_ids(
+    *,
+    roles: dict[str, str] | None,
+    used_ids: set[str],
+) -> set[str]:
+    if not roles:
+        return set()
+    focus_roles = {"diagram", "core_eq", "conclusion", "check", "title"}
+    result: set[str] = set()
+    for object_id_raw, role_raw in roles.items():
+        object_id = str(object_id_raw).strip()
+        role = str(role_raw).strip().lower()
+        if object_id and role in focus_roles and object_id in used_ids:
+            result.add(object_id)
+    return result
 
 
 def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
@@ -200,12 +236,16 @@ def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
     expected_scene_set = set(expected_scene_ids)
     seen_scene_ids: set[str] = set()
 
-    slot_catalog = _template_slot_catalog()
     allowed_layout_types = set(enums["layout_types"])
     allowed_action_ops = set(enums["action_ops"])
     allowed_anims = set(enums["anims"])
     known_object_ids = _global_object_ids(draft)
     motion_span_by_scene = _scene_motion_span_map(draft)
+    draft_scene_roles = _scene_role_summary(draft)
+
+    scene_used_ids_map: dict[str, set[str]] = {}
+    scene_keep_ids_map: dict[str, set[str]] = {}
+    scene_focus_ids_map: dict[str, set[str]] = {}
 
     for scene_index, scene in enumerate(scenes):
         scene_path = f"scenes[{scene_index}]"
@@ -231,6 +271,9 @@ def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
 
         used_ids: set[str] = set()
         scene_timeline_duration = 0.0
+        keep_ids: set[str] = set()
+        play_anims: list[str] = []
+        roles_compact: dict[str, str] | None = None
 
         layout = scene.get("layout")
         if not isinstance(layout, dict):
@@ -238,73 +281,65 @@ def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
         else:
             layout_type = str(layout.get("type", "")).strip()
             slots = layout.get("slots")
-            params = layout.get("params", {})
+            params = layout.get("params")
+            placements = layout.get("placements")
 
             if not layout_type:
                 errors.append(f"{scene_path}.layout.type is required")
             elif layout_type not in allowed_layout_types:
                 errors.append(f"{scene_path}.layout.type not allowed: {layout_type}")
+            if layout_type != "free":
+                errors.append(f"{scene_path}.layout.type must be free in LLM3 output")
+            if slots is not None:
+                if not isinstance(slots, dict):
+                    errors.append(f"{scene_path}.layout.slots must be an object when provided")
+                elif slots:
+                    errors.append(f"{scene_path}.layout.slots must be empty under free layout")
+            if params is not None:
+                if not isinstance(params, dict):
+                    errors.append(f"{scene_path}.layout.params must be an object when provided")
+                elif params:
+                    errors.append(f"{scene_path}.layout.params must be empty under free layout")
 
-            valid_slots = set(slot_catalog.get(layout_type, []))
-            if not isinstance(slots, dict):
-                errors.append(f"{scene_path}.layout.slots must be an object")
+            if not isinstance(placements, dict):
+                errors.append(f"{scene_path}.layout.placements must be an object")
+            elif not placements:
+                errors.append(f"{scene_path}.layout.placements must not be empty")
             else:
-                for slot_id, object_id_raw in slots.items():
-                    slot_key = str(slot_id).strip()
+                for object_id_raw, place in placements.items():
                     object_id = str(object_id_raw).strip()
-                    if valid_slots and slot_key not in valid_slots:
-                        errors.append(f"{scene_path}.layout.slots has invalid slot key: {slot_key}")
                     if not object_id:
-                        errors.append(f"{scene_path}.layout.slots[{slot_key}] must be non-empty object id")
+                        errors.append(f"{scene_path}.layout.placements has empty object id key")
                         continue
                     if object_id not in known_object_ids:
-                        errors.append(f"{scene_path}.layout.slots[{slot_key}] unknown object id: {object_id}")
+                        errors.append(f"{scene_path}.layout.placements unknown object id: {object_id}")
+                        continue
                     used_ids.add(object_id)
 
-            if not isinstance(params, dict):
-                errors.append(f"{scene_path}.layout.params must be an object")
-            else:
-                unknown_param_keys = sorted([k for k in params.keys() if k != "slot_scales"])
-                if unknown_param_keys:
-                    errors.append(
-                        f"{scene_path}.layout.params has unsupported keys: {', '.join(unknown_param_keys)}"
-                    )
-                slot_scales = params.get("slot_scales")
-                if slot_scales is not None:
-                    if not isinstance(slot_scales, dict):
-                        errors.append(f"{scene_path}.layout.params.slot_scales must be an object")
-                    else:
-                        for slot_id, scale in slot_scales.items():
-                            slot_key = str(slot_id).strip()
-                            if valid_slots and slot_key not in valid_slots:
-                                errors.append(
-                                    f"{scene_path}.layout.params.slot_scales has invalid slot key: {slot_key}"
-                                )
-                            if not isinstance(scale, dict):
-                                errors.append(
-                                    f"{scene_path}.layout.params.slot_scales[{slot_key}] must be an object"
-                                )
-                                continue
-                            unknown_scale_keys = sorted([k for k in scale.keys() if k not in {"w", "h"}])
-                            if unknown_scale_keys:
-                                errors.append(
-                                    f"{scene_path}.layout.params.slot_scales[{slot_key}] has unsupported keys: "
-                                    + ", ".join(unknown_scale_keys)
-                                )
-                            for dim in ("w", "h"):
-                                if dim not in scale:
-                                    continue
-                                try:
-                                    value = float(scale[dim])
-                                except (TypeError, ValueError):
-                                    errors.append(
-                                        f"{scene_path}.layout.params.slot_scales[{slot_key}].{dim} must be float in [0.2,1.0]"
-                                    )
-                                    continue
-                                if value < 0.2 or value > 1.0:
-                                    errors.append(
-                                        f"{scene_path}.layout.params.slot_scales[{slot_key}].{dim} out of range [0.2,1.0]: {value}"
-                                    )
+                    place_path = f"{scene_path}.layout.placements[{object_id}]"
+                    if not isinstance(place, dict):
+                        errors.append(f"{place_path} must be an object")
+                        continue
+                    unknown_keys = sorted([k for k in place.keys() if k not in {"cx", "cy", "w", "h", "anchor"}])
+                    if unknown_keys:
+                        errors.append(f"{place_path} has unsupported keys: {', '.join(unknown_keys)}")
+                    numeric_values: dict[str, float] = {}
+                    for key in ("cx", "cy", "w", "h"):
+                        value = _safe_float(place.get(key))
+                        if value is None:
+                            errors.append(f"{place_path}.{key} must be a number")
+                            continue
+                        numeric_values[key] = value
+                        if key in {"cx", "cy"} and (value < 0.0 or value > 1.0):
+                            errors.append(f"{place_path}.{key} out of range [0,1]: {value}")
+                        if key in {"w", "h"} and (value <= 0.0 or value > 1.0):
+                            errors.append(f"{place_path}.{key} out of range (0,1]: {value}")
+                    anchor = str(place.get("anchor", "C")).strip().upper() or "C"
+                    if anchor not in _ALLOWED_PLACEMENT_ANCHORS:
+                        errors.append(
+                            f"{place_path}.anchor not allowed: {anchor} "
+                            f"(allowed: {', '.join(sorted(_ALLOWED_PLACEMENT_ANCHORS))})"
+                        )
 
         actions = scene.get("actions")
         if not isinstance(actions, list):
@@ -335,6 +370,8 @@ def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
                 anim = str(action.get("anim", "")).strip()
                 if anim not in allowed_anims:
                     errors.append(f"{action_path}.anim not allowed: {action.get('anim')}")
+                else:
+                    play_anims.append(anim)
 
                 play_duration: float | None = None
                 if "duration" in action:
@@ -414,12 +451,14 @@ def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
                 if object_id not in known_object_ids:
                     errors.append(f"{scene_path}.keep[{keep_index}] unknown object id: {object_id}")
                 used_ids.add(object_id)
+                keep_ids.add(object_id)
 
         roles = scene.get("roles")
         if roles is not None:
             if not isinstance(roles, dict):
                 errors.append(f"{scene_path}.roles must be an object when provided")
             else:
+                roles_compact = {}
                 for object_id_raw in roles.keys():
                     object_id = str(object_id_raw).strip()
                     if not object_id:
@@ -431,10 +470,58 @@ def _validate_layout_data(*, data: Any, draft: dict, enums: dict) -> list[str]:
                         errors.append(
                             f"{scene_path}.roles references object not used in this scene: {object_id}"
                         )
+                    role_raw = roles.get(object_id_raw)
+                    role = str(role_raw).strip()
+                    if role:
+                        roles_compact[object_id] = role
+
+        # Quality checks (focus / rhythm) are soft constraints but enforced here
+        # so repair loop can fix low-quality structure before rendering.
+        explicit_roles_provided = roles_compact is not None
+        role_source = roles_compact if explicit_roles_provided else (draft_scene_roles.get(scene_id) or {})
+        focus_ids = _focus_object_ids(roles=role_source, used_ids=used_ids)
+        if role_source:
+            if not focus_ids:
+                errors.append(
+                    f"{scene_path} quality: no focus object used "
+                    "(expected role in diagram/core_eq/conclusion/check/title)"
+                )
+            elif explicit_roles_provided and len(focus_ids) > 2:
+                errors.append(
+                    f"{scene_path} quality: too many focus objects ({len(focus_ids)}), keep 1-2 focus objects"
+                )
+
+        emphasis_anims = {"write", "create", "indicate", "transform"}
+        if len(play_anims) >= 3 and not any(anim in emphasis_anims for anim in play_anims):
+            errors.append(
+                f"{scene_path} quality: action rhythm lacks emphasis "
+                "(need at least one of write/create/indicate/transform)"
+            )
+
+        if scene_id:
+            scene_used_ids_map[scene_id] = set(used_ids)
+            scene_keep_ids_map[scene_id] = set(keep_ids)
+            scene_focus_ids_map[scene_id] = set(focus_ids)
 
     missing_scene_ids = sorted(expected_scene_set - seen_scene_ids)
     for missing in missing_scene_ids:
         errors.append(f"scene missing in layout output: {missing}")
+
+    # Cross-scene continuity: if next scene's focus object already appears in current scene,
+    # prefer continuity via keep.
+    for current_scene_id, next_scene_id in zip(expected_scene_ids, expected_scene_ids[1:]):
+        current_used = scene_used_ids_map.get(current_scene_id, set())
+        current_keep = scene_keep_ids_map.get(current_scene_id, set())
+        next_focus = scene_focus_ids_map.get(next_scene_id, set())
+        if not current_used or not next_focus:
+            continue
+        should_continue = sorted((current_used & next_focus) - current_keep)
+        if should_continue:
+            preview = ", ".join(should_continue[:3])
+            errors.append(
+                f"scene transition quality {current_scene_id}->{next_scene_id}: "
+                f"focus continuity object(s) should be kept: {preview}"
+            )
 
     return errors
 
@@ -449,17 +536,21 @@ def _parse_and_validate(*, content: str, draft: dict, enums: dict) -> tuple[dict
     return (data if not errors else None), errors
 
 
-def _build_user_payload(*, draft: dict, enums: dict) -> str:
+def _build_user_payload(*, draft: dict, enums: dict, narrative_plan: dict[str, Any] | None) -> str:
     pedagogy = draft.get("pedagogy_plan")
     scene_roles = _scene_role_summary(draft)
     scene_objects = _scene_object_catalog(draft)
     scene_ids = _draft_scene_ids(draft)
+    compact_narrative_plan = _compact_narrative_plan(narrative_plan)
+    allowed_layout_types = [layout_type for layout_type in sorted(enums["layout_types"]) if layout_type == "free"] or [
+        "free"
+    ]
     return "\n".join(
         [
-            "你要输出 scene_layout.json。只做布局和动作，不改 scene_draft 的对象语义。",
+            "你要输出 scene_layout.json。只做布局和动作，不修改 scene_draft 的对象语义。",
             "",
-            "允许的 layout.type：",
-            json.dumps(sorted(enums["layout_types"]), ensure_ascii=False),
+            "强制布局类型（仅允许）：",
+            json.dumps(allowed_layout_types, ensure_ascii=False),
             "",
             "允许的 action.op：",
             json.dumps(sorted(enums["action_ops"]), ensure_ascii=False),
@@ -467,16 +558,25 @@ def _build_user_payload(*, draft: dict, enums: dict) -> str:
             "允许的 anim：",
             json.dumps(sorted(enums["anims"]), ensure_ascii=False),
             "",
-            "模板槽位目录（slots 的 key 只能从这里选）：",
-            json.dumps(_template_slot_catalog(), ensure_ascii=False, indent=2),
-            "",
-            "模板参数规范（仅允许 params.slot_scales）：",
-            json.dumps(_template_param_catalog(), ensure_ascii=False, indent=2),
+            "自由布局 placements 规范：",
+            json.dumps(
+                {
+                    "object_id": {
+                        "cx": "float in [0,1]",
+                        "cy": "float in [0,1]",
+                        "w": "float in (0,1]",
+                        "h": "float in (0,1]",
+                        "anchor": "one of C/U/D/L/R/UL/UR/DL/DR (default C)",
+                    }
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
             "",
             "布局策略提示：",
             json.dumps(_layout_strategy_hints(), ensure_ascii=False, indent=2),
             "",
-            "必须覆盖的 scene id（一一对应，不可缺失）：",
+            "必须覆盖的 scene id（一一对应，不能缺失）：",
             json.dumps(scene_ids, ensure_ascii=False),
             "",
             "每个 scene 可用对象 id：",
@@ -485,38 +585,43 @@ def _build_user_payload(*, draft: dict, enums: dict) -> str:
             "pedagogy_plan（可选）：",
             json.dumps(pedagogy, ensure_ascii=False, indent=2),
             "",
-            "scene 角色摘要（若存在，优先按角色分配槽位）：",
+            "scene 角色摘要（若存在，优先按角色决定主次和版面重心）：",
             json.dumps(scene_roles, ensure_ascii=False, indent=2),
+            "",
+            "narrative_plan（可选，若存在请对齐其节奏与转场）：",
+            json.dumps(compact_narrative_plan, ensure_ascii=False, indent=2) if compact_narrative_plan is not None else "{}",
             "",
             "scene_draft.json：",
             json.dumps(draft, ensure_ascii=False, indent=2),
+            "",
+            "若 scene_draft 某幕包含 narrative_storyboard，请优先按其 animation_steps 组织 actions 时序。",
             "",
             "硬性输出合同：",
             "1) 只输出一个 JSON 对象，不要 Markdown，不要解释。",
             "2) 根对象必须包含 scenes 数组，且 scene id 与 scene_draft 一一对应。",
             "3) 每个 scene 必须包含 id/layout/actions/keep。",
-            "4) scene.layout 必须包含 type/slots；slots 键名必须合法。",
-            "5) 不允许绝对坐标；只允许 slot 布局。",
-            "6) layout.params 只允许 slot_scales。",
-            "7) 所有对象 id 必须来自 scene_draft，不允许发明新 id。",
-            "8) 如果输出 roles，roles 中对象必须在本 scene 的 slots/actions/keep 中实际使用。",
+            "4) 每个 scene.layout 必须包含 type 与 placements，且 type 必须为 free。",
+            "5) free 布局下 layout.slots 与 layout.params 必须为空对象，或直接省略。",
+            "6) 禁止发明新 object id；所有 id 必须来自 scene_draft。",
+            "7) 若输出 roles，roles 里的对象必须在本 scene 的 placements/actions/keep 中实际使用。",
+            "8) 若提供 narrative_plan，尽量保持 segment 对应 scene 的主焦点与 transition_hook。",
             "",
             "动作合同（必须遵守）：",
             "A) wait: 必须有 duration >= 0。",
             "B) fade_in/fade_out/write/create/indicate: targets 必须非空。",
             "C) transform: 必须满足其一：",
-            "   - 提供 src 和 dst；",
-            "   - 或 targets 至少 2 个（第1个作 src，第2个作 dst）。",
-            "D) 严禁 transform 只有一个 target。",
+            "   - 提供 src 与 dst；",
+            "   - 或 targets 至少 2 个（第 1 个作 src，第 2 个作 dst）。",
+            "D) 严禁 transform 只有 1 个 target。",
             "E) 如果不确定 transform 参数，改用 write/fade_in/fade_out。",
         ]
     )
-
 
 def _build_repair_payload(
     *,
     draft: dict,
     enums: dict,
+    narrative_plan: dict[str, Any] | None,
     raw_content: str,
     errors: list[str],
     round_index: int,
@@ -525,6 +630,10 @@ def _build_repair_payload(
     scene_roles = _scene_role_summary(draft)
     scene_objects = _scene_object_catalog(draft)
     scene_ids = _draft_scene_ids(draft)
+    compact_narrative_plan = _compact_narrative_plan(narrative_plan)
+    allowed_layout_types = [layout_type for layout_type in sorted(enums["layout_types"]) if layout_type == "free"] or [
+        "free"
+    ]
     return "\n".join(
         [
             f"这是第 {round_index} 轮修复。请在最小改动下修复 scene_layout.json。",
@@ -533,8 +642,8 @@ def _build_repair_payload(
             "必须修复的错误：",
             _render_error_lines(errors),
             "",
-            "允许的 layout.type：",
-            json.dumps(sorted(enums["layout_types"]), ensure_ascii=False),
+            "强制布局类型（仅允许）：",
+            json.dumps(allowed_layout_types, ensure_ascii=False),
             "",
             "允许的 action.op：",
             json.dumps(sorted(enums["action_ops"]), ensure_ascii=False),
@@ -542,11 +651,20 @@ def _build_repair_payload(
             "允许的 anim：",
             json.dumps(sorted(enums["anims"]), ensure_ascii=False),
             "",
-            "模板槽位目录：",
-            json.dumps(_template_slot_catalog(), ensure_ascii=False, indent=2),
-            "",
-            "模板参数规范（仅 slot_scales）：",
-            json.dumps(_template_param_catalog(), ensure_ascii=False, indent=2),
+            "自由布局 placements 规范：",
+            json.dumps(
+                {
+                    "object_id": {
+                        "cx": "float in [0,1]",
+                        "cy": "float in [0,1]",
+                        "w": "float in (0,1]",
+                        "h": "float in (0,1]",
+                        "anchor": "one of C/U/D/L/R/UL/UR/DL/DR",
+                    }
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
             "",
             "布局策略提示：",
             json.dumps(_layout_strategy_hints(), ensure_ascii=False, indent=2),
@@ -563,8 +681,13 @@ def _build_repair_payload(
             "scene 角色摘要：",
             json.dumps(scene_roles, ensure_ascii=False, indent=2),
             "",
+            "narrative_plan（可选，若存在请保持节奏与转场语义）：",
+            json.dumps(compact_narrative_plan, ensure_ascii=False, indent=2) if compact_narrative_plan is not None else "{}",
+            "",
             "scene_draft.json：",
             json.dumps(draft, ensure_ascii=False, indent=2),
+            "",
+            "若 scene_draft 某幕包含 narrative_storyboard，请优先按其 animation_steps 组织 actions 时序。",
             "",
             "参考结构示例：",
             json.dumps(
@@ -573,9 +696,11 @@ def _build_repair_payload(
                         {
                             "id": "S1",
                             "layout": {
-                                "type": "left_right",
-                                "slots": {"left": "o_diagram", "right": "o_text"},
-                                "params": {"slot_scales": {"left": {"w": 0.95, "h": 0.9}}},
+                                "type": "free",
+                                "placements": {
+                                    "o_diagram": {"cx": 0.33, "cy": 0.55, "w": 0.58, "h": 0.82, "anchor": "C"},
+                                    "o_text": {"cx": 0.77, "cy": 0.62, "w": 0.40, "h": 0.40, "anchor": "C"},
+                                },
                             },
                             "actions": [
                                 {"op": "play", "anim": "fade_in", "targets": ["o_diagram"]},
@@ -597,39 +722,72 @@ def _build_repair_payload(
             "再次重申动作合同：",
             "- transform 必须有 src+dst，或 targets 至少 2 个。",
             "- 不能出现 transform 只有 1 个 target。",
-            "- 如果无法保证 transform 合法，请改为 write/fade_in/fade_out。",
+            "- 若无法保证 transform 合法，请改为 write/fade_in/fade_out。",
+            "- 若提供 narrative_plan，修复后仍要保持对应 scene 的主焦点与转场钩子语义。",
+            "- layout.type 只能是 free，layout.placements 不能为空。",
             "",
             "仅输出修复后的 JSON。",
         ]
     )
 
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="LLM3: generate scene_layout.json")
     parser.add_argument("--case", default="cases/demo_001", help="Case directory, e.g. cases/demo_001")
+    parser.add_argument(
+        "--narrative-plan",
+        default=None,
+        help="Optional narrative_plan.json path (default: case/narrative_plan.json if exists)",
+    )
     parser.add_argument("--no-repair", action="store_true", help="Skip repair when parse/validation fails")
     parser.add_argument("--continue-rounds", type=int, default=2, help="Max continuation rounds for truncated JSON")
     parser.add_argument("--repair-rounds", type=int, default=2, help="Max validation-driven repair rounds")
     args = parser.parse_args()
 
     load_dotenv()
+    base_llm_cfg = load_zhipu_config()
+    generate_llm_cfg = load_zhipu_stage_config("llm3", "generate", base_cfg=base_llm_cfg)
+    continue_llm_cfg = load_zhipu_stage_config("llm3", "continue", base_cfg=base_llm_cfg)
+    repair_llm_cfg = load_zhipu_stage_config("llm3", "repair", base_cfg=base_llm_cfg)
 
     case_dir = Path(args.case)
     draft = json.loads((case_dir / "scene_draft.json").read_text(encoding="utf-8"))
+    narrative_plan_path = Path(args.narrative_plan) if args.narrative_plan else (case_dir / "narrative_plan.json")
+    narrative_plan: dict[str, Any] | None = None
+    if narrative_plan_path.exists():
+        try:
+            parsed = json.loads(narrative_plan_path.read_text(encoding="utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            print(f"Invalid narrative_plan.json: {exc}", file=sys.stderr)
+            return 2
+        if isinstance(parsed, dict):
+            narrative_plan = parsed
+    elif args.narrative_plan:
+        print(f"Missing specified narrative plan file: {narrative_plan_path}", file=sys.stderr)
+        return 2
+
     out_path = case_dir / "scene_layout.json"
     errors_path = case_dir / "llm3_validation_errors.txt"
+    system_prompt_path = case_dir / "llm3_system_prompt.txt"
 
     enums = load_enums()
-    prompt = load_prompt("llm3_scene_layout.md")
-    user_payload = _build_user_payload(draft=draft, enums=enums)
+    prompt = compose_prompt(
+        "llm3",
+        context={"has_narrative_plan": narrative_plan is not None},
+    )
+    system_prompt_path.write_text(prompt.strip() + "\n", encoding="utf-8")
+    user_payload = _build_user_payload(draft=draft, enums=enums, narrative_plan=narrative_plan)
 
-    content = chat_completion([ChatMessage(role="system", content=prompt), ChatMessage(role="user", content=user_payload)])
+    content = chat_completion(
+        [ChatMessage(role="system", content=prompt), ChatMessage(role="user", content=user_payload)],
+        cfg=generate_llm_cfg,
+    )
     content, cont_chunks = continue_json_output(
         content,
         system_prompt=prompt,
         user_payload=user_payload,
         parse_fn=load_json_from_llm,
         max_rounds=args.continue_rounds,
+        llm_cfg=continue_llm_cfg,
     )
 
     raw_path = case_dir / "llm3_raw.txt"
@@ -657,12 +815,14 @@ def main() -> int:
             repair_payload = _build_repair_payload(
                 draft=draft,
                 enums=enums,
+                narrative_plan=narrative_plan,
                 raw_content=current_content,
                 errors=errors,
                 round_index=round_index,
             )
             repaired = chat_completion(
-                [ChatMessage(role="system", content=repair_prompt), ChatMessage(role="user", content=repair_payload)]
+                [ChatMessage(role="system", content=repair_prompt), ChatMessage(role="user", content=repair_payload)],
+                cfg=repair_llm_cfg,
             )
             repaired, repair_cont_chunks = continue_json_output(
                 repaired,
@@ -670,6 +830,7 @@ def main() -> int:
                 user_payload=repair_payload,
                 parse_fn=load_json_from_llm,
                 max_rounds=args.continue_rounds,
+                llm_cfg=continue_llm_cfg,
             )
             repair_raw_path.write_text(repaired.strip() + "\n", encoding="utf-8")
             (case_dir / f"llm3_repair_raw_round_{round_index}.txt").write_text(
@@ -706,3 +867,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+

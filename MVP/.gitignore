@@ -1,0 +1,28 @@
+.env
+.env.local
+
+# 运行产物
+runs/
+
+# Case 运行产物（保留 cases/**/problem.txt）
+cases/**/run/
+cases/**/llm1/
+cases/**/llm2/
+cases/**/llm3/
+cases/**/llm4/
+cases/**/llm5/
+cases/**/render/
+cases/**/scene.py
+cases/**/final.mp4
+cases/**/requirement.txt
+cases/**/FAILED.txt
+
+# Python
+__pycache__/
+*.pyc
+
+# Manim
+media/
+partial_movie_files/
+*.log
+manim.cfg

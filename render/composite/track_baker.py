@@ -45,8 +45,8 @@ def _bake_line_or_segment(
     pose = poses[part_id]
     geom = geometries[part_id]
 
-    a_name = str(data.get("anchor_a") or data.get("a1") or "").strip()
-    b_name = str(data.get("anchor_b") or data.get("a2") or "").strip()
+    a_name = str(data.get("anchor_a") or "").strip()
+    b_name = str(data.get("anchor_b") or "").strip()
     if not (a_name and b_name):
         raise ValueError("local line/segment track requires anchor_a and anchor_b")
 
@@ -63,6 +63,15 @@ def _bake_line_or_segment(
     }
 
 
+def _is_local_anchor_ref_line_segment(data: dict[str, Any]) -> bool:
+    if _space(data) == "world":
+        return False
+    part_id = str(data.get("part_id", "")).strip()
+    a_name = str(data.get("anchor_a") or "").strip()
+    b_name = str(data.get("anchor_b") or "").strip()
+    return bool(part_id and a_name and b_name)
+
+
 def _bake_arc(
     *,
     data: dict[str, Any],
@@ -72,26 +81,6 @@ def _bake_arc(
     if _space(data) == "world":
         return dict(data)
 
-    has_legacy_arc_fields = any(
-        key in data
-        for key in (
-            "center",
-            "center_local",
-            "cx",
-            "cy",
-            "radius",
-            "r",
-            "start_deg",
-            "end_deg",
-            "start_angle",
-            "end_angle",
-        )
-    )
-    if has_legacy_arc_fields:
-        raise ValueError(
-            "local arc track forbids center/radius/world-angle fields; use center_anchor|cx_local+cy_local + radius_local + local angles"
-        )
-
     part_id = str(data.get("part_id", "")).strip()
     if not part_id or part_id not in poses or part_id not in geometries:
         raise ValueError("local arc track requires valid data.part_id")
@@ -99,38 +88,32 @@ def _bake_arc(
     pose = poses[part_id]
     geom = geometries[part_id]
 
-    center_anchor = str(data.get("center_anchor", "")).strip()
+    center_anchor = str(data.get("center", "")).strip()
     if center_anchor:
         local_center = geom.anchor_local(center_anchor)
     else:
-        if not (isinstance(data.get("cx_local"), (int, float)) and isinstance(data.get("cy_local"), (int, float))):
-            raise ValueError("local arc track requires center_anchor or cx_local+cy_local")
-        local_center = (_to_float(data.get("cx_local")), _to_float(data.get("cy_local")))
+        if not (isinstance(data.get("cx"), (int, float)) and isinstance(data.get("cy"), (int, float))):
+            raise ValueError("local arc track requires center or cx+cy")
+        local_center = (_to_float(data.get("cx")), _to_float(data.get("cy")))
 
     world_center = _transform_local_point(pose, local_center)
-    if "radius_local" in data:
-        radius_local = _to_float(data.get("radius_local"))
-    elif "r_local" in data:
-        radius_local = _to_float(data.get("r_local"))
-    else:
-        raise ValueError("local arc track requires radius_local or r_local")
+    if "radius" not in data:
+        raise ValueError("local arc track requires radius")
+    radius_local = _to_float(data.get("radius"))
 
-    if "start_deg_local" in data and "end_deg_local" in data:
-        start_local = _to_float(data.get("start_deg_local"))
-        end_local = _to_float(data.get("end_deg_local"))
-    elif "start_angle_local" in data and "end_angle_local" in data:
-        start_local = _to_float(data.get("start_angle_local"))
-        end_local = _to_float(data.get("end_angle_local"))
+    if "start" in data and "end" in data:
+        start_local = _to_float(data.get("start"))
+        end_local = _to_float(data.get("end"))
     else:
-        raise ValueError("local arc track requires start/end local angles")
+        raise ValueError("local arc track requires start/end")
 
     return {
         "space": "world",
         "cx": float(world_center[0]),
         "cy": float(world_center[1]),
-        "r": abs(float(pose.scale)) * float(radius_local),
-        "start_deg": float(pose.theta) + float(start_local),
-        "end_deg": float(pose.theta) + float(end_local),
+        "radius": abs(float(pose.scale)) * float(radius_local),
+        "start": float(pose.theta) + float(start_local),
+        "end": float(pose.theta) + float(end_local),
     }
 
 
@@ -139,13 +122,18 @@ def bake_local_tracks_to_world(
     *,
     poses: dict[str, Pose],
     geometries: dict[str, PartGeometry],
+    preserve_line_segment_track_ids: set[str] | None = None,
 ) -> CompositeGraph:
+    preserve_ids = preserve_line_segment_track_ids or set()
     baked_tracks = []
     for track in graph.tracks:
         data = dict(track.data or {})
         ttype = str(track.type).strip().lower()
         if ttype in {"line", "segment"}:
-            baked_data = _bake_line_or_segment(data=data, poses=poses, geometries=geometries)
+            if track.id in preserve_ids and _is_local_anchor_ref_line_segment(data):
+                baked_data = dict(data)
+            else:
+                baked_data = _bake_line_or_segment(data=data, poses=poses, geometries=geometries)
         elif ttype == "arc":
             baked_data = _bake_arc(data=data, poses=poses, geometries=geometries)
         else:

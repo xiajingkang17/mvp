@@ -13,8 +13,8 @@
         "cx": 0.0,
         "cy": 0.0,
         "r": 2.0,
-        "start_deg": 180.0,
-        "end_deg": 0.0
+        "start": 180.0,
+        "end": 0.0
       }
     }
   ],
@@ -28,7 +28,6 @@
         "anchor": "bottom_center",
         "s": 0.25,
         "contact_side": "outer",
-        "clearance": 0.0,
         "angle_mode": "tangent"
       },
       "hard": true

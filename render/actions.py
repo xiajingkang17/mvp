@@ -93,15 +93,15 @@ class ActionEngine:
             for object_id in action.targets:
                 mobj = self.state.objects[object_id]
                 if action.anim == "fade_in":
-                    anims.append(FadeIn(mobj))
+                    anims.append(FadeIn(mobj, suspend_mobject_updating=False))
                 elif action.anim == "fade_out":
-                    anims.append(FadeOut(mobj))
+                    anims.append(FadeOut(mobj, suspend_mobject_updating=False))
                 elif action.anim == "write":
-                    anims.append(Write(mobj))
+                    anims.append(Write(mobj, suspend_mobject_updating=False))
                 elif action.anim == "create":
-                    anims.append(Create(mobj))
+                    anims.append(Create(mobj, suspend_mobject_updating=False))
                 elif action.anim == "indicate":
-                    anims.append(Indicate(mobj))
+                    anims.append(Indicate(mobj, suspend_mobject_updating=False))
 
             self._play_with_timeline(anims, duration=duration)
 
@@ -109,6 +109,10 @@ class ActionEngine:
                 return ActionResult(newly_visible=set(action.targets), newly_hidden=set())
             if action.anim == "fade_out":
                 return ActionResult(newly_visible=set(), newly_hidden=set(action.targets))
+            if action.anim == "indicate":
+                # Indicate can be the first action that makes an object appear in-scene.
+                # Mark targets visible so scene-level cleanup can fade them out reliably.
+                return ActionResult(newly_visible=set(action.targets), newly_hidden=set())
             return ActionResult(newly_visible=set(), newly_hidden=set())
 
         if action.anim == "transform":
@@ -124,7 +128,10 @@ class ActionEngine:
             dst_mobj.move_to(src_mobj.get_center())
             dst_mobj.match_height(src_mobj)
 
-            self._play_with_timeline([Transform(src_mobj, dst_mobj)], duration=duration)
+            self._play_with_timeline(
+                [Transform(src_mobj, dst_mobj, suspend_mobject_updating=False)],
+                duration=duration,
+            )
 
             # Rebind dst id to transformed source mobject for subsequent references.
             self.state.objects[dst] = src_mobj

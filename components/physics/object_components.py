@@ -14,12 +14,16 @@ from .electromagnetism import (
     Inductor,
     LED,
     LightBulb,
+    Particle,
+    FieldCross,
     Potentiometer,
     Rheostat,
     Switch as EMSwitchClass,
     Voltmeter,
 )
+from .common import Arrow, Axes2D
 from .mechanics import (
+    Ball,
     Block,
     Cart,
     CircularGroove,
@@ -51,9 +55,12 @@ class PhysicsObjectDef:
 
 PHYSICS_OBJECT_DEFS: tuple[PhysicsObjectDef, ...] = (
     # Mechanics
+    PhysicsObjectDef("Axes2D", Axes2D),
     PhysicsObjectDef("InclinedPlaneGroup", InclinedPlaneGroup),
     PhysicsObjectDef("Wall", Wall),
+    PhysicsObjectDef("Arrow", Arrow),
     PhysicsObjectDef("Block", Block),
+    PhysicsObjectDef("Ball", Ball),
     PhysicsObjectDef("Cart", Cart),
     PhysicsObjectDef("Weight", Weight),
     PhysicsObjectDef("Pulley", Pulley),
@@ -86,6 +93,8 @@ PHYSICS_OBJECT_DEFS: tuple[PhysicsObjectDef, ...] = (
     PhysicsObjectDef("Potentiometer", Potentiometer),
     PhysicsObjectDef("Inductor", Inductor),
     PhysicsObjectDef("LED", LED),
+    PhysicsObjectDef("Particle", Particle),
+    PhysicsObjectDef("FieldCross", FieldCross),
 )
 
 

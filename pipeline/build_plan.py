@@ -8,6 +8,7 @@ from typing import Any
 
 from layout.params import sanitize_params
 from layout.templates import build_template
+from components.common.latex_subscripts import shorten_inline_math_subscripts, shorten_latex_subscripts
 from pipeline.env import load_dotenv
 from schema.scene_plan_models import LayoutSpec, ObjectSpec, PedagogyPlan, ScenePlan, SceneSpec
 
@@ -15,6 +16,7 @@ from schema.scene_plan_models import LayoutSpec, ObjectSpec, PedagogyPlan, Scene
 _CJK_RE = re.compile(r"[\u3400-\u9fff]")
 _SLOT_TOKEN_SPLIT_RE = re.compile(r"[\s_-]+")
 _GRID_TYPE_RE = re.compile(r"^grid_(\d+)x(\d+)$")
+_ALLOWED_PLACEMENT_ANCHORS = {"C", "U", "D", "L", "R", "UL", "UR", "DL", "DR"}
 
 
 def _contains_cjk(text: str) -> bool:
@@ -29,7 +31,7 @@ def _normalize_draft_object(obj: dict) -> tuple[str, dict]:
         text = params.get("text")
         if text is None:
             text = params.get("content", "")
-        params["text"] = str(text)
+        params["text"] = shorten_inline_math_subscripts(str(text), max_letters=2)
         params.pop("content", None)
         return object_type, params
 
@@ -40,7 +42,7 @@ def _normalize_draft_object(obj: dict) -> tuple[str, dict]:
         latex = str(latex)
         if _contains_cjk(latex):
             return "TextBlock", {"text": latex}
-        params["latex"] = latex
+        params["latex"] = shorten_latex_subscripts(latex, max_letters=2)
         params.pop("content", None)
         return object_type, params
 
@@ -76,6 +78,39 @@ def _normalize_layout_slots(slots: object) -> dict[str, str]:
 
 def _normalize_slot_token(token: str) -> str:
     return _SLOT_TOKEN_SPLIT_RE.sub("", token.strip().lower())
+
+
+def _to_float_or_none(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_layout_placements(raw: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(raw, dict):
+        return {}
+
+    normalized: dict[str, dict[str, Any]] = {}
+    for raw_object_id, raw_item in raw.items():
+        object_id = str(raw_object_id).strip()
+        if not object_id or not isinstance(raw_item, dict):
+            continue
+
+        cx = _to_float_or_none(raw_item.get("cx"))
+        cy = _to_float_or_none(raw_item.get("cy"))
+        w = _to_float_or_none(raw_item.get("w"))
+        h = _to_float_or_none(raw_item.get("h"))
+        if cx is None or cy is None or w is None or h is None:
+            continue
+
+        anchor = str(raw_item.get("anchor", "C")).strip().upper() or "C"
+        if anchor not in _ALLOWED_PLACEMENT_ANCHORS:
+            anchor = "C"
+
+        normalized[object_id] = {"cx": cx, "cy": cy, "w": w, "h": h, "anchor": anchor}
+
+    return normalized
 
 
 def _canonicalize_layout_slots(template_type: str, slots: dict[str, str]) -> dict[str, str]:
@@ -196,6 +231,87 @@ def _normalize_actions(raw_actions: Any) -> list[dict[str, Any]]:
     return normalized
 
 
+def _narrative_text_from_segment(segment: Any) -> str:
+    if not isinstance(segment, dict):
+        return ""
+
+    title = str(segment.get("title", "")).strip()
+    narration = str(segment.get("narration", "")).strip()
+    hook_raw = segment.get("transition_hook")
+    hook = str(hook_raw).strip() if hook_raw is not None else ""
+
+    lines: list[str] = []
+    if title:
+        lines.append(title)
+    if narration:
+        lines.append(narration)
+    if hook:
+        lines.append(f"过渡：{hook}")
+    return "\n".join(lines).strip()
+
+
+def _narrative_by_scene_ids(*, scene_ids: list[str], narrative_plan: Any) -> dict[str, str]:
+    if not isinstance(narrative_plan, dict):
+        return {}
+    raw_segments = narrative_plan.get("segments")
+    if not isinstance(raw_segments, list):
+        return {}
+
+    segments = [seg for seg in raw_segments if isinstance(seg, dict)]
+    result: dict[str, str] = {}
+    for index, scene_id in enumerate(scene_ids):
+        if index >= len(segments):
+            break
+        text = _narrative_text_from_segment(segments[index])
+        if text:
+            result[scene_id] = text
+    return result
+
+
+def _narrative_from_storyboard(scene: Any) -> str:
+    if not isinstance(scene, dict):
+        return ""
+    storyboard = scene.get("narrative_storyboard")
+    if not isinstance(storyboard, dict):
+        return ""
+
+    intro = str(storyboard.get("intro", "")).strip()
+    lines: list[str] = []
+    if intro:
+        lines.append(intro)
+
+    key_formulae = storyboard.get("key_formulae")
+    if isinstance(key_formulae, list):
+        formulas: list[str] = []
+        for item in key_formulae:
+            if not isinstance(item, dict):
+                continue
+            latex = str(item.get("latex", "")).strip()
+            if not latex:
+                continue
+            formulas.append(f"${latex}$")
+            if len(formulas) >= 2:
+                break
+        if formulas:
+            lines.append("关键公式：" + "；".join(formulas))
+
+    steps = storyboard.get("animation_steps")
+    if isinstance(steps, list):
+        for index, step in enumerate(steps[:3], start=1):
+            if not isinstance(step, dict):
+                continue
+            desc = str(step.get("description", "")).strip()
+            if not desc:
+                continue
+            lines.append(f"{index}. {desc}")
+
+    bridge = str(storyboard.get("bridge_to_next", "")).strip()
+    if bridge:
+        lines.append(f"过渡：{bridge}")
+
+    return "\n".join(lines).strip()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Merge draft+layout into scene_plan.json")
     parser.add_argument("--case", default="cases/demo_001", help="Case directory, e.g. cases/demo_001")
@@ -206,13 +322,21 @@ def main() -> int:
     case_dir = Path(args.case)
     draft_path = case_dir / "scene_draft.json"
     layout_path = case_dir / "scene_layout.json"
+    narrative_path = case_dir / "narrative_plan.json"
     out_path = case_dir / "scene_plan.json"
 
     draft = json.loads(draft_path.read_text(encoding="utf-8"))
     layout = json.loads(layout_path.read_text(encoding="utf-8"))
+    narrative_plan: dict[str, Any] | None = None
+    if narrative_path.exists():
+        parsed = json.loads(narrative_path.read_text(encoding="utf-8"))
+        if isinstance(parsed, dict):
+            narrative_plan = parsed
 
     draft_scenes = {s.get("id"): s for s in (draft.get("scenes") or []) if s.get("id")}
     layout_scenes = layout.get("scenes") or []
+    scene_ids = [str(s.get("id", "")).strip() for s in layout_scenes if str(s.get("id", "")).strip()]
+    narrative_by_scene = _narrative_by_scene_ids(scene_ids=scene_ids, narrative_plan=narrative_plan)
 
     objects: dict[str, ObjectSpec] = {}
     for s in draft.get("scenes") or []:
@@ -244,16 +368,28 @@ def main() -> int:
 
         layout_obj = s.get("layout") or {}
         layout_type = str(layout_obj.get("type", ""))
-        layout_slots = _canonicalize_layout_slots(layout_type, _normalize_layout_slots(layout_obj.get("slots")))
+        raw_slots = _normalize_layout_slots(layout_obj.get("slots"))
+        layout_slots = (
+            {}
+            if layout_type == "free"
+            else _canonicalize_layout_slots(layout_type, raw_slots)
+        )
+        layout_placements = _normalize_layout_placements(layout_obj.get("placements"))
+        layout_params = {} if layout_type == "free" else sanitize_params(layout_type, dict(layout_obj.get("params") or {}))
         layout_spec = LayoutSpec(
             type=layout_type,
             slots=layout_slots,
-            params=sanitize_params(layout_type, dict(layout_obj.get("params") or {})),
+            placements=layout_placements,
+            params=layout_params,
         )
 
+        fallback_storyboard_narrative = _narrative_from_storyboard(draft_scene)
         scene_spec = SceneSpec(
             id=str(scene_id),
             intent=intent,
+            narrative=str(s.get("narrative", "")).strip()
+            or narrative_by_scene.get(str(scene_id))
+            or fallback_storyboard_narrative,
             layout=layout_spec,
             actions=_normalize_actions(s.get("actions")),
             keep=list(s.get("keep") or []),

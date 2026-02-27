@@ -55,9 +55,6 @@
             "inner"
           ],
           "default": "outer"
-        },
-        "clearance": {
-          "type": "number"
         }
       }
     },

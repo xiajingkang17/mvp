@@ -1,6 +1,8 @@
 from .inclined_plane_group import InclinedPlaneGroup
 from .wall import Wall
+from .arrow import Arrow
 from .block import Block
+from .ball import Ball
 from .cart import Cart
 from .weight import Weight
 from .pulley import Pulley
@@ -19,7 +21,7 @@ from .quarter_cart import QuarterCart
 from .spring_scale import SpringScale
 
 __all__ = [
-    "InclinedPlaneGroup", "Wall", "Block", "Cart", "Weight",
+    "InclinedPlaneGroup", "Wall", "Arrow", "Block", "Ball", "Cart", "Weight",
     "Pulley", "FixedPulley", "MovablePulley", "Rope", "Spring", "Rod", "Hinge",
     "CircularGroove", "ArcTrack", "SemicircleGroove", "QuarterCircleGroove", "SemicircleCart", "QuarterCart", "SpringScale",
 ]

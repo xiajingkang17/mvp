@@ -113,105 +113,102 @@ class GraphTrack(BaseModel):
         if not isinstance(payload, dict):
             return raw
         payload = dict(payload)
+        track_type = str(raw.get("type", "")).strip().lower()
 
-        def _has_any(*keys: str) -> bool:
-            return any(key in payload for key in keys)
+        def _is_number(value: Any) -> bool:
+            return isinstance(value, (int, float)) and not isinstance(value, bool)
 
-        if "p1" in payload and isinstance(payload.get("p1"), dict):
-            p1 = payload.get("p1", {})
-            if "x1" not in payload and isinstance(p1.get("x"), (int, float)):
-                payload["x1"] = float(p1["x"])
-            if "y1" not in payload and isinstance(p1.get("y"), (int, float)):
-                payload["y1"] = float(p1["y"])
-        if "p2" in payload and isinstance(payload.get("p2"), dict):
-            p2 = payload.get("p2", {})
-            if "x2" not in payload and isinstance(p2.get("x"), (int, float)):
-                payload["x2"] = float(p2["x"])
-            if "y2" not in payload and isinstance(p2.get("y"), (int, float)):
-                payload["y2"] = float(p2["y"])
+        if track_type == "arc":
+            if "space" not in payload:
+                raise ValueError("arc track data requires explicit space")
+            allowed_arc_keys = {
+                "space",
+                "part_id",
+                "center",
+                "cx",
+                "cy",
+                "radius",
+                "start",
+                "end",
+            }
+            unknown = sorted(key for key in payload.keys() if key not in allowed_arc_keys)
+            if unknown:
+                raise ValueError(
+                    "arc track data has unknown keys; use canonical fields only: "
+                    + ", ".join(unknown)
+                )
+            required = [key for key in ("space", "radius", "start", "end") if key not in payload]
+            if required:
+                raise ValueError("arc track data missing required keys: " + ", ".join(required))
+            if "center" in payload and not isinstance(payload.get("center"), str):
+                raise ValueError("arc track data.center must be an anchor name string")
 
-        if "center" in payload and isinstance(payload.get("center"), dict):
-            center = payload.get("center", {})
-            if "cx" not in payload and isinstance(center.get("x"), (int, float)):
-                payload["cx"] = float(center["x"])
-            if "cy" not in payload and isinstance(center.get("y"), (int, float)):
-                payload["cy"] = float(center["y"])
-        elif "center" in payload and isinstance(payload.get("center"), (list, tuple)):
-            center_seq = list(payload.get("center") or [])
-            if len(center_seq) >= 2:
-                if "cx" not in payload and isinstance(center_seq[0], (int, float)):
-                    payload["cx"] = float(center_seq[0])
-                if "cy" not in payload and isinstance(center_seq[1], (int, float)):
-                    payload["cy"] = float(center_seq[1])
+            arc_space = str(payload.get("space", "")).strip().lower()
+            if arc_space not in {"local", "world"}:
+                raise ValueError("arc track data.space must be local/world")
 
-        if "center_local" in payload and isinstance(payload.get("center_local"), dict):
-            center_local = payload.get("center_local", {})
-            if "cx_local" not in payload and isinstance(center_local.get("x"), (int, float)):
-                payload["cx_local"] = float(center_local["x"])
-            if "cy_local" not in payload and isinstance(center_local.get("y"), (int, float)):
-                payload["cy_local"] = float(center_local["y"])
-        elif "center_local" in payload and isinstance(payload.get("center_local"), (list, tuple)):
-            center_local_seq = list(payload.get("center_local") or [])
-            if len(center_local_seq) >= 2:
-                if "cx_local" not in payload and isinstance(center_local_seq[0], (int, float)):
-                    payload["cx_local"] = float(center_local_seq[0])
-                if "cy_local" not in payload and isinstance(center_local_seq[1], (int, float)):
-                    payload["cy_local"] = float(center_local_seq[1])
+            if arc_space == "local":
+                part_id = payload.get("part_id")
+                if not isinstance(part_id, str) or not part_id.strip():
+                    raise ValueError("local arc track requires part_id")
+                has_center_anchor = isinstance(payload.get("center"), str) and bool(str(payload.get("center")).strip())
+                has_center_xy = _is_number(payload.get("cx")) and _is_number(payload.get("cy"))
+                if not (has_center_anchor or has_center_xy):
+                    raise ValueError("local arc track requires center or cx/cy")
+            else:
+                if "part_id" in payload:
+                    raise ValueError("world arc track forbids part_id")
+                if "center" in payload:
+                    raise ValueError("world arc track forbids center anchor")
+                if not (_is_number(payload.get("cx")) and _is_number(payload.get("cy"))):
+                    raise ValueError("world arc track requires cx/cy")
 
-        if "p1_local" in payload and isinstance(payload.get("p1_local"), dict):
-            p1_local = payload.get("p1_local", {})
-            if "x1_local" not in payload and isinstance(p1_local.get("x"), (int, float)):
-                payload["x1_local"] = float(p1_local["x"])
-            if "y1_local" not in payload and isinstance(p1_local.get("y"), (int, float)):
-                payload["y1_local"] = float(p1_local["y"])
-        if "p2_local" in payload and isinstance(payload.get("p2_local"), dict):
-            p2_local = payload.get("p2_local", {})
-            if "x2_local" not in payload and isinstance(p2_local.get("x"), (int, float)):
-                payload["x2_local"] = float(p2_local["x"])
-            if "y2_local" not in payload and isinstance(p2_local.get("y"), (int, float)):
-                payload["y2_local"] = float(p2_local["y"])
+            raw["data"] = payload
+            return raw
 
-        if "a0" in payload and "start_deg" not in payload:
-            payload["start_deg"] = payload["a0"]
-        if "a1" in payload and "end_deg" not in payload:
-            payload["end_deg"] = payload["a1"]
-        if "start_angle" in payload and "start_deg" not in payload:
-            payload["start_deg"] = payload["start_angle"]
-        if "end_angle" in payload and "end_deg" not in payload:
-            payload["end_deg"] = payload["end_angle"]
-        if "start_angle_local" in payload and "start_deg_local" not in payload:
-            payload["start_deg_local"] = payload["start_angle_local"]
-        if "end_angle_local" in payload and "end_deg_local" not in payload:
-            payload["end_deg_local"] = payload["end_angle_local"]
-
-        if "r_local" in payload and "radius_local" not in payload:
-            payload["radius_local"] = payload["r_local"]
-
-        if "space" not in payload:
-            has_local_hint = _has_any(
+        if track_type == "segment":
+            allowed_segment_keys = {
+                "space",
                 "part_id",
                 "anchor_a",
                 "anchor_b",
-                "a1",
-                "a2",
-                "p1_local",
-                "p2_local",
-                "x1_local",
-                "y1_local",
-                "x2_local",
-                "y2_local",
-                "center_local",
-                "cx_local",
-                "cy_local",
-                "radius_local",
-                "r_local",
-                "start_deg_local",
-                "end_deg_local",
-                "start_angle_local",
-                "end_angle_local",
-            )
-            has_world_hint = _has_any("x1", "y1", "x2", "y2", "cx", "cy", "start_deg", "end_deg", "x0", "y0", "dx", "dy")
-            payload["space"] = "local" if has_local_hint or not has_world_hint else "world"
+                "x1",
+                "y1",
+                "x2",
+                "y2",
+            }
+            unknown = sorted(key for key in payload.keys() if key not in allowed_segment_keys)
+            if unknown:
+                raise ValueError(
+                    "segment track data has unknown keys; use canonical fields only: "
+                    + ", ".join(unknown)
+                )
+
+            if "space" not in payload:
+                has_world_coords = all(_is_number(payload.get(key)) for key in ("x1", "y1", "x2", "y2"))
+                payload["space"] = "world" if has_world_coords else "local"
+
+            seg_space = str(payload.get("space", "")).strip().lower()
+            if seg_space not in {"local", "world"}:
+                raise ValueError("segment track data.space must be local/world")
+
+            if seg_space == "local":
+                part_id = payload.get("part_id")
+                if not isinstance(part_id, str) or not part_id.strip():
+                    raise ValueError("local segment track requires part_id")
+                anchor_a = payload.get("anchor_a")
+                anchor_b = payload.get("anchor_b")
+                if not isinstance(anchor_a, str) or not anchor_a.strip():
+                    raise ValueError("local segment track requires anchor_a")
+                if not isinstance(anchor_b, str) or not anchor_b.strip():
+                    raise ValueError("local segment track requires anchor_b")
+                if any(key in payload for key in ("x1", "y1", "x2", "y2")):
+                    raise ValueError("local segment track forbids x1/y1/x2/y2")
+            else:
+                if any(key in payload for key in ("part_id", "anchor_a", "anchor_b")):
+                    raise ValueError("world segment track forbids part_id/anchor_a/anchor_b")
+                if not all(_is_number(payload.get(key)) for key in ("x1", "y1", "x2", "y2")):
+                    raise ValueError("world segment track requires x1/y1/x2/y2")
 
         raw["data"] = payload
         return raw

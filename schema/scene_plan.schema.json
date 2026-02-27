@@ -32,7 +32,7 @@
     },
     "LayoutSpec": {
       "type": "object",
-      "required": ["type", "slots"],
+      "required": ["type"],
       "additionalProperties": false,
       "properties": {
         "type": { "type": "string", "minLength": 1 },
@@ -40,7 +40,23 @@
           "type": "object",
           "additionalProperties": { "type": "string" }
         },
+        "placements": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/PlacementSpec" }
+        },
         "params": { "type": "object" }
+      }
+    },
+    "PlacementSpec": {
+      "type": "object",
+      "required": ["cx", "cy", "w", "h"],
+      "additionalProperties": false,
+      "properties": {
+        "cx": { "type": "number", "minimum": 0, "maximum": 1 },
+        "cy": { "type": "number", "minimum": 0, "maximum": 1 },
+        "w": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "h": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 },
+        "anchor": { "type": "string", "minLength": 1 }
       }
     },
     "PlayAction": {
@@ -76,6 +92,7 @@
       "properties": {
         "id": { "type": "string", "minLength": 1 },
         "intent": { "type": ["string", "null"] },
+        "narrative": { "type": ["string", "null"] },
         "layout": { "$ref": "#/$defs/LayoutSpec" },
         "actions": { "type": "array", "items": { "$ref": "#/$defs/ActionSpec" } },
         "keep": { "type": "array", "items": { "type": "string" } },

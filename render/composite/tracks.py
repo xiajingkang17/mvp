@@ -53,11 +53,17 @@ def _line_point_tangent(data: dict[str, Any], s: float) -> tuple[tuple[float, fl
 
 
 def _arc_point_tangent(data: dict[str, Any], s: float) -> tuple[tuple[float, float], tuple[float, float]]:
-    cx = float(data.get("cx", 0.0))
-    cy = float(data.get("cy", 0.0))
-    radius = float(data.get("r", data.get("radius", 1.0)))
-    start_deg = float(data.get("start_deg", 0.0))
-    end_deg = float(data.get("end_deg", 180.0))
+    if "cx" not in data or "cy" not in data:
+        raise ValueError("arc track requires cx/cy")
+    if "radius" not in data:
+        raise ValueError("arc track requires radius")
+    cx = float(data.get("cx"))
+    cy = float(data.get("cy"))
+    radius = float(data.get("radius"))
+    if "start" not in data or "end" not in data:
+        raise ValueError("arc track requires start/end")
+    start_deg = float(data.get("start"))
+    end_deg = float(data.get("end"))
     t = _clamp01(float(s))
     angle_deg = start_deg + (end_deg - start_deg) * t
     angle_rad = math.radians(angle_deg)

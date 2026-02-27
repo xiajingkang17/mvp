@@ -4,6 +4,7 @@ from manim import DOWN, LEFT, RIGHT, MathTex, Text, VGroup
 
 from components.base import Component, ComponentDefaults, _style_get, resolve_text_font
 from components.common.inline_math import split_inline_math_segments
+from components.common.latex_subscripts import shorten_latex_subscripts
 from schema.scene_plan_models import ObjectSpec
 
 
@@ -56,6 +57,7 @@ class TextBlock(Component):
                 expression = value.strip()
                 if not expression:
                     continue
+                expression = shorten_latex_subscripts(expression, max_letters=2)
                 try:
                     mobj = MathTex(expression, font_size=font_size)
                     if color is not None:

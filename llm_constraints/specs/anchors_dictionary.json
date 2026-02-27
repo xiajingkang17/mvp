@@ -1,7 +1,21 @@
 {
   "version": "0.1",
-  "scope": "mechanics_only",
+  "scope": "physics",
   "components": {
+    "Axes2D": {
+      "anchors": [
+        "center",
+        "origin",
+        "x_start",
+        "x_end",
+        "y_start",
+        "y_end",
+        "top_left",
+        "top_right",
+        "bottom_left",
+        "bottom_right"
+      ]
+    },
     "Block": {
       "anchors": [
         "center",
@@ -13,6 +27,19 @@
         "top_right",
         "bottom_left",
         "bottom_right"
+      ]
+    },
+    "Ball": {
+      "anchors": [
+        "center",
+        "top",
+        "bottom",
+        "left",
+        "right",
+        "top_center",
+        "bottom_center",
+        "left_center",
+        "right_center"
       ]
     },
     "Cart": {
@@ -38,6 +65,14 @@
         "end",
         "low_end",
         "high_end"
+      ]
+    },
+    "Arrow": {
+      "anchors": [
+        "center",
+        "start",
+        "end",
+        "tip"
       ]
     },
     "FixedPulley": {
@@ -123,6 +158,32 @@
         "start",
         "end",
         "mid"
+      ]
+    },
+    "Particle": {
+      "anchors": [
+        "center",
+        "top",
+        "bottom",
+        "left",
+        "right",
+        "top_center",
+        "bottom_center",
+        "left_center",
+        "right_center"
+      ]
+    },
+    "FieldCross": {
+      "anchors": [
+        "center",
+        "top",
+        "bottom",
+        "left",
+        "right",
+        "top_center",
+        "bottom_center",
+        "left_center",
+        "right_center"
       ]
     }
   },

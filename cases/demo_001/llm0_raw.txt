@@ -1,0 +1,115 @@
+{
+  "analysis": {
+    "core_concept": "带电粒子在复合场中的运动",
+    "domain": "physics/electromagnetism",
+    "level": "advanced",
+    "goal": "掌握带电粒子在交替分布的匀强电场和匀强磁场中的加速、偏转及周期性运动规律"
+  },
+  "root_id": "n0",
+  "nodes": [
+    {
+      "id": "n0",
+      "concept": "带电粒子在复合场中的运动",
+      "depth": 0,
+      "is_foundation": false,
+      "rationale": "目标概念，涉及电场加速与磁场偏转的组合过程"
+    },
+    {
+      "id": "n1",
+      "concept": "带电粒子在匀强磁场中的圆周运动",
+      "depth": 1,
+      "is_foundation": false,
+      "rationale": "解决磁场偏转、回旋及周期计算的核心机制"
+    },
+    {
+      "id": "n2",
+      "concept": "带电粒子在匀强电场中的加速运动",
+      "depth": 1,
+      "is_foundation": false,
+      "rationale": "计算粒子进入磁场时的初速度"
+    },
+    {
+      "id": "n3",
+      "concept": "洛伦兹力提供向心力",
+      "depth": 2,
+      "is_foundation": false,
+      "rationale": "推导半径公式和周期公式的动力学依据"
+    },
+    {
+      "id": "n4",
+      "concept": "动能定理",
+      "depth": 2,
+      "is_foundation": false,
+      "rationale": "求解电场加速末速度的通用方法"
+    },
+    {
+      "id": "n5",
+      "concept": "匀变速直线运动",
+      "depth": 3,
+      "is_foundation": true,
+      "rationale": "电场加速的基础运动学模型"
+    },
+    {
+      "id": "n6",
+      "concept": "牛顿第二定律",
+      "depth": 3,
+      "is_foundation": true,
+      "rationale": "连接力与运动的基础定律"
+    },
+    {
+      "id": "n7",
+      "concept": "圆周运动几何关系",
+      "depth": 3,
+      "is_foundation": true,
+      "rationale": "处理偏转角、弦长与半径关系的基础几何"
+    }
+  ],
+  "edges": [
+    {
+      "from_id": "n0",
+      "to_id": "n1",
+      "relation": "requires"
+    },
+    {
+      "from_id": "n0",
+      "to_id": "n2",
+      "relation": "requires"
+    },
+    {
+      "from_id": "n1",
+      "to_id": "n3",
+      "relation": "requires"
+    },
+    {
+      "from_id": "n1",
+      "to_id": "n7",
+      "relation": "requires"
+    },
+    {
+      "from_id": "n2",
+      "to_id": "n4",
+      "relation": "requires"
+    },
+    {
+      "from_id": "n3",
+      "to_id": "n6",
+      "relation": "requires"
+    },
+    {
+      "from_id": "n4",
+      "to_id": "n5",
+      "relation": "requires"
+    }
+  ],
+  "ordered_concepts": [
+    "匀变速直线运动",
+    "牛顿第二定律",
+    "圆周运动几何关系",
+    "动能定理",
+    "洛伦兹力提供向心力",
+    "带电粒子在匀强磁场中的圆周运动",
+    "带电粒子在匀强电场中的加速运动",
+    "带电粒子在复合场中的运动"
+  ],
+  "explanation": "根据题目描述，粒子依次经过电场加速和两个不同方向的磁场偏转。理解该过程需掌握电场加速求速度（基于动能定理和匀变速直线运动）、磁场偏转求半径和周期（基于洛伦兹力提供向心力、牛顿第二定律及圆周几何），最后综合分析粒子在复合场中的轨迹与时间。"
+}

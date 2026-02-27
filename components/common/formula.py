@@ -3,6 +3,7 @@ from __future__ import annotations
 from manim import MathTex
 
 from components.base import Component, ComponentDefaults, _style_get
+from components.common.latex_subscripts import shorten_latex_subscripts
 from schema.scene_plan_models import ObjectSpec
 
 
@@ -16,6 +17,7 @@ class Formula(Component):
         latex = str(latex).strip()
         if not latex:
             raise ValueError("Formula params.latex cannot be empty")
+        latex = shorten_latex_subscripts(latex, max_letters=2)
 
         font_size = int(_style_get(spec, "font_size", defaults.formula_font_size))
         color = _style_get(spec, "color", None)

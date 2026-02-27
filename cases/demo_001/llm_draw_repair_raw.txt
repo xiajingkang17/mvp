@@ -1,0 +1,662 @@
+```json
+{
+  "version": "0.1",
+  "scenes": [
+    {
+      "id": "S1",
+      "composites": [
+        {
+          "object_id": "scene_setup",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [
+              {
+                "id": "p_ground",
+                "type": "Wall",
+                "params": {
+                  "length": 12,
+                  "angle": 0,
+                  "rise_to": "right",
+                  "color": "#888888",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": -4
+                  },
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_arc",
+                "type": "ArcTrack",
+                "params": {
+                  "center": {
+                    "x": -2,
+                    "y": -2.75
+                  },
+                  "radius": 2.75,
+                  "start_angle": 143.13,
+                  "end_angle": 270,
+                  "color": "#AAAAAA",
+                  "stroke_width": 4
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_ball",
+                "type": "Ball",
+                "params": {
+                  "radius": 0.2,
+                  "color": "#FF4444",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "angle": 0
+                }
+              }
+            ],
+            "tracks": [
+              {
+                "id": "t_arc",
+                "type": "arc",
+                "data": {
+                  "part_id": "p_arc",
+                  "center_anchor": "center",
+                  "radius_local": 2.75,
+                  "start_angle": 143.13,
+                  "end_angle": 270,
+                  "space": "local"
+                }
+              }
+            ],
+            "constraints": [
+              {
+                "id": "c_ball_on_arc",
+                "type": "on_track_pose",
+                "args": {
+                  "part_id": "p_ball",
+                  "track_id": "t_arc",
+                  "s": 0.0,
+                  "anchor": "bottom_center",
+                  "angle_mode": "tangent"
+                },
+                "hard": true
+              }
+            ],
+            "motions": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "composites": [
+        {
+          "object_id": "energy_scene",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [
+              {
+                "id": "p_ground",
+                "type": "Wall",
+                "params": {
+                  "length": 12,
+                  "angle": 0,
+                  "rise_to": "right",
+                  "color": "#888888",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": -4
+                  },
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_arc",
+                "type": "ArcTrack",
+                "params": {
+                  "center": {
+                    "x": -2,
+                    "y": -2.75
+                  },
+                  "radius": 2.75,
+                  "start_angle": 143.13,
+                  "end_angle": 270,
+                  "color": "#AAAAAA",
+                  "stroke_width": 4
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_ball",
+                "type": "Ball",
+                "params": {
+                  "radius": 0.2,
+                  "color": "#FF4444",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "angle": 0
+                }
+              }
+            ],
+            "tracks": [
+              {
+                "id": "t_arc",
+                "type": "arc",
+                "data": {
+                  "part_id": "p_arc",
+                  "center_anchor": "center",
+                  "radius_local": 2.75,
+                  "start_angle": 143.13,
+                  "end_angle": 270,
+                  "space": "local"
+                }
+              }
+            ],
+            "constraints": [
+              {
+                "id": "c_ball_on_arc",
+                "type": "on_track_pose",
+                "args": {
+                  "part_id": "p_ball",
+                  "track_id": "t_arc",
+                  "s": 0.0,
+                  "anchor": "bottom_center",
+                  "angle_mode": "tangent"
+                },
+                "hard": true
+              }
+            ],
+            "motions": [
+              {
+                "id": "m_slide_down",
+                "type": "on_track",
+                "args": {
+                  "part_id": "p_ball",
+                  "track_id": "t_arc"
+                },
+                "timeline": [
+                  {
+                    "t": 0,
+                    "s": 0.0
+                  },
+                  {
+                    "t": 3,
+                    "s": 1.0
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "S3",
+      "composites": [
+        {
+          "object_id": "projectile_demo",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [
+              {
+                "id": "p_ground",
+                "type": "Wall",
+                "params": {
+                  "length": 12,
+                  "angle": 0,
+                  "rise_to": "right",
+                  "color": "#888888",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": -4
+                  },
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_arc",
+                "type": "ArcTrack",
+                "params": {
+                  "center": {
+                    "x": -2,
+                    "y": -2.75
+                  },
+                  "radius": 2.75,
+                  "start_angle": 143.13,
+                  "end_angle": 270,
+                  "color": "#AAAAAA",
+                  "stroke_width": 4
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_ball",
+                "type": "Ball",
+                "params": {
+                  "radius": 0.2,
+                  "color": "#FF4444",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_arrow_vx",
+                "type": "Arrow",
+                "params": {
+                  "length": 1.5,
+                  "angle": 0,
+                  "color": "#4444FF",
+                  "stroke_width": 3
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_arrow_vy",
+                "type": "Arrow",
+                "params": {
+                  "length": 1.5,
+                  "angle": -90,
+                  "color": "#FF4444",
+                  "stroke_width": 3
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "angle": 0
+                }
+              }
+            ],
+            "tracks": [
+              {
+                "id": "t_arc",
+                "type": "arc",
+                "data": {
+                  "part_id": "p_arc",
+                  "center_anchor": "center",
+                  "radius_local": 2.75,
+                  "start_angle": 143.13,
+                  "end_angle": 270,
+                  "space": "local"
+                }
+              },
+              {
+                "id": "t_projectile",
+                "type": "segment",
+                "data": {
+                  "p1": {
+                    "x": 0.75,
+                    "y": -2.75
+                  },
+                  "p2": {
+                    "x": 4.75,
+                    "y": -4
+                  },
+                  "space": "world"
+                }
+              }
+            ],
+            "constraints": [
+              {
+                "id": "c_ball_on_arc",
+                "type": "on_track_pose",
+                "args": {
+                  "part_id": "p_ball",
+                  "track_id": "t_arc",
+                  "s": 1.0,
+                  "anchor": "bottom_center",
+                  "angle_mode": "tangent"
+                },
+                "hard": true
+              },
+              {
+                "id": "c_arrow_vx",
+                "type": "attach",
+                "args": {
+                  "part_a": "p_arrow_vx",
+                  "anchor_a": "start",
+                  "part_b": "p_ball",
+                  "anchor_b": "center"
+                },
+                "hard": true
+              },
+              {
+                "id": "c_arrow_vy",
+                "type": "attach",
+                "args": {
+                  "part_a": "p_arrow_vy",
+                  "anchor_a": "start",
+                  "part_b": "p_ball",
+                  "anchor_b": "center"
+                },
+                "hard": true
+              }
+            ],
+            "motions": [
+              {
+                "id": "m_projectile",
+                "type": "on_track_schedule",
+                "args": {
+                  "segments": [
+                    {
+                      "track_id": "t_arc",
+                      "u0": 0.0,
+                      "u1": 1.0,
+                      "s0": 0.0,
+                      "s1": 0.2
+                    },
+                    {
+                      "track_id": "t_projectile",
+                      "u0": 0.0,
+                      "u1": 1.0,
+                      "s0": 0.2,
+                      "s1": 1.0
+                    }
+                  ]
+                },
+                "timeline": [
+                  {
+                    "t": 0,
+                    "u": 0.0
+                  },
+                  {
+                    "t": 3,
+                    "u": 1.0
+                  }
+                ]
+              },
+              {
+                "id": "m_arrow_vy_len",
+                "type": "state_driver",
+                "args": {
+                  "part_id": "p_arrow_vy",
+                  "param_key": "length"
+                },
+                "timeline": [
+                  {
+                    "t": 0.6,
+                    "length": 0.1
+                  },
+                  {
+                    "t": 3,
+                    "length": 2.0
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "S4",
+      "composites": [
+        {
+          "object_id": "vertical_motion",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [
+              {
+                "id": "p_ground",
+                "type": "Wall",
+                "params": {
+                  "length": 12,
+                  "angle": 0,
+                  "rise_to": "right",
+                  "color": "#888888",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": -4
+                  },
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_ball",
+                "type": "Ball",
+                "params": {
+                  "radius": 0.2,
+                  "color": "#FF4444",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "angle": 0
+                }
+              }
+            ],
+            "tracks": [
+              {
+                "id": "t_vertical",
+                "type": "segment",
+                "data": {
+                  "p1": {
+                    "x": 0.75,
+                    "y": -2.75
+                  },
+                  "p2": {
+                    "x": 0.75,
+                    "y": -4
+                  },
+                  "space": "world"
+                }
+              }
+            ],
+            "constraints": [
+              {
+                "id": "c_ball_on_vertical",
+                "type": "on_track_pose",
+                "args": {
+                  "part_id": "p_ball",
+                  "track_id": "t_vertical",
+                  "s": 0.0,
+                  "anchor": "bottom_center",
+                  "angle_mode": "fixed"
+                },
+                "hard": true
+              }
+            ],
+            "motions": [
+              {
+                "id": "m_drop",
+                "type": "on_track",
+                "args": {
+                  "part_id": "p_ball",
+                  "track_id": "t_vertical"
+                },
+                "timeline": [
+                  {
+                    "t": 0,
+                    "s": 0.0
+                  },
+                  {
+                    "t": 2,
+                    "s": 1.0
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "S5",
+      "composites": [
+        {
+          "object_id": "horizontal_motion",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [
+              {
+                "id": "p_ground",
+                "type": "Wall",
+                "params": {
+                  "length": 12,
+                  "angle": 0,
+                  "rise_to": "right",
+                  "color": "#888888",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": -4
+                  },
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_ball",
+                "type": "Ball",
+                "params": {
+                  "radius": 0.2,
+                  "color": "#FF4444",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "angle": 0
+                }
+              }
+            ],
+            "tracks": [
+              {
+                "id": "t_horizontal",
+                "type": "segment",
+                "data": {
+                  "p1": {
+                    "x": 0.75,
+                    "y": -3.8
+                  },
+                  "p2": {
+                    "x": 4.75,
+                    "y": -3.8
+                  },
+                  "space": "world"
+                }
+              }
+            ],
+            "constraints": [
+              {
+                "id": "c_ball_on_horizontal",
+                "type": "on_track_pose",
+                "args": {
+                  "part_id": "p_ball",
+                  "track_id": "t_horizontal",
+                  "s": 0.0,
+                  "anchor": "bottom_center",
+                  "angle_mode": "fixed"
+                },
+                "hard": true
+              }
+            ],
+            "motions": [
+              {
+                "id": "m_move_x",
+                "type": "on_track",
+                "args": {
+                  "part_id": "p_ball",
+                  "track_id": "t_horizontal"
+                },
+                "timeline": [
+                  {
+                    "t": 0,
+                    "s": 0.0
+                  },
+                  {
+                    "t": 2,
+                    "s": 1.0
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "S6",
+      "composites": []
+    }
+  ]
+}
+```

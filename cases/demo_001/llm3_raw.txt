@@ -3,46 +3,66 @@
     {
       "id": "S1",
       "layout": {
-        "type": "left_right",
-        "slots": {
-          "left": "o_diagram",
-          "right": "o_text_s1"
-        },
-        "params": {
-          "slot_scales": {
-            "left": {
-              "w": 0.6,
-              "h": 0.8
-            },
-            "right": {
-              "w": 0.35,
-              "h": 0.3
-            }
+        "type": "free",
+        "placements": {
+          "field_system": {
+            "cx": 0.5,
+            "cy": 0.55,
+            "w": 0.9,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "particle": {
+            "cx": 0.5,
+            "cy": 0.55,
+            "w": 0.1,
+            "h": 0.1,
+            "anchor": "C"
+          },
+          "text_q1": {
+            "cx": 0.5,
+            "cy": 0.1,
+            "w": 0.8,
+            "h": 0.15,
+            "anchor": "C"
+          },
+          "formula_v0": {
+            "cx": 0.5,
+            "cy": 0.25,
+            "w": 0.7,
+            "h": 0.15,
+            "anchor": "C"
           }
         }
       },
       "actions": [
         {
           "op": "play",
-          "anim": "create",
+          "anim": "fade_in",
           "targets": [
-            "o_diagram"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 1.0
+            "field_system"
+          ],
+          "duration": 3.0
         },
         {
           "op": "play",
           "anim": "fade_in",
           "targets": [
-            "o_text_s1"
-          ]
+            "particle"
+          ],
+          "duration": 2.0
         },
         {
           "op": "wait",
-          "duration": 1.0
+          "duration": 4.0
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "targets": [
+            "formula_v0"
+          ],
+          "duration": 3.0
         }
       ],
       "keep": []
@@ -50,58 +70,63 @@
     {
       "id": "S2",
       "layout": {
-        "type": "left_right",
-        "slots": {
-          "left": "o_diagram_s2",
-          "right": "o_eq_s2"
-        },
-        "params": {
-          "slot_scales": {
-            "left": {
-              "w": 0.5,
-              "h": 0.8
-            },
-            "right": {
-              "w": 0.45,
-              "h": 0.3
-            }
+        "type": "free",
+        "placements": {
+          "magnetic_field_B1": {
+            "cx": 0.5,
+            "cy": 0.55,
+            "w": 0.9,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "trajectory_B1": {
+            "cx": 0.5,
+            "cy": 0.55,
+            "w": 0.8,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "formula_R1": {
+            "cx": 0.5,
+            "cy": 0.15,
+            "w": 0.7,
+            "h": 0.15,
+            "anchor": "C"
           }
         }
       },
       "actions": [
         {
           "op": "play",
-          "anim": "create",
+          "anim": "fade_in",
           "targets": [
-            "o_diagram_s2"
-          ]
+            "magnetic_field_B1"
+          ],
+          "duration": 3.0
         },
         {
-          "op": "wait",
-          "duration": 0.5
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "trajectory_B1"
+          ],
+          "duration": 6.0
+        },
+        {
+          "op": "play",
+          "anim": "indicate",
+          "targets": [
+            "trajectory_B1"
+          ],
+          "duration": 4.0
         },
         {
           "op": "play",
           "anim": "write",
           "targets": [
-            "o_eq_s2"
+            "formula_R1"
           ],
-          "duration": 1.5
-        },
-        {
-          "op": "wait",
-          "duration": 0.5
-        },
-        {
-          "op": "play",
-          "anim": "fade_in",
-          "targets": [
-            "o_res_s2"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 1.0
+          "duration": 3.0
         }
       ],
       "keep": []
@@ -109,58 +134,63 @@
     {
       "id": "S3",
       "layout": {
-        "type": "left_right",
-        "slots": {
-          "left": "o_diagram_s3",
-          "right": "o_eq_s3"
-        },
-        "params": {
-          "slot_scales": {
-            "left": {
-              "w": 0.5,
-              "h": 0.8
-            },
-            "right": {
-              "w": 0.45,
-              "h": 0.4
-            }
+        "type": "free",
+        "placements": {
+          "magnetic_field_B2": {
+            "cx": 0.65,
+            "cy": 0.55,
+            "w": 0.5,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "trajectory_B2": {
+            "cx": 0.55,
+            "cy": 0.55,
+            "w": 0.8,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "formula_B2": {
+            "cx": 0.5,
+            "cy": 0.15,
+            "w": 0.8,
+            "h": 0.2,
+            "anchor": "C"
           }
         }
       },
       "actions": [
         {
           "op": "play",
-          "anim": "create",
+          "anim": "fade_in",
           "targets": [
-            "o_diagram_s3"
-          ]
+            "magnetic_field_B2"
+          ],
+          "duration": 3.0
         },
         {
-          "op": "wait",
-          "duration": 0.5
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "trajectory_B2"
+          ],
+          "duration": 6.0
+        },
+        {
+          "op": "play",
+          "anim": "indicate",
+          "targets": [
+            "trajectory_B2"
+          ],
+          "duration": 5.0
         },
         {
           "op": "play",
           "anim": "write",
           "targets": [
-            "o_eq_s3"
+            "formula_B2"
           ],
-          "duration": 2.0
-        },
-        {
-          "op": "wait",
-          "duration": 0.5
-        },
-        {
-          "op": "play",
-          "anim": "fade_in",
-          "targets": [
-            "o_res_s3"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 1.0
+          "duration": 4.0
         }
       ],
       "keep": []
@@ -168,58 +198,63 @@
     {
       "id": "S4",
       "layout": {
-        "type": "left_right",
-        "slots": {
-          "left": "o_diagram_s4",
-          "right": "o_eq_s4"
-        },
-        "params": {
-          "slot_scales": {
-            "left": {
-              "w": 0.5,
-              "h": 0.8
-            },
-            "right": {
-              "w": 0.45,
-              "h": 0.3
-            }
+        "type": "free",
+        "placements": {
+          "critical_trajectory": {
+            "cx": 0.6,
+            "cy": 0.55,
+            "w": 0.7,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "point_Q": {
+            "cx": 0.2,
+            "cy": 0.75,
+            "w": 0.1,
+            "h": 0.1,
+            "anchor": "C"
+          },
+          "formula_time": {
+            "cx": 0.5,
+            "cy": 0.15,
+            "w": 0.8,
+            "h": 0.2,
+            "anchor": "C"
           }
         }
       },
       "actions": [
         {
           "op": "play",
-          "anim": "create",
+          "anim": "fade_in",
           "targets": [
-            "o_diagram_s4"
-          ]
+            "point_Q"
+          ],
+          "duration": 2.0
         },
         {
-          "op": "wait",
-          "duration": 0.5
+          "op": "play",
+          "anim": "create",
+          "targets": [
+            "critical_trajectory"
+          ],
+          "duration": 6.0
+        },
+        {
+          "op": "play",
+          "anim": "indicate",
+          "targets": [
+            "critical_trajectory"
+          ],
+          "duration": 6.0
         },
         {
           "op": "play",
           "anim": "write",
           "targets": [
-            "o_eq_s4"
+            "formula_time"
           ],
-          "duration": 1.5
-        },
-        {
-          "op": "wait",
-          "duration": 0.5
-        },
-        {
-          "op": "play",
-          "anim": "fade_in",
-          "targets": [
-            "o_res_s4"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 1.0
+          "duration": 6.0
         }
       ],
       "keep": []
@@ -227,58 +262,48 @@
     {
       "id": "S5",
       "layout": {
-        "type": "left_right",
-        "slots": {
-          "left": "o_diagram_s5",
-          "right": "o_eq_s5"
-        },
-        "params": {
-          "slot_scales": {
-            "left": {
-              "w": 0.5,
-              "h": 0.8
-            },
-            "right": {
-              "w": 0.45,
-              "h": 0.4
-            }
+        "type": "free",
+        "placements": {
+          "text_conclusion": {
+            "cx": 0.5,
+            "cy": 0.2,
+            "w": 0.8,
+            "h": 0.15,
+            "anchor": "C"
+          },
+          "final_formula": {
+            "cx": 0.5,
+            "cy": 0.55,
+            "w": 0.8,
+            "h": 0.3,
+            "anchor": "C"
           }
         }
       },
       "actions": [
         {
           "op": "play",
-          "anim": "create",
+          "anim": "fade_in",
           "targets": [
-            "o_diagram_s5"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 0.5
+            "text_conclusion"
+          ],
+          "duration": 2.0
         },
         {
           "op": "play",
           "anim": "write",
           "targets": [
-            "o_eq_s5"
+            "final_formula"
           ],
-          "duration": 2.0
-        },
-        {
-          "op": "wait",
-          "duration": 0.5
+          "duration": 8.0
         },
         {
           "op": "play",
-          "anim": "fade_in",
+          "anim": "indicate",
           "targets": [
-            "o_res_s5"
-          ]
-        },
-        {
-          "op": "wait",
-          "duration": 1.0
+            "final_formula"
+          ],
+          "duration": 6.0
         }
       ],
       "keep": []

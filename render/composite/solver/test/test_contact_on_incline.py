@@ -49,7 +49,6 @@ class TestContactOnIncline(Scene):
                             "anchor": "bottom_center",
                             "s": 0.0,
                             "angle_mode": "tangent",
-                            "clearance": 0.0,
                         },
                         "hard": True,
                     }
