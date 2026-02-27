@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-from .templates import TEMPLATE_REGISTRY, SlotBBox
+from .templates import SlotBBox, build_template
 
 
 @dataclass(frozen=True)
@@ -48,22 +49,53 @@ def _norm_to_frame_center(cx: float, cy: float, frame: Frame) -> tuple[float, fl
     return x, y
 
 
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
+
+
+def _apply_slot_size_override(slot_id: str, bbox: SlotBBox, params: dict[str, Any] | None) -> SlotBBox:
+    if not isinstance(params, dict):
+        return bbox
+    raw_scales = params.get("slot_scales")
+    if not isinstance(raw_scales, dict):
+        return bbox
+    item = raw_scales.get(slot_id)
+    if not isinstance(item, dict):
+        return bbox
+
+    w_raw = item.get("w", item.get("width", 1.0))
+    h_raw = item.get("h", item.get("height", 1.0))
+    try:
+        w_scale = float(w_raw)
+        h_scale = float(h_raw)
+    except (TypeError, ValueError):
+        return bbox
+
+    # Keep slot overrides conservative to avoid uncontrolled overlap.
+    w_scale = _clamp(w_scale, 0.2, 1.0)
+    h_scale = _clamp(h_scale, 0.2, 1.0)
+    return SlotBBox(cx=bbox.cx, cy=bbox.cy, w=bbox.w * w_scale, h=bbox.h * h_scale, anchor=bbox.anchor)
+
+
 def compute_placements(
     template_type: str,
     slots: dict[str, str],
     *,
     safe_area: SafeArea,
     frame: Frame,
+    params: dict | None = None,
 ) -> dict[str, Placement]:
-    template = TEMPLATE_REGISTRY.get(template_type)
-    if not template:
-        raise ValueError(f"Unknown template: {template_type}")
+    try:
+        template = build_template(template_type, params)
+    except KeyError as exc:
+        raise ValueError(f"Unknown template: {template_type}") from exc
 
     placements: dict[str, Placement] = {}
     for slot_id, object_id in slots.items():
         if slot_id not in template.slots:
             raise ValueError(f"Template {template_type} has no slot named {slot_id}")
-        full = _apply_safe_area(template.slots[slot_id], safe_area)
+        slot_bbox = _apply_slot_size_override(slot_id, template.slots[slot_id], params)
+        full = _apply_safe_area(slot_bbox, safe_area)
         center_x, center_y = _norm_to_frame_center(full.cx, full.cy, frame)
         placements[object_id] = Placement(
             object_id=object_id,

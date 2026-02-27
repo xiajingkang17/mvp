@@ -1,0 +1,101 @@
+# Narrative Prompt: 带电粒子在复合场中的运动
+
+Goal: 从电场加速的基础出发，通过磁场偏转的几何约束，最终解决复合场中的极值时间问题。
+
+## Global Arc
+首先利用动能定理解决电场加速问题（Q1），接着通过洛伦兹力与几何对称性分析磁场中的回旋运动（Q2），最后综合运动学规律寻找时间极值的几何条件（Q3）。
+
+## 1. N1 - 电场加速与初速度获取
+Concept: 带电粒子在匀强电场中的加速运动
+Focus: core_equation
+Duration: 12s
+Key Equations:
+- qEd = 1/2mv0^2
+Narration:
+粒子在 L1 到 L2 间受电场力作用做匀加速直线运动。根据动能定理，电场力做功 qEd 等于动能增量 1/2mv0^2，由此解出进入磁场时的速度 v0。
+Visual Intent:
+展示粒子从 P 点加速穿过 L1-L2 区域，高亮电场线方向和位移 d。
+Transition Hook:
+获得初速度 v0 后，粒子进入 L2-L3 磁场开始偏转。
+
+## 2. N2 - 初速度结果校验
+Concept: 带电粒子在匀强磁场中的圆周运动
+Focus: check_sanity
+Duration: 8s
+Key Equations:
+- v0 = sqrt(2qEd/m)
+Narration:
+代入已知量计算 v0 = sqrt(2qEd/m)。检查量纲，根号内为能量/质量，结果为速度单位，符合物理预期。
+Visual Intent:
+屏幕显示 v0 的表达式，并高亮单位 m/s。
+Transition Hook:
+带着这个速度，粒子进入第一个磁场区域 B1。
+
+## 3. N3 - 磁场 B1 中的偏转半径
+Concept: 洛伦兹力提供向心力
+Focus: derive_step
+Duration: 16s
+Key Equations:
+- R1 = mv0/qB1
+- R1 = 2d
+Narration:
+粒子在 B1 中受洛伦兹力做匀速圆周运动。由 qv0B1 = mv0^2/R1 得半径 R1 = mv0/qB1。代入 B1 的表达式，发现 R1 = 2d，即粒子在 B1 中转过半圆到达 L3。
+Visual Intent:
+绘制粒子在 B1 区域的半圆轨迹，标注圆心位置和半径 2d。
+Transition Hook:
+粒子垂直进入 L3-L4 区域的磁场 B2，开始第二次偏转。
+
+## 4. N4 - 回到 P 点的几何约束
+Concept: 圆周运动几何关系
+Focus: diagram
+Duration: 18s
+Key Equations:
+- R2 = 2d / sin(60°)
+Narration:
+若粒子回到 P 点，轨迹必须关于 L2 对称。粒子在 B2 中偏转后需垂直打向 L2，且总水平位移需满足几何条件。分析可知粒子在 B2 中转过 60 度圆心角，对应的弦长为 2d。
+Visual Intent:
+展示完整的闭合轨迹，重点标注 B2 区域的 60 度扇形及对应的弦长 2d。
+Transition Hook:
+利用几何关系求出 R2 后，即可反推 B2。
+
+## 5. N5 - 求解磁感应强度 B2
+Concept: 带电粒子在匀强磁场中的圆周运动
+Focus: conclusion
+Duration: 14s
+Key Equations:
+- B2 = mv0/(qR2)
+- B2 = sqrt(3mE/(2qd))
+Narration:
+由洛伦兹力公式 R2 = mv0/qB2，结合 v0 和 R2 的结果，解得 B2 = sqrt(3mE/(2qd))。单位检查：根号内为 (kg*N/C)/(C*m) = (kg*m/s^2)/(C*m) * 1/C，最终为 T，正确。
+Visual Intent:
+列出 B2 的推导方程链，最终高亮 B2 的表达式。
+Transition Hook:
+现在改变 B2，寻找到达 Q 点的最短时间。
+
+## 6. N6 - 最短时间的几何极值分析
+Concept: 带电粒子在复合场中的运动
+Focus: derive_step
+Duration: 20s
+Key Equations:
+- sin(θ) = d/R2
+- θ = 105°
+Narration:
+粒子需从 P 到达水平距离 2√2d 处的 Q 点。总时间包括电场加速时间 t1 和磁场偏转时间 t2。t1 固定，t2 取决于 B2 中的圆心角。要使时间最短，需使粒子在 B2 中偏转角度最小，即轨迹与 L4 相切，此时圆心角为 105 度。
+Visual Intent:
+动态演示不同 B2 下的轨迹，最终锁定与 L4 相切的临界轨迹，标注 105 度角。
+Transition Hook:
+根据此几何条件计算具体时间。
+
+## 7. N7 - 综合计算最短时间 t
+Concept: 带电粒子在复合场中的运动
+Focus: conclusion
+Duration: 16s
+Key Equations:
+- t = t1 + t2
+- t = (1 + 7π/12) * sqrt(2md/(qE))
+Narration:
+计算电场时间 t1 = d/v_avg = sqrt(2md/(qE))。计算磁场时间 t2 = (105/360) * (2πm/qB2)。结合 B2 的几何关系，最终得到 t = (1 + 7π/12) * sqrt(2md/(qE))。
+Visual Intent:
+分步展示时间计算公式，最后合并总时间表达式。
+Transition Hook:
+至此，完成了从加速、偏转到极值时间的全过程分析。

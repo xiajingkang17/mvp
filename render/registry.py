@@ -3,9 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from components.base import Component, ComponentDefaults
+from components.composite.object_component import CompositeObjectComponent
 from components.common.bullet_panel import BulletPanel
+from components.common.custom_object import CustomObjectComponent
 from components.common.formula import Formula
 from components.common.text_block import TextBlock
+from components.physics.object_components import build_physics_components
 from schema.scene_plan_models import ObjectSpec
 
 
@@ -25,6 +28,9 @@ DEFAULT_REGISTRY = ComponentRegistry(
         TextBlock.type_name: TextBlock(),
         BulletPanel.type_name: BulletPanel(),
         Formula.type_name: Formula(),
+        CompositeObjectComponent.type_name: CompositeObjectComponent(),
+        CustomObjectComponent.type_name: CustomObjectComponent(),
+        **build_physics_components(),
     }
 )
 

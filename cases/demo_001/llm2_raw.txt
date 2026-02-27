@@ -1,0 +1,504 @@
+```json
+{
+  "version": "0.1",
+  "scenes": [
+    {
+      "id": "S1",
+      "intent": "展示粒子在电场中加速的过程，推导初速度 v0。",
+      "goal": "利用动能定理 qEd = 1/2mv0^2 求解 v0。",
+      "notes": "elements: L1/L2边界, 电场线, 粒子, P点, 文本, 公式;\ncolors: 电场线(RED), 粒子(YELLOW), 边界(WHITE);\ngeometry_elements: 4条平行竖线(L1-L4), 水平向右箭头表示电场, 粒子球体;\ngeometry_construction: 先绘制L1-L4四条等距竖线, 在L1-L2间填充红色箭头表示电场E, 在L1上标记P点;\ngeometry_relations: L1与L2间距为d, 电场方向水平向右;\ntransitions: 粒子从P点出现, 沿水平向右加速运动至L2;\ncamera_movement: none;\nlayout: 场景中心为粒子运动区域, 公式显示在上方;\nduration: 12s",
+      "objects": [
+        {
+          "id": "field_system",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "构建L1-L4边界及L1-L2间的匀强电场",
+            "geometry_prompt": "绘制4条垂直于x轴的平行直线，间距为d。在L1和L2之间绘制均匀分布的水平向右箭头，表示匀强电场E。",
+            "must_have_parts": [
+              "Wall",
+              "Arrow"
+            ],
+            "forbidden_parts": [
+              "InclinedPlane"
+            ]
+          },
+          "style": {
+            "color": "WHITE",
+            "position_hint": "ORIGIN"
+          }
+        },
+        {
+          "id": "particle",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "表示带正电的粒子",
+            "geometry_prompt": "绘制一个黄色小球，标记为+q",
+            "must_have_parts": [
+              "Particle"
+            ]
+          },
+          "style": {
+            "color": "YELLOW",
+            "position_hint": "[-2,0,0]"
+          }
+        },
+        {
+          "id": "formula_v0",
+          "type": "Formula",
+          "params": {
+            "latex": "qEd = \\frac{1}{2}mv_0^2 \\implies v_0 = \\sqrt{\\frac{2qEd}{m}}"
+          },
+          "style": {
+            "color": "GREEN",
+            "position_hint": "UP"
+          }
+        },
+        {
+          "id": "text_q1",
+          "type": "TextBlock",
+          "params": {
+            "text": "问题(1)：求粒子进入磁场时的速度大小 $v_0$"
+          },
+          "style": {
+            "color": "WHITE",
+            "position_hint": "UP"
+          }
+        }
+      ],
+      "narrative_storyboard": {
+        "bridge_from_prev": "粒子从P点静止释放，开始在电场中加速。",
+        "intro": "首先分析粒子在L1与L2之间的电场加速过程。根据动能定理，电场力做功等于粒子动能的增量。",
+        "key_formulae": [
+          {
+            "latex": "qEd = \\frac{1}{2}mv_0^2",
+            "color": "GREEN",
+            "position_hint": "UP",
+            "duration_s": 5
+          },
+          {
+            "latex": "v_0 = \\sqrt{\\frac{2qEd}{m}}",
+            "color": "GREEN",
+            "position_hint": "UP",
+            "duration_s": 5
+          }
+        ],
+        "animation_steps": [
+          {
+            "id": "step_1",
+            "description": "FadeIn 边界系统与电场线。显示L1-L4四条边界，并在L1-L2之间高亮显示向右的红色电场箭头，建立空间场景。",
+            "targets": [
+              "field_system"
+            ],
+            "duration_s": 3
+          },
+          {
+            "id": "step_2",
+            "description": "FadeIn 粒子。在L1上的P点位置显示黄色小球，表示粒子初始状态。",
+            "targets": [
+              "particle"
+            ],
+            "duration_s": 2
+          },
+          {
+            "id": "step_3",
+            "description": "粒子加速运动。粒子在电场力作用下从L1匀加速运动到L2，位移为d，速度从0增加到v0。",
+            "targets": [
+              "particle"
+            ],
+            "duration_s": 4
+          },
+          {
+            "id": "step_4",
+            "description": "Write 核心公式。在屏幕上方写出动能定理公式及v0的表达式，展示计算结果。",
+            "targets": [
+              "formula_v0"
+            ],
+            "duration_s": 3
+          }
+        ],
+        "bridge_to_next": "获得初速度v0后，粒子将垂直进入L2与L3之间的磁场区域，开始做圆周运动。"
+      }
+    },
+    {
+      "id": "S2",
+      "intent": "分析粒子在磁场B1中的偏转，推导半径R1并验证B1。",
+      "goal": "展示粒子在B1中的半圆轨迹，确认R1=2d。",
+      "notes": "elements: 磁场B1区域符号(x), 粒子轨迹, 半径标注;\ncolors: 磁场(BLUE), 轨迹(YELLOW);\ngeometry_elements: L2-L3区域内的叉号阵列, 半圆弧线, 半径矢量;\ngeometry_construction: 在L2-L3区域绘制蓝色'x'表示磁场向里。粒子从L2进入，画出半圆轨迹回到L2下方;\ngeometry_relations: 轨迹半径R1等于2d，圆心在L3上;\ntransitions: 粒子平滑进入磁场，画出半圆;\ncamera_movement: none;\nlayout: 重点展示L2-L3区域的半圆轨迹;\nduration: 16s",
+      "objects": [
+        {
+          "id": "magnetic_field_B1",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "表示L2-L3间垂直向里的匀强磁场B1",
+            "geometry_prompt": "在L2和L3之间的区域绘制均匀分布的'x'符号，表示磁场方向垂直纸面向里。",
+            "must_have_parts": [
+              "FieldCross"
+            ]
+          },
+          "style": {
+            "color": "BLUE",
+            "position_hint": "ORIGIN"
+          }
+        },
+        {
+          "id": "trajectory_B1",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "粒子在B1中的运动轨迹",
+            "geometry_prompt": "绘制一段半圆弧，从L2上的入射点出发，向下偏转，最终切向进入L3。标注半径R1=2d。",
+            "must_have_parts": [
+              "ArcTrack",
+              "Arrow"
+            ]
+          },
+          "style": {
+            "color": "YELLOW",
+            "position_hint": "ORIGIN"
+          }
+        },
+        {
+          "id": "formula_R1",
+          "type": "Formula",
+          "params": {
+            "latex": "R_1 = \\frac{mv_0}{qB_1} = 2d"
+          },
+          "style": {
+            "color": "ORANGE",
+            "position_hint": "UP"
+          }
+        }
+      ],
+      "narrative_storyboard": {
+        "bridge_from_prev": "粒子带着速度v0进入L2-L3区域。",
+        "intro": "在磁场B1中，洛伦兹力提供向心力。粒子做匀速圆周运动。根据题目给定的B1大小，我们可以计算出其运动半径。",
+        "key_formulae": [
+          {
+            "latex": "qv_0B_1 = m\\frac{v_0^2}{R_1}",
+            "color": "ORANGE",
+            "position_hint": "UP",
+            "duration_s": 4
+          },
+          {
+            "latex": "R_1 = 2d",
+            "color": "ORANGE",
+            "position_hint": "UP",
+            "duration_s": 4
+          }
+        ],
+        "animation_steps": [
+          {
+            "id": "step_1",
+            "description": "FadeIn 磁场B1。在L2-L3区域显示蓝色'x'阵列，表示磁场方向。",
+            "targets": [
+              "magnetic_field_B1"
+            ],
+            "duration_s": 3
+          },
+          {
+            "id": "step_2",
+            "description": "粒子进入磁场并偏转。粒子从L2进入，画出半圆轨迹，最终垂直穿过L3。",
+            "targets": [
+              "trajectory_B1",
+              "particle"
+            ],
+            "duration_s": 6
+          },
+          {
+            "id": "step_3",
+            "description": "标注几何关系。高亮显示轨迹半径，并标注R1=2d，说明粒子恰好经过半个圆周。",
+            "targets": [
+              "trajectory_B1"
+            ],
+            "duration_s": 4
+          },
+          {
+            "id": "step_4",
+            "description": "Write 半径公式。显示R1的计算公式，验证B1的取值。",
+            "targets": [
+              "formula_R1"
+            ],
+            "duration_s": 3
+          }
+        ],
+        "bridge_to_next": "粒子穿过L3后，进入L3-L4之间的磁场B2，开始第二次偏转。"
+      }
+    },
+    {
+      "id": "S3",
+      "intent": "分析粒子在磁场B2中的运动，利用回到P点的几何约束求解B2。",
+      "goal": "推导B2 = sqrt(3mE/2qd)。",
+      "notes": "elements: 磁场B2区域符号(.), 第二段轨迹, 闭合回路, 几何角度标注;\ncolors: 磁场(PURPLE), 轨迹(YELLOW);\ngeometry_elements: L3-L4区域内的点号阵列, 60度圆弧, 弦长2d;\ngeometry_construction: 在L3-L4区域绘制紫色'.'表示磁场向外。粒子从L3进入，偏转60度后垂直向上穿过L2回到P点;\ngeometry_relations: 第二段轨迹弦长为2d，偏转角为60度，半径R2 = 2d/sin(60°);\ntransitions: 轨迹从L3延续到L2，形成闭合;\ncamera_movement: none;\nlayout: 完整展示从P出发回到P的闭合路径;\nduration: 18s",
+      "objects": [
+        {
+          "id": "magnetic_field_B2",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "表示L3-L4间垂直向外的匀强磁场B2",
+            "geometry_prompt": "在L3和L4之间的区域绘制均匀分布的'.'符号，表示磁场方向垂直纸面向外。",
+            "must_have_parts": [
+              "FieldCross"
+            ]
+          },
+          "style": {
+            "color": "PURPLE",
+            "position_hint": "RIGHT"
+          }
+        },
+        {
+          "id": "trajectory_B2",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "粒子在B2中的运动轨迹",
+            "geometry_prompt": "绘制一段圆弧，从L3上的出射点出发，向上偏转，最终垂直向上穿过L2回到P点。标注偏转角60度和半径R2。",
+            "must_have_parts": [
+              "ArcTrack",
+              "Arrow"
+            ]
+          },
+          "style": {
+            "color": "YELLOW",
+            "position_hint": "RIGHT"
+          }
+        },
+        {
+          "id": "formula_B2",
+          "type": "Formula",
+          "params": {
+            "latex": "R_2 = \\frac{2d}{\\sin 60^\\circ}, \\quad B_2 = \\frac{mv_0}{qR_2} = \\sqrt{\\frac{3mE}{2qd}}"
+          },
+          "style": {
+            "color": "GREEN",
+            "position_hint": "UP"
+          }
+        }
+      ],
+      "narrative_storyboard": {
+        "bridge_from_prev": "粒子垂直穿过L3进入B2区域。",
+        "intro": "若粒子恰好回到P点，其轨迹必须闭合。在B2区域，粒子向上偏转并最终垂直穿过L2回到P。通过几何关系可求出R2，进而求出B2。",
+        "key_formulae": [
+          {
+            "latex": "R_2 = \\frac{2d}{\\sin 60^\\circ}",
+            "color": "GREEN",
+            "position_hint": "UP",
+            "duration_s": 5
+          },
+          {
+            "latex": "B_2 = \\sqrt{\\frac{3mE}{2qd}}",
+            "color": "GREEN",
+            "position_hint": "UP",
+            "duration_s": 5
+          }
+        ],
+        "animation_steps": [
+          {
+            "id": "step_1",
+            "description": "FadeIn 磁场B2。在L3-L4区域显示紫色'.'阵列。",
+            "targets": [
+              "magnetic_field_B2"
+            ],
+            "duration_s": 3
+          },
+          {
+            "id": "step_2",
+            "description": "绘制第二段轨迹。粒子从L3进入B2，画出一段圆弧，最终垂直向上穿过L2回到P点。",
+            "targets": [
+              "trajectory_B2",
+              "particle"
+            ],
+            "duration_s": 6
+          },
+          {
+            "id": "step_3",
+            "description": "高亮几何约束。高亮显示轨迹的弦长（等于2d）和偏转角（60度），展示R2的计算依据。",
+            "targets": [
+              "trajectory_B2"
+            ],
+            "duration_s": 5
+          },
+          {
+            "id": "step_4",
+            "description": "Write 最终结果。显示B2的推导过程和最终表达式。",
+            "targets": [
+              "formula_B2"
+            ],
+            "duration_s": 4
+          }
+        ],
+        "bridge_to_next": "现在我们改变B2的大小，寻找粒子能以最短时间到达Q点的条件。"
+      }
+    },
+    {
+      "id": "S4",
+      "intent": "分析最短时间的几何极值条件，展示临界轨迹。",
+      "goal": "确定最短时间对应的轨迹是与L4相切的圆弧，偏转角105度。",
+      "notes": "elements: 多条试探轨迹, 临界轨迹(相切), Q点, 角度标注;\ncolors: 轨迹(YELLOW), 临界轨迹(RED);\ngeometry_elements: 不同半径的圆弧族, 一条与L4相切的圆弧, Q点标记;\ngeometry_construction: 先显示几条虚线轨迹表示不同B2的情况，最后高亮一条与L4相切的实线轨迹，标记切点;\ngeometry_relations: 临界条件下，轨迹圆与L4相切，偏转角为105度，弦长对应PQ间距;\ntransitions: 轨迹动态变化，锁定到临界状态;\ncamera_movement: none;\nlayout: 突出显示L3-L4区域的临界轨迹;\nduration: 20s",
+      "objects": [
+        {
+          "id": "critical_trajectory",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "最短时间对应的临界轨迹",
+            "geometry_prompt": "绘制一段从L3出发，向上偏转并与L4相切的圆弧，最终到达Q点。标注偏转角105度。",
+            "must_have_parts": [
+              "ArcTrack",
+              "Arrow"
+            ]
+          },
+          "style": {
+            "color": "RED",
+            "position_hint": "RIGHT"
+          }
+        },
+        {
+          "id": "point_Q",
+          "type": "CompositeObject",
+          "params": {
+            "semantic_intent": "标记Q点",
+            "geometry_prompt": "在L1上距离P点2d的位置标记Q点。",
+            "must_have_parts": [
+              "Particle"
+            ]
+          },
+          "style": {
+            "color": "WHITE",
+            "position_hint": "[-2, 2, 0]"
+          }
+        },
+        {
+          "id": "formula_time",
+          "type": "Formula",
+          "params": {
+            "latex": "\\theta = 105^\\circ, \\quad t = t_1 + t_2 = \\sqrt{\\frac{2md}{qE}} + \\frac{105^\\circ}{360^\\circ}T_2"
+          },
+          "style": {
+            "color": "ORANGE",
+            "position_hint": "UP"
+          }
+        }
+      ],
+      "narrative_storyboard": {
+        "bridge_from_prev": "改变B2的大小，粒子在磁场中的偏转半径和到达Q点的时间也会随之改变。",
+        "intro": "为了使到达Q点的时间最短，粒子在磁场B2中的运动时间必须最短。这对应于轨迹圆与边界L4相切的临界情况。",
+        "key_formulae": [
+          {
+            "latex": "\\sin \\theta = \\frac{d}{R_2}",
+            "color": "ORANGE",
+            "position_hint": "UP",
+            "duration_s": 4
+          },
+          {
+            "latex": "\\theta = 105^\\circ",
+            "color": "RED",
+            "position_hint": "UP",
+            "duration_s": 4
+          }
+        ],
+        "animation_steps": [
+          {
+            "id": "step_1",
+            "description": "FadeIn Q点。在L1上标出Q点，明确目标位置。",
+            "targets": [
+              "point_Q"
+            ],
+            "duration_s": 2
+          },
+          {
+            "id": "step_2",
+            "description": "演示试探轨迹。用虚线显示几条不同半径的轨迹，说明B2变化对路径的影响。",
+            "targets": [
+              "critical_trajectory"
+            ],
+            "duration_s": 6
+          },
+          {
+            "id": "step_3",
+            "description": "锁定临界轨迹。高亮显示一条与L4相切的红色实线轨迹，说明这是时间最短的路径。",
+            "targets": [
+              "critical_trajectory"
+            ],
+            "duration_s": 6
+          },
+          {
+            "id": "step_4",
+            "description": "标注几何条件。显示偏转角105度，并写出时间计算公式。",
+            "targets": [
+              "formula_time"
+            ],
+            "duration_s": 6
+          }
+        ],
+        "bridge_to_next": "基于这个几何条件，我们可以计算出最短时间的具体数值。"
+      }
+    },
+    {
+      "id": "S5",
+      "intent": "综合计算最短时间t，给出最终结论。",
+      "goal": "计算并展示 t = (1 + 7pi/12) * sqrt(2md/qE)。",
+      "notes": "elements: 时间公式链, 最终结果, 单位校验;\ncolors: 公式(GREEN);\ngeometry_elements: 文本公式;\ngeometry_construction: 屏幕中央逐步展示时间计算的分步公式;\ngeometry_relations: 无特定几何关系;\ntransitions: 公式逐步展开;\ncamera_movement: none;\nlayout: 屏幕中央显示公式推导;\nduration: 16s",
+      "objects": [
+        {
+          "id": "final_formula",
+          "type": "Formula",
+          "params": {
+            "latex": "t = \\left(1 + \\frac{7\\pi}{12}\\right)\\sqrt{\\frac{2md}{qE}}"
+          },
+          "style": {
+            "color": "GREEN",
+            "position_hint": "ORIGIN"
+          }
+        },
+        {
+          "id": "text_conclusion",
+          "type": "TextBlock",
+          "params": {
+            "text": "结论：粒子从 P 运动到 Q 的最短时间"
+          },
+          "style": {
+            "color": "WHITE",
+            "position_hint": "UP"
+          }
+        }
+      ],
+      "narrative_storyboard": {
+        "bridge_from_prev": "我们已经确定了最短时间对应的几何条件。",
+        "intro": "将电场加速时间与磁场偏转时间相加，代入已知量，即可得到最短时间的最终表达式。",
+        "key_formulae": [
+          {
+            "latex": "t = \\left(1 + \\frac{7\\pi}{12}\\right)\\sqrt{\\frac{2md}{qE}}",
+            "color": "GREEN",
+            "position_hint": "ORIGIN",
+            "duration_s": 8
+          }
+        ],
+        "animation_steps": [
+          {
+            "id": "step_1",
+            "description": "FadeIn 结论标题。显示'结论：粒子从 P 运动到 Q 的最短时间'。",
+            "targets": [
+              "text_conclusion"
+            ],
+            "duration_s": 2
+          },
+          {
+            "id": "step_2",
+            "description": "Write 最终公式。逐步写出总时间t的表达式，合并电场时间和磁场时间。",
+            "targets": [
+              "final_formula"
+            ],
+            "duration_s": 8
+          },
+          {
+            "id": "step_3",
+            "description": "高亮结果。最终公式保持高亮，强调核心结论。",
+            "targets": [
+              "final_formula"
+            ],
+            "duration_s": 6
+          }
+        ],
+        "bridge_to_next": "至此，我们完成了从电场加速、磁场偏转到极值时间分析的全过程。"
+      }
+    }
+  ]
+}
+```

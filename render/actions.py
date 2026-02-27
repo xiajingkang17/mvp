@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from schema.scene_plan_models import PlayAction, WaitAction
+from render.motions import run_pin_to_corner
 
 
 @dataclass(frozen=True)
@@ -13,9 +14,7 @@ class ActionResult:
 
 class ActionEngine:
     """
-    将动作规格（action spec）翻译成 Manim 调用。
-
-    本模块对 Manim 使用延迟导入：即使未安装 Manim，非渲染工具也能正常使用。
+    Translate action specs to Manim calls and advance a shared scene timeline clock.
     """
 
     def __init__(self, *, scene, state, ctx):
@@ -23,38 +22,97 @@ class ActionEngine:
         self.state = state
         self.ctx = ctx
 
+    def _timeline_animation(self, duration: float):
+        clock = getattr(self.state, "timeline_clock", None)
+        if clock is None or duration <= 0:
+            return None
+        from manim import linear  # local import
+
+        start = float(clock.get_value())
+        end = start + float(duration)
+        self.state.timeline_seconds = end
+        return clock.animate(rate_func=linear).set_value(end)
+
+    def _play_with_timeline(self, anims: list, *, duration: float) -> None:
+        duration = float(max(0.0, duration))
+        timeline_anim = self._timeline_animation(duration)
+
+        if timeline_anim is not None:
+            if anims:
+                self.scene.play(*anims, timeline_anim, run_time=duration)
+            else:
+                self.scene.play(timeline_anim, run_time=duration)
+            clock = getattr(self.state, "timeline_clock", None)
+            if clock is not None:
+                # Keep planned end time when running under mocked scenes in tests.
+                self.state.timeline_seconds = max(self.state.timeline_seconds, float(clock.get_value()))
+            return
+
+        if anims:
+            self.scene.play(*anims, run_time=duration)
+        else:
+            self.scene.wait(duration)
+        self.state.timeline_seconds += duration
+
+    def _timeline_now(self) -> float:
+        clock = getattr(self.state, "timeline_clock", None)
+        if clock is not None:
+            return float(clock.get_value())
+        return float(self.state.timeline_seconds)
+
+    def advance_timeline(self, duration: float) -> None:
+        self._play_with_timeline([], duration=duration)
+
+    def play_animations(self, anims: list, *, duration: float) -> None:
+        self._play_with_timeline(list(anims), duration=duration)
+
     def run_action(self, action):
         if isinstance(action, WaitAction):
-            self.scene.wait(action.duration)
+            self.advance_timeline(action.duration)
             return ActionResult(newly_visible=set(), newly_hidden=set())
 
         if not isinstance(action, PlayAction):
             raise TypeError(f"Unknown action type: {type(action)}")
 
-        from manim import Create, FadeIn, FadeOut, Indicate, Transform, Write  # 本地导入
+        from manim import Create, FadeIn, FadeOut, Indicate, Transform, Write  # local import
 
-        duration = action.duration or self.ctx.defaults.action_duration
+        duration = float(action.duration or self.ctx.defaults.action_duration)
 
         if action.anim in {"fade_in", "fade_out", "write", "create", "indicate"}:
+            if action.anim in {"fade_in", "write", "create"}:
+                now_t = self._timeline_now()
+                for object_id in action.targets:
+                    if object_id in self.state.visible:
+                        continue
+                    mobj = self.state.objects[object_id]
+                    reset = getattr(mobj, "composite_reset_time_origin", None)
+                    if callable(reset):
+                        reset(now_t)
+
             anims = []
             for object_id in action.targets:
                 mobj = self.state.objects[object_id]
                 if action.anim == "fade_in":
-                    anims.append(FadeIn(mobj))
+                    anims.append(FadeIn(mobj, suspend_mobject_updating=False))
                 elif action.anim == "fade_out":
-                    anims.append(FadeOut(mobj))
+                    anims.append(FadeOut(mobj, suspend_mobject_updating=False))
                 elif action.anim == "write":
-                    anims.append(Write(mobj))
+                    anims.append(Write(mobj, suspend_mobject_updating=False))
                 elif action.anim == "create":
-                    anims.append(Create(mobj))
+                    anims.append(Create(mobj, suspend_mobject_updating=False))
                 elif action.anim == "indicate":
-                    anims.append(Indicate(mobj))
-            self.scene.play(*anims, run_time=duration)
+                    anims.append(Indicate(mobj, suspend_mobject_updating=False))
+
+            self._play_with_timeline(anims, duration=duration)
 
             if action.anim in {"fade_in", "write", "create"}:
                 return ActionResult(newly_visible=set(action.targets), newly_hidden=set())
             if action.anim == "fade_out":
                 return ActionResult(newly_visible=set(), newly_hidden=set(action.targets))
+            if action.anim == "indicate":
+                # Indicate can be the first action that makes an object appear in-scene.
+                # Mark targets visible so scene-level cleanup can fade them out reliably.
+                return ActionResult(newly_visible=set(action.targets), newly_hidden=set())
             return ActionResult(newly_visible=set(), newly_hidden=set())
 
         if action.anim == "transform":
@@ -66,14 +124,21 @@ class ActionEngine:
             src_mobj = self.state.objects[src]
             dst_mobj = self.state.objects[dst]
 
-            # 变换前先让目标对象与源对象的位置/尺度对齐。
+            # Align target object with source before transform.
             dst_mobj.move_to(src_mobj.get_center())
             dst_mobj.match_height(src_mobj)
 
-            self.scene.play(Transform(src_mobj, dst_mobj), run_time=duration)
+            self._play_with_timeline(
+                [Transform(src_mobj, dst_mobj, suspend_mobject_updating=False)],
+                duration=duration,
+            )
 
-            # 将 dst id 绑定到变换后的源 mobject（后续引用 dst 时复用同一对象）。
+            # Rebind dst id to transformed source mobject for subsequent references.
             self.state.objects[dst] = src_mobj
             return ActionResult(newly_visible={src, dst}, newly_hidden=set())
+
+        if action.anim in {"pin_to_corner", "title_pin"}:
+            oid = run_pin_to_corner(engine=self, action=action)
+            return ActionResult(newly_visible={str(oid)}, newly_hidden=set())
 
         raise ValueError(f"Unknown anim: {action.anim}")

@@ -1,0 +1,532 @@
+```json
+{
+  "scenes": [
+    {
+      "id": "S1",
+      "layout": {
+        "type": "free",
+        "placements": {
+          "track_system": {
+            "cx": 0.3,
+            "cy": 0.5,
+            "w": 0.5,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "ball": {
+            "cx": 0.18,
+            "cy": 0.22,
+            "w": 0.08,
+            "h": 0.08,
+            "anchor": "C"
+          },
+          "label_A": {
+            "cx": 0.12,
+            "cy": 0.15,
+            "w": 0.08,
+            "h": 0.08,
+            "anchor": "C"
+          },
+          "label_B": {
+            "cx": 0.28,
+            "cy": 0.48,
+            "w": 0.08,
+            "h": 0.08,
+            "anchor": "C"
+          },
+          "label_h": {
+            "cx": 0.22,
+            "cy": 0.35,
+            "w": 0.15,
+            "h": 0.1,
+            "anchor": "C"
+          },
+          "label_H": {
+            "cx": 0.28,
+            "cy": 0.65,
+            "w": 0.15,
+            "h": 0.1,
+            "anchor": "C"
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "duration": 3.0,
+          "targets": [
+            "track_system"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "duration": 2.0,
+          "targets": [
+            "ball"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "duration": 5.0,
+          "targets": [
+            "label_A",
+            "label_B",
+            "label_h",
+            "label_H"
+          ]
+        }
+      ],
+      "keep": []
+    },
+    {
+      "id": "S2",
+      "layout": {
+        "type": "free",
+        "placements": {
+          "track_system_S2": {
+            "cx": 0.35,
+            "cy": 0.5,
+            "w": 0.5,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "ball_S2": {
+            "cx": 0.33,
+            "cy": 0.48,
+            "w": 0.08,
+            "h": 0.08,
+            "anchor": "C"
+          },
+          "velocity_arrow": {
+            "cx": 0.45,
+            "cy": 0.48,
+            "w": 0.2,
+            "h": 0.1,
+            "anchor": "L"
+          },
+          "formula_energy": {
+            "cx": 0.75,
+            "cy": 0.5,
+            "w": 0.4,
+            "h": 0.2,
+            "anchor": "C"
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "duration": 2.0,
+          "targets": [
+            "track_system_S2"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "duration": 5.0,
+          "targets": [
+            "ball_S2"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "create",
+          "duration": 3.0,
+          "targets": [
+            "velocity_arrow"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "duration": 5.0,
+          "targets": [
+            "formula_energy"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "indicate",
+          "duration": 5.0,
+          "targets": [
+            "formula_energy"
+          ]
+        }
+      ],
+      "keep": []
+    },
+    {
+      "id": "S3",
+      "layout": {
+        "type": "free",
+        "placements": {
+          "track_system_S3": {
+            "cx": 0.3,
+            "cy": 0.5,
+            "w": 0.5,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "ball_S3": {
+            "cx": 0.28,
+            "cy": 0.48,
+            "w": 0.08,
+            "h": 0.08,
+            "anchor": "C"
+          },
+          "velocity_arrow_S3": {
+            "cx": 0.4,
+            "cy": 0.48,
+            "w": 0.2,
+            "h": 0.1,
+            "anchor": "L"
+          },
+          "calc_vB": {
+            "cx": 0.7,
+            "cy": 0.4,
+            "w": 0.5,
+            "h": 0.3,
+            "anchor": "C"
+          },
+          "label_vB_val": {
+            "cx": 0.5,
+            "cy": 0.35,
+            "w": 0.2,
+            "h": 0.1,
+            "anchor": "C"
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "duration": 2.0,
+          "targets": [
+            "track_system_S3",
+            "ball_S3",
+            "velocity_arrow_S3"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "duration": 6.0,
+          "targets": [
+            "calc_vB"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "duration": 4.0,
+          "targets": [
+            "label_vB_val"
+          ]
+        }
+      ],
+      "keep": []
+    },
+    {
+      "id": "S4",
+      "layout": {
+        "type": "free",
+        "placements": {
+          "track_system_S4": {
+            "cx": 0.3,
+            "cy": 0.5,
+            "w": 0.5,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "projectile_path": {
+            "cx": 0.45,
+            "cy": 0.4,
+            "w": 0.5,
+            "h": 0.6,
+            "anchor": "C"
+          },
+          "arrow_vertical": {
+            "cx": 0.55,
+            "cy": 0.35,
+            "w": 0.1,
+            "h": 0.2,
+            "anchor": "C"
+          },
+          "arrow_horizontal": {
+            "cx": 0.55,
+            "cy": 0.35,
+            "w": 0.2,
+            "h": 0.1,
+            "anchor": "C"
+          },
+          "formula_time": {
+            "cx": 0.75,
+            "cy": 0.5,
+            "w": 0.4,
+            "h": 0.2,
+            "anchor": "C"
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "duration": 2.0,
+          "targets": [
+            "track_system_S4"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "create",
+          "duration": 4.0,
+          "targets": [
+            "projectile_path"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "create",
+          "duration": 4.0,
+          "targets": [
+            "arrow_vertical",
+            "arrow_horizontal"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "duration": 5.0,
+          "targets": [
+            "formula_time"
+          ]
+        }
+      ],
+      "keep": []
+    },
+    {
+      "id": "S5",
+      "layout": {
+        "type": "free",
+        "placements": {
+          "track_system_S5": {
+            "cx": 0.3,
+            "cy": 0.5,
+            "w": 0.5,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "projectile_path_S5": {
+            "cx": 0.45,
+            "cy": 0.4,
+            "w": 0.5,
+            "h": 0.6,
+            "anchor": "C"
+          },
+          "arrow_vertical_S5": {
+            "cx": 0.55,
+            "cy": 0.35,
+            "w": 0.1,
+            "h": 0.2,
+            "anchor": "C"
+          },
+          "arrow_horizontal_S5": {
+            "cx": 0.55,
+            "cy": 0.35,
+            "w": 0.2,
+            "h": 0.1,
+            "anchor": "C"
+          },
+          "calc_t": {
+            "cx": 0.75,
+            "cy": 0.4,
+            "w": 0.4,
+            "h": 0.3,
+            "anchor": "C"
+          },
+          "label_t_val": {
+            "cx": 0.6,
+            "cy": 0.25,
+            "w": 0.15,
+            "h": 0.1,
+            "anchor": "C"
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "duration": 2.0,
+          "targets": [
+            "track_system_S5",
+            "projectile_path_S5",
+            "arrow_vertical_S5",
+            "arrow_horizontal_S5"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "duration": 6.0,
+          "targets": [
+            "calc_t"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "duration": 4.0,
+          "targets": [
+            "label_t_val"
+          ]
+        }
+      ],
+      "keep": []
+    },
+    {
+      "id": "S6",
+      "layout": {
+        "type": "free",
+        "placements": {
+          "track_system_S6": {
+            "cx": 0.3,
+            "cy": 0.5,
+            "w": 0.5,
+            "h": 0.8,
+            "anchor": "C"
+          },
+          "projectile_path_S6": {
+            "cx": 0.45,
+            "cy": 0.4,
+            "w": 0.5,
+            "h": 0.6,
+            "anchor": "C"
+          },
+          "ground_dist": {
+            "cx": 0.5,
+            "cy": 0.75,
+            "w": 0.3,
+            "h": 0.1,
+            "anchor": "C"
+          },
+          "formula_dist": {
+            "cx": 0.75,
+            "cy": 0.5,
+            "w": 0.4,
+            "h": 0.2,
+            "anchor": "C"
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "duration": 3.0,
+          "targets": [
+            "track_system_S6",
+            "projectile_path_S6"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "create",
+          "duration": 4.0,
+          "targets": [
+            "ground_dist"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "duration": 5.0,
+          "targets": [
+            "formula_dist"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "indicate",
+          "duration": 3.0,
+          "targets": [
+            "formula_dist"
+          ]
+        }
+      ],
+      "keep": []
+    },
+    {
+      "id": "S7",
+      "layout": {
+        "type": "free",
+        "placements": {
+          "final_scene": {
+            "cx": 0.35,
+            "cy": 0.5,
+            "w": 0.6,
+            "h": 0.9,
+            "anchor": "C"
+          },
+          "final_path": {
+            "cx": 0.45,
+            "cy": 0.4,
+            "w": 0.5,
+            "h": 0.6,
+            "anchor": "C"
+          },
+          "calc_x": {
+            "cx": 0.75,
+            "cy": 0.35,
+            "w": 0.4,
+            "h": 0.2,
+            "anchor": "C"
+          },
+          "summary_panel": {
+            "cx": 0.75,
+            "cy": 0.65,
+            "w": 0.4,
+            "h": 0.3,
+            "anchor": "C"
+          }
+        }
+      },
+      "actions": [
+        {
+          "op": "play",
+          "anim": "create",
+          "duration": 3.0,
+          "targets": [
+            "final_scene",
+            "final_path"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "write",
+          "duration": 4.0,
+          "targets": [
+            "calc_x"
+          ]
+        },
+        {
+          "op": "play",
+          "anim": "fade_in",
+          "duration": 3.0,
+          "targets": [
+            "summary_panel"
+          ]
+        }
+      ],
+      "keep": []
+    }
+  ]
+}
+```

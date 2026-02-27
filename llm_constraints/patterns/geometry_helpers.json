@@ -1,0 +1,36 @@
+{
+  "name": "geometry_helpers",
+  "description": "Examples for midpoint/distance helper constraints.",
+  "parts": [
+    {"id": "p_a", "type": "Block"},
+    {"id": "p_b", "type": "Block"}
+  ],
+  "tracks": [],
+  "constraints": [
+    {
+      "id": "c_mid",
+      "type": "midpoint",
+      "args": {
+        "part_id": "p_a",
+        "part_1": "p_a",
+        "anchor_1": "center",
+        "part_2": "p_b",
+        "anchor_2": "center"
+      },
+      "hard": false
+    },
+    {
+      "id": "c_distance",
+      "type": "distance",
+      "args": {
+        "part_a": "p_a",
+        "anchor_a": "center",
+        "part_b": "p_b",
+        "anchor_b": "center",
+        "value": 1.0
+      },
+      "hard": false
+    }
+  ],
+  "motions": []
+}

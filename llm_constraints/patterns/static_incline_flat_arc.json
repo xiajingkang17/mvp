@@ -1,0 +1,39 @@
+{
+  "name": "static_incline_flat_arc",
+  "description": "Static assembly of incline-flat-arc without moving objects.",
+  "parts": [
+    {"id": "p_incline", "type": "Wall"},
+    {"id": "p_flat", "type": "Wall"},
+    {"id": "p_arc", "type": "ArcTrack"}
+  ],
+  "tracks": [],
+  "constraints": [
+    {
+      "id": "c_attach_incline_flat",
+      "type": "attach",
+      "args": {
+        "part_a": "p_incline",
+        "anchor_a": "end",
+        "part_b": "p_flat",
+        "anchor_b": "start",
+        "mode": "b_to_a",
+        "rigid": true
+      },
+      "hard": true
+    },
+    {
+      "id": "c_attach_flat_arc",
+      "type": "attach",
+      "args": {
+        "part_a": "p_flat",
+        "anchor_a": "end",
+        "part_b": "p_arc",
+        "anchor_b": "start",
+        "mode": "b_to_a",
+        "rigid": true
+      },
+      "hard": true
+    }
+  ],
+  "motions": []
+}

@@ -1,0 +1,414 @@
+{
+  "version": "0.1",
+  "scenes": [
+    {
+      "id": "S1",
+      "composites": [
+        {
+          "object_id": "field_system",
+          "graph": {
+            "version": "0.1",
+            "space": {
+              "x_range": [-10, 10],
+              "y_range": [-6, 6],
+              "unit": "scene_unit",
+              "angle_unit": "deg",
+              "origin": "center"
+            },
+            "parts": [
+              {
+                "id": "p_L1",
+                "type": "Wall",
+                "params": {
+                  "length": 12,
+                  "angle": 90,
+                  "rise_to": "left",
+                  "color": "WHITE",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [-2, 0, 0],
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_L2",
+                "type": "Wall",
+                "params": {
+                  "length": 12,
+                  "angle": 90,
+                  "rise_to": "left",
+                  "color": "WHITE",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [0, 0, 0],
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_L3",
+                "type": "Wall",
+                "params": {
+                  "length": 12,
+                  "angle": 90,
+                  "rise_to": "left",
+                  "color": "WHITE",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [2, 0, 0],
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_L4",
+                "type": "Wall",
+                "params": {
+                  "length": 12,
+                  "angle": 90,
+                  "rise_to": "left",
+                  "color": "WHITE",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [4, 0, 0],
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_field_arrow_1",
+                "type": "Arrow",
+                "params": {
+                  "length": 1.5,
+                  "angle": 0,
+                  "head_length": 0.3,
+                  "head_angle": 30,
+                  "color": "RED",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [-1, 1.5, 0],
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_field_arrow_2",
+                "type": "Arrow",
+                "params": {
+                  "length": 1.5,
+                  "angle": 0,
+                  "head_length": 0.3,
+                  "head_angle": 30,
+                  "color": "RED",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [-1, 0.5, 0],
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_field_arrow_3",
+                "type": "Arrow",
+                "params": {
+                  "length": 1.5,
+                  "angle": 0,
+                  "head_length": 0.3,
+                  "head_angle": 30,
+                  "color": "RED",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [-1, -0.5, 0],
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_field_arrow_4",
+                "type": "Arrow",
+                "params": {
+                  "length": 1.5,
+                  "angle": 0,
+                  "head_length": 0.3,
+                  "head_angle": 30,
+                  "color": "RED",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [-1, -1.5, 0],
+                  "angle": 0
+                }
+              }
+            ],
+            "tracks": [],
+            "constraints": [],
+            "motions": []
+          }
+        },
+        {
+          "object_id": "particle",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [
+              {
+                "id": "p_ball",
+                "type": "Ball",
+                "params": {
+                  "radius": 0.15,
+                  "label": "+q",
+                  "label_color": "BLACK",
+                  "color": "YELLOW",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [-2, 0, 0],
+                  "angle": 0
+                }
+              }
+            ],
+            "tracks": [
+              {
+                "id": "t_accel",
+                "type": "segment",
+                "data": {
+                  "space": "world",
+                  "x1": -2,
+                  "y1": 0,
+                  "x2": 0,
+                  "y2": 0
+                }
+              }
+            ],
+            "constraints": [
+              {
+                "id": "c_on_track",
+                "type": "on_track_pose",
+                "args": {
+                  "part_id": "p_ball",
+                  "track_id": "t_accel",
+                  "s": 0,
+                  "anchor": "center"
+                },
+                "hard": true
+              }
+            ],
+            "motions": [
+              {
+                "id": "m_accel",
+                "type": "on_track",
+                "args": {
+                  "part_id": "p_ball",
+                  "track_id": "t_accel"
+                },
+                "timeline": [
+                  {
+                    "t": 0,
+                    "s": 0
+                  },
+                  {
+                    "t": 1,
+                    "s": 1
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "S2",
+      "composites": [
+        {
+          "object_id": "magnetic_field_B1",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [],
+            "tracks": [],
+            "constraints": [],
+            "motions": []
+          }
+        },
+        {
+          "object_id": "trajectory_B1",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [
+              {
+                "id": "p_arc_B1",
+                "type": "ArcTrack",
+                "params": {
+                  "center": [2, 0],
+                  "radius": 2,
+                  "start": 180,
+                  "end": 0,
+                  "color": "YELLOW",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [0, 0, 0],
+                  "angle": 0
+                }
+              },
+              {
+                "id": "p_radius_arrow",
+                "type": "Arrow",
+                "params": {
+                  "length": 2,
+                  "angle": 90,
+                  "head_length": 0.2,
+                  "head_angle": 30,
+                  "color": "ORANGE",
+                  "stroke_width": 1.5
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [2, 0, 0],
+                  "angle": 0
+                }
+              }
+            ],
+            "tracks": [],
+            "constraints": [
+              {
+                "id": "c_attach_radius",
+                "type": "attach",
+                "args": {
+                  "part_a": "p_radius_arrow",
+                  "anchor_a": "start",
+                  "part_b": "p_arc_B1",
+                  "anchor_b": "center"
+                },
+                "hard": true
+              }
+            ],
+            "motions": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "S3",
+      "composites": [
+        {
+          "object_id": "magnetic_field_B2",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [],
+            "tracks": [],
+            "constraints": [],
+            "motions": []
+          }
+        },
+        {
+          "object_id": "trajectory_B2",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [
+              {
+                "id": "p_arc_B2",
+                "type": "ArcTrack",
+                "params": {
+                  "center": [3.464, -1],
+                  "radius": 2.309,
+                  "start": 330,
+                  "end": 30,
+                  "color": "YELLOW",
+                  "stroke_width": 2
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [0, 0, 0],
+                  "angle": 0
+                }
+              }
+            ],
+            "tracks": [],
+            "constraints": [],
+            "motions": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "S4",
+      "composites": [
+        {
+          "object_id": "critical_trajectory",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [
+              {
+                "id": "p_arc_crit",
+                "type": "ArcTrack",
+                "params": {
+                  "center": [3.866, -1.017],
+                  "radius": 1.035,
+                  "start": 345,
+                  "end": 90,
+                  "color": "RED",
+                  "stroke_width": 3
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [0, 0, 0],
+                  "angle": 0
+                }
+              }
+            ],
+            "tracks": [],
+            "constraints": [],
+            "motions": []
+          }
+        },
+        {
+          "object_id": "point_Q",
+          "graph": {
+            "version": "0.1",
+            "space": {},
+            "parts": [
+              {
+                "id": "p_Q",
+                "type": "Ball",
+                "params": {
+                  "radius": 0.1,
+                  "color": "WHITE",
+                  "stroke_width": 1
+                },
+                "style": {},
+                "seed_pose": {
+                  "position": [0, 2, 0],
+                  "angle": 0
+                }
+              }
+            ],
+            "tracks": [],
+            "constraints": [],
+            "motions": []
+          }
+        }
+      ]
+    },
+    {
+      "id": "S5",
+      "composites": []
+    }
+  ]
+}
