@@ -14,6 +14,7 @@ if __package__ in {None, ""}:
 from pipeline.cli_utils import load_json, write_text  # noqa: E402
 from pipeline.run_mvp import (  # noqa: E402
     build_client,
+    reset_case_outputs,
     stage_codegen_video,
     stage_render_fix_loop,
 )
@@ -21,7 +22,7 @@ from pipeline.run_layout import RunLayout  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="LLM4（codegen）：把所有 scene 设计稿整合成单个 scene.py")
+    p = argparse.ArgumentParser(description="LLM4?split codegen??? framework / scene / motion / assemble ?????? scene.py")
     p.add_argument("--run-dir", type=str, required=True, help="运行目录（需要 llm1/llm2/llm3 输出）")
     p.add_argument("--scene-id", type=str, default="", help="可选：只把指定 scene_id 整合进单文件（用于调试）")
     p.add_argument("--force", action="store_true", help="已废弃参数（兼容保留，不再使用）")
@@ -59,6 +60,7 @@ def main() -> int:
     if not run_dir.exists():
         raise SystemExit(f"--run-dir 不存在: {run_dir}")
     layout = RunLayout.from_run_dir(run_dir)
+    reset_case_outputs(layout, from_stage=4)
 
     analyst_path = layout.stage1_json
     plan_path = layout.stage2_json
@@ -91,9 +93,6 @@ def main() -> int:
         raise SystemExit("scene_designs 为空：请检查 stage3_scene_designs.json 或 --scene-id")
 
     client = build_client()
-    system = client.load_stage_system_prompt("codegen")
-    write_text(layout.llm4_system_prompt, system.strip() + "\n")
-
     class_name, code = stage_codegen_video(
         client,
         analyst=analyst,
@@ -105,7 +104,16 @@ def main() -> int:
     write_text(layout.exported_scene_py, code)
     write_text(
         layout.stage4_meta,
-        json.dumps({"class_name": class_name}, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(
+            {
+                "class_name": class_name,
+                "codegen_mode": "split_llm4",
+                "sub_stages": ["framework", "scene", "motion", "assemble"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
     )
 
     if args.no_render:

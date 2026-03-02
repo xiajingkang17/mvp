@@ -1,149 +1,258 @@
-# MVP（独立项目，Scene-first 多 LLM 分工）
+# MVP
 
-这个 `MVP/` 目录被设计成可单独拎出去的项目：不依赖仓库其它模块。
+`MVP/` 是一个独立的 `scene-first` 多 LLM Manim 生成项目。
 
 目标：
 
-- LLM 自由设计每一个 scene（不强制任何布局模板）
-- 先保证“正确性 + 可运行”：生成 -> 渲染 -> 报错 -> 修复循环
-- 最终只产出一个可直接运行的 `scene.py`（单一 Scene 类），渲染得到 `final.mp4`
+- 先把视频拆成 scene，再逐 scene 设计和编码
+- 先保证“正确 + 可运行”，再追求视觉质量
+- 最终只产出一个可直接运行的 `scene.py`，渲染得到 `final.mp4`
+
+## 当前工作流
+
+### LLM1: analyst
+
+职责：
+
+- 理解题目和用户需求
+- 给出教学目标、受众、知识前置
+- 对题目类内容完成完整求解
+
+产物：
+
+- `llm1/stage1_analyst.json`
+
+### LLM2: scene planner
+
+职责：
+
+- 只负责全片 scene 序列与题解教学流程规划
+- 让每个 scene 自己就是工作流里的一个节点
+- 定义每个 scene 的教学角色、目标、输入前提、输出结果与承接关系
+
+当前只使用新字段：
+
+- 顶层：
+  - `video_title`
+  - `opening_strategy`
+  - `question_structure`
+- `scenes[*]`：
+  - `workflow_step`
+  - `question_scope`
+  - `scene_goal`
+  - `entry_requirement`
+  - `key_points`
+  - `scene_outputs`
+  - `handoff_to_next`
+  - `layout_prompt`
+  - `panels`
+  - `beat_sequence`
+  - `duration_s`
+
+LLM2 不再负责：
+
+- object 生命周期
+- object 保留清单
+- `carry_over`
+- 平行的 `workflow_strategy / workflow_trace`
+
+产物：
+
+- `llm2/stage2_scene_plan.json`
+
+### LLM3: scene designer
+
+职责：
+
+- 为单个 scene 做完整视觉设计
+- 定义 scene 开场状态、step 级状态、scene 收场状态
+- 保证叙事过渡自然，并且每个 scene 的对象生命周期在本幕内闭合
+
+当前只使用新 schema：
+
+- `scene_id`
+- `class_name`
+- `narration`
+- `on_screen_text`
+- `object_registry`
+- `entry_state`
+- `steps`
+- `exit_state`
+- `layout_contract`
+- `motion_contract`
+
+LLM3 现在默认一次生成整片 scenes 的设计稿，再按 scene 拆分落盘。
+当前主链路采用“scene 对象完全独立”模式：每个 scene 都从空画面开始、在空画面结束，不做跨 scene object 继承。
+
+其中：
+
+- `entry_state.objects_on_screen` 固定为空集
+- `steps[*].object_ops` 和 `steps[*].end_state_objects` 是 step 级显隐真源
+- `exit_state.objects_on_screen` 固定为空集
+
+LLM3 不再输出旧字段：
+
+- `object_manifest`
+- `lifecycle_contract`
+- `scene_end_keep`
+- `transition_in`
+- `transition_out`
+- `carry_over`
+
+产物：
+
+- `llm3/stage3_scene_designs.json`
+- `llm3/stage3_scene_designs_raw.txt`
+- `llm3/stage3_<scene_id>_raw.txt`
+- `llm3/scenes/<scene_id>/design.json`
+
+### LLM4: split codegen
+
+LLM4 拆成 4 个子阶段：
+
+- `LLM4A`: 共享 helper 与框架代码
+- `LLM4B`: 单 scene 方法代码
+- `LLM4C`: 单 scene motion 代码
+- `LLM4D`: 最终装配单文件 `scene.py`
+
+LLM4 现在严格按以下边界执行：
+
+- scene 开头只看 `entry_state.objects_on_screen`
+- step 级显隐只看 `steps[*].object_ops`
+- scene 结束只看 `exit_state.objects_on_screen`
+
+共享 helper 里：
+
+- `reset_scene(...)` 用于空 entry scene
+- `prepare_scene_entry(...)` 用于把当前对象收敛到精确 entry 集合
+- `cleanup_step(...)` 用于 step 末清理
+- `cleanup_scene(...)` 用于 scene 末保留精确 exit 集合
+
+产物：
+
+- `llm4/code_interface_contract.json`
+- `llm4/framework/`
+- `llm4/scenes/<scene_id>/`
+- `llm4/motion/<scene_id>/`
+- `llm4/assemble/`
+- `llm4/scene.py`
+- `<run_dir>/scene.py`
+
+### LLM5: fixer
+
+职责：
+
+- 渲染失败后根据错误日志修复 `scene.py`
+
+产物：
+
+- `llm5/fix_raw_*.txt`
+- 修复后的 `llm4/scene.py`
 
 ## 目录结构
 
-- `run_mvp.py`：一键编排入口（需求 -> scene 规划 -> scene 设计 -> 代码 -> 渲染 -> 修复）
-- `pipeline/`：核心流水线代码（配置/LLM 调用/渲染封装等）
-- `prompts/`：各 LLM 的 prompt（中文，按文件夹组织，支持 `bundle.md` 拼接）
-  - `prompts/llm1_analyst/`
-  - `prompts/llm2_scene_planner/`
-  - `prompts/llm3_scene_designer/`
-  - `prompts/llm4_codegen/`
-  - `prompts/llm5_fixer/`
-- `configs/llm.yaml`：LLM 配置（stage/mode 采样策略）
-- `.env`：密钥与运行参数（不提交，参考 `.env.example`）
-- `runs/`：每次运行产物（已在 `.gitignore` 忽略）
+- `run_mvp.py`: 一键运行入口
+- `pipeline/`: 核心流程代码
+- `prompts/`: 各阶段 prompt
+- `configs/llm.yaml`: LLM 配置
+- `.env`: API key 与环境配置
+- `runs/`: 默认运行产物目录
+- `cases/`: 测试 case
 
-## 配置说明
+## 提示词结构
 
-### 1) `.env`（优先级最高）
+- `prompts/llm1_analyst/`
+- `prompts/llm2_scene_planner/`
+- `prompts/llm3_scene_designer/`
+- `prompts/llm4a_framework_codegen/`
+- `prompts/llm4b_scene_codegen/`
+- `prompts/llm4c_motion_codegen/`
+- `prompts/llm4d_assemble_codegen/`
+- `prompts/llm4_codegen/`
+- `prompts/llm5_fixer/`
 
-复制模板：
+`llm3_scene_designer` 当前 bundle 包含：
+
+- `system.md`
+- `layout_reference_templates.md`
+- `../draw/physics/mechanics_motion_contract.md`
+- `lifecycle.md`
+- `layout_contract.md`
+- `visual_spec.md`
+- `narrative_guidelines.md`
+
+## 安装
 
 ```powershell
-Copy-Item .env.example .env
+pip install -r requirements.txt
 ```
 
 至少需要：
 
 - `ZHIPUAI_API_KEY=...`
 
-### 2) `configs/llm.yaml`
-
-用于配置不同角色的采样参数（例如 `analyst/scene_planner/...`），并提供默认模型等信息。
-
-配置优先级：`.env` > `configs/llm.yaml` > 内置默认值（实现见 `pipeline/llm/zhipu.py`）。
-
-## 安装依赖
-
 ```powershell
-pip install -r requirements.txt
+Copy-Item .env.example .env
 ```
 
-说明：
+## 一键运行
 
-- `manim` 需要系统侧的额外依赖（FFmpeg、LaTeX 等），按你的环境安装即可。
-- 如果只想先“生成代码不渲染”，可以用 `--no-render`，那就不依赖本机的 manim 安装是否完整。
-
-## 运行
-
-推荐在 `MVP/` 目录内运行：
+在 `MVP/` 目录内：
 
 ```powershell
-python run_mvp.py -r "用动画讲清楚勾股定理，并给一个简单例题"
+python run_mvp.py -r "用动画讲清勾股定理，并给一个简单例题"
 ```
 
-也支持从父目录运行：
+或从仓库根目录：
 
 ```powershell
 python MVP/run_mvp.py -r "..."
 ```
 
-运行结束后，你会在运行目录里得到 `scene.py`，也可以手动渲染：
+只生成代码不渲染：
+
+```powershell
+python run_mvp.py -r "..." --no-render
+```
+
+手动渲染：
 
 ```powershell
 manim -ql <run_dir>/scene.py MainScene
 ```
 
-默认情况下，`run_mvp.py` 会自动执行渲染并进入修复循环，直到成功或达到最大轮数。常用命令：
+## Case 运行
 
-```powershell
-python run_mvp.py -r "..." --max-fix-rounds 10 --quality l
-```
+示例输入：
 
-## Case 测试（输入为 txt）
+- `cases/demo_001/problem.txt`
 
-我们在 `cases/` 下放测试用例，每个 case 至少包含一个输入文件：
-
-- `cases/<case_name>/problem.txt`：问题/需求输入（纯文本）
-
-示例 case：`cases/demo_001/problem.txt`
-
-一键跑完整流水线（从输入文件读需求）：
+完整运行：
 
 ```powershell
 python run_mvp.py --requirement-file cases/demo_001/problem.txt
 ```
 
-如果你想先只生成代码、不渲染：
+只生成代码：
 
 ```powershell
 python run_mvp.py --requirement-file cases/demo_001/problem.txt --no-render
 ```
 
-当 `--requirement-file` 位于 `cases/<case_name>/` 下时，默认把产物写回该 case 目录（并按 `llm1/..llm5/`、`render/` 分文件夹）。
-如果你想把产物落到其它目录，再显式指定 `--run-dir`。
+如果 `--requirement-file` 位于 `cases/<case_name>/` 下，默认把产物写回该 case 目录。
 
-## 分阶段运行（像原项目一样拆开 5 个 LLM）
+## 分阶段运行
 
-在 `MVP/` 目录内执行：
-
-```powershell
-# LLM1：分析 + 前置探索（会自动创建 runs/<时间戳>_<slug>/）
-python pipeline/run_llm1.py -r "用动画讲清楚勾股定理，并给一个简单例题"
-```
-
-说明：分阶段脚本（`run_llm1.py` ~ `run_llm4.py`）现在默认“再次运行即重新生成并覆盖同名产物”，不再因为文件已存在而跳过。
-旧参数 `--force` 仅为兼容保留，已无实际作用。
-
-然后把上一步输出的 `runs/<...>` 作为 `--run-dir` 继续：
+### 从头开始
 
 ```powershell
-# LLM2：scene 拆分规划
+python pipeline/run_llm1.py -r "用动画讲清勾股定理，并给一个简单例题"
 python pipeline/run_llm2.py --run-dir runs/<...>
-
-# LLM3：逐 scene 设计（分镜级，聚合到一个 JSON）
 python pipeline/run_llm3.py --run-dir runs/<...>
-
-# LLM4：整合成单文件 scene.py，并自动执行“渲染 -> 报错 -> LLM5 修复 -> 重渲染”循环
 python pipeline/run_llm4.py --run-dir runs/<...> --max-fix-rounds 10 --quality l
 ```
 
-如果你只想生成 `scene.py` 不渲染：
-
-```powershell
-python pipeline/run_llm4.py --run-dir runs/<...> --no-render
-```
-
-`LLM5` 相关脚本现在作为“手动兜底工具”（可选）：
-
-```powershell
-# 手动触发 LLM5（不依赖 stderr，做一次预审查/预修复）
-python pipeline/run_llm5_review.py --run-dir runs/<...>
-
-# 给定 stderr（或 stderr 文件）手动触发 LLM5 修复
-python pipeline/run_llm5.py --run-dir runs/<...> --stderr-file <path-to-stderr.txt>
-```
-
-按 case 输入文件分阶段运行（产物固定落在 case 目录）：
+### 对 case 分阶段运行
 
 ```powershell
 python pipeline/run_llm1.py --requirement-file cases/demo_001/problem.txt --run-dir cases/demo_001
@@ -152,40 +261,92 @@ python pipeline/run_llm3.py --run-dir cases/demo_001
 python pipeline/run_llm4.py --run-dir cases/demo_001 --max-fix-rounds 10
 ```
 
-只跑某一个 scene：
+### 只重跑单个 scene
 
 ```powershell
 python pipeline/run_llm3.py --run-dir runs/<...> --scene-id scene_02
 python pipeline/run_llm4.py --run-dir runs/<...> --scene-id scene_02 --max-fix-rounds 10
 ```
 
-## 输出产物
+## 重跑行为
 
-每次运行会落在某个运行目录（默认 `runs/<时间戳>_<slug>/`；若 requirement-file 在 `cases/` 下则默认回写到 case 目录）。常见文件：
+当前脚本已经切到“重跑即清空下游产物”模式。
 
-- `requirement.txt`：原始需求
-- `llm1/stage1_analyst.json`：分析与前置探索输出
-- `llm2/stage2_scene_plan.json`：scene 列表（含 `scene_id/class_name/duration_s`）
-- `llm3/stage3_scene_designs.json`：所有 scene 的设计稿（聚合）
-- `llm3/stage3_<scene_id>_raw.txt`：某个 scene 的原始设计输出（排查用）
-- `llm4/scene.py`：LLM4 产出的单文件 Manim 代码（默认类名 `MainScene`）
-- `scene.py`：导出一份到运行目录根部（便于直接运行）
-- `llm5/fix_raw_*.txt`：修复轮次的原始输出（用于排查）
-- `render/render_stderr_*.txt`：渲染错误日志（修复循环输入）
-- `render/media/**/MainScene.mp4`：manim 的渲染产物
-- `render/final.mp4`：从 manim 产物复制一份到 render 目录
-- `final.mp4`：再导出一份到运行目录根部（方便取用）
+规则：
 
-## 可调参数
+- `run_mvp.py` 重跑时，会清空当前 case/run 目录下所有阶段产物，然后重新生成
+- `run_llm1.py` 会清空 `llm1` 以及所有下游目录
+- `run_llm2.py` 会清空 `llm2` 以及所有下游目录
+- `run_llm3.py` 全量运行时，会清空整个 `llm3` 以及下游 `llm4/llm5/render`
+- `run_llm3.py --scene-id ...` 时，会删除该 scene 的旧 raw，并清空下游 `llm4/llm5/render`
+- `run_llm4.py` 会清空 `llm4/llm5/render`，并删除根目录导出的 `scene.py` / `final.mp4`
 
-- `--max-fix-rounds`：渲染失败时的最大修复轮数（默认 5）
-- `--quality`：渲染质量（默认 `l`，更快；可选 `m/h`）
-- `--render-timeout-s`：单次渲染任务超时秒数（默认 300）
-- `--no-render`：只生成代码，不执行 manim 渲染（便于先调 prompt）
+这意味着：
+
+- 不会继续在同一个 case 目录里累积旧的 stage3/stage4 文件
+- 不会出现“这次运行混进上次的 llm4 片段”这种情况
+
+## 主要产物
+
+每次运行通常落在：
+
+- `runs/<timestamp_slug>/`
+- 或 `cases/<case_name>/`
+
+常见文件：
+
+- `requirement.txt`
+- `llm1/stage1_analyst.json`
+- `llm2/stage2_scene_plan.json`
+- `llm3/stage3_scene_designs.json`
+- `llm3/stage3_scene_designs_raw.txt`
+- `llm3/stage3_<scene_id>_raw.txt`
+- `llm3/scenes/<scene_id>/design.json`
+- `llm4/code_interface_contract.json`
+- `llm4/framework/`
+- `llm4/scenes/<scene_id>/`
+- `llm4/motion/<scene_id>/`
+- `llm4/assemble/`
+- `llm4/scene.py`
+- `scene.py`
+- `llm5/fix_raw_*.txt`
+- `render/render_stdout_*.txt`
+- `render/render_stderr_*.txt`
+- `render/final.mp4`
+- `final.mp4`
+
+## 已废弃旧字段
+
+主链路已经彻底移除以下旧字段：
+
+- `carry_over`
+- `transition_in`
+- `transition_out`
+- `object_manifest`
+- `lifecycle_contract`
+- `scene_end_keep`
+
+如果某个 case 或历史产物里还出现这些字段，它们属于旧输出，不代表当前主链路 schema。
+
+## 常用参数
+
+- `--max-fix-rounds`: 最大修复轮数，默认 5
+- `--quality`: 渲染质量，默认 `l`
+- `--render-timeout-s`: 单次渲染超时秒数，默认 300
+- `--no-render`: 只生成代码，不执行 Manim 渲染
 
 ## 常见问题
 
-- 报错 `缺少 Zhipu API key`：
-  - 检查 `MVP/.env` 是否有 `ZHIPUAI_API_KEY=...`
-- 报错 `找不到 manim 命令`：
-  - 先确认已安装 manim，并且 `manim` 已加入 PATH（或先激活你的虚拟环境再运行）
+### 缺少 API key
+
+检查：
+
+- `MVP/.env` 是否包含 `ZHIPUAI_API_KEY=...`
+
+### 找不到 `manim`
+
+检查：
+
+- 当前环境是否已安装 `manim`
+- 是否已激活正确的虚拟环境
+- `manim` 是否在 PATH 中

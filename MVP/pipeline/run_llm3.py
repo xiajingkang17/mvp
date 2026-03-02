@@ -12,7 +12,13 @@ if __package__ in {None, ""}:
         sys.path.insert(0, str(MVP_ROOT))
 
 from pipeline.cli_utils import list_scenes, load_json, pick_scenes, read_requirement, write_text  # noqa: E402
-from pipeline.run_mvp import build_client, generate_scene_design  # noqa: E402
+from pipeline.run_mvp import (  # noqa: E402
+    build_client,
+    generate_scene_designs_batch,
+    generate_scene_design,
+    reset_case_outputs,
+    write_split_scene_design_files,
+)
 from pipeline.run_layout import RunLayout  # noqa: E402
 
 
@@ -43,6 +49,16 @@ def main() -> int:
     if not run_dir.exists():
         raise SystemExit(f"--run-dir 不存在: {run_dir}")
     layout = RunLayout.from_run_dir(run_dir)
+    stale_boundary_file = layout.llm3_dir / "object_boundary_memory.json"
+    if stale_boundary_file.exists():
+        stale_boundary_file.unlink()
+    if args.scene_id.strip():
+        raw_path = layout.stage3_raw_scene(args.scene_id)
+        if raw_path.exists():
+            raw_path.unlink()
+        reset_case_outputs(layout, from_stage=4)
+    else:
+        reset_case_outputs(layout, from_stage=3)
 
     requirement = read_requirement(run_dir=run_dir)
 
@@ -70,11 +86,32 @@ def main() -> int:
     if not scenes:
         raise SystemExit("未找到要运行的 scenes（检查 stage2_scene_plan.json 或 --scene-id）")
 
+    all_scenes = plan.get("scenes") or []
+    if not isinstance(all_scenes, list):
+        all_scenes = []
+    all_scenes = [sc for sc in all_scenes if isinstance(sc, dict)]
+    scene_index_by_id = {
+        str(sc.get("scene_id") or "").strip(): idx for idx, sc in enumerate(all_scenes)
+    }
+
     client = build_client()
     system = client.load_stage_system_prompt("scene_designer")
     write_text(layout.llm3_system_prompt, system.strip() + "\n")
 
     stage3_path = layout.stage3_json
+    if not args.scene_id.strip():
+        payload, raw = generate_scene_designs_batch(
+            client,
+            requirement=requirement,
+            analyst=analyst,
+            plan=plan,
+        )
+        write_text(layout.stage3_raw_batch, raw)
+        write_text(stage3_path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+        write_split_scene_design_files(out_dir=layout.llm3_dir, scene_designs=payload)
+        print(f"[LLM3] 完成: {len(payload.get('scenes') or [])} 个。输出: {stage3_path}")
+        return 0
+
     existing_payload: dict[str, Any] = {}
     if stage3_path.exists():
         try:
@@ -91,12 +128,25 @@ def main() -> int:
     ran = 0
     for scene in scenes:
         sid = str(scene.get("scene_id") or "").strip() or "scene_unknown"
+        full_idx = scene_index_by_id.get(sid, -1)
+        prev_scene = all_scenes[full_idx - 1] if full_idx > 0 else None
+        previous_scene_design = (
+            existing_map.get(str(prev_scene.get("scene_id") or "").strip())
+            if isinstance(prev_scene, dict)
+            else None
+        )
 
         design, raw = generate_scene_design(
             client,
             requirement=requirement,
             analyst=analyst,
             scene=scene,
+            prev_scene=prev_scene,
+            next_scene=all_scenes[full_idx + 1]
+            if 0 <= full_idx + 1 < len(all_scenes)
+            else None,
+            previous_scene_design=previous_scene_design,
+            plan=plan,
         )
         write_text(layout.stage3_raw_scene(sid), raw)
         existing_map[sid] = design
@@ -122,6 +172,7 @@ def main() -> int:
 
     payload = {"video_title": video_title, "scenes": ordered}
     write_text(stage3_path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+    write_split_scene_design_files(out_dir=layout.llm3_dir, scene_designs=payload)
 
     print(f"[LLM3] 完成: {ran} 个。输出: {stage3_path}")
     return 0

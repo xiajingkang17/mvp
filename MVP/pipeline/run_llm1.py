@@ -10,7 +10,7 @@ if __package__ in {None, ""}:
         sys.path.insert(0, str(MVP_ROOT))
 
 from pipeline.cli_utils import ensure_run_dir, read_requirement, write_text  # noqa: E402
-from pipeline.run_mvp import build_client, stage_analyst  # noqa: E402
+from pipeline.run_mvp import build_client, reset_case_outputs, stage_analyst  # noqa: E402
 from pipeline.run_layout import RunLayout  # noqa: E402
 
 
@@ -40,6 +40,7 @@ def main() -> int:
         requirement_file=args.requirement_file,
     )
     layout = RunLayout.from_run_dir(run_dir)
+    reset_case_outputs(layout, from_stage=1)
     print(f"[LLM1] 运行目录: {run_dir}")
 
     req_path = layout.requirement_txt

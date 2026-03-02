@@ -6,6 +6,7 @@ import re
 import shutil
 import sys
 import time
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +20,7 @@ if __package__ in {None, ""}:
     if str(_mvp_root) not in sys.path:
         sys.path.insert(0, str(_mvp_root))
 
+    from pipeline.codegen_contract import build_codegen_interface_contract  # noqa: E402
     from pipeline.config import ERROR_DIR, PROMPTS_DIR, RUNS_DIR  # noqa: E402
     from pipeline.llm_client import LLMClient, LLMStage  # noqa: E402
     from pipeline.run_layout import RunLayout  # noqa: E402
@@ -28,6 +30,7 @@ if __package__ in {None, ""}:
         render_scene,
     )
 else:
+    from .codegen_contract import build_codegen_interface_contract  # noqa: E402
     from .config import ERROR_DIR, PROMPTS_DIR, RUNS_DIR  # noqa: E402
     from .llm_client import LLMClient, LLMStage  # noqa: E402
     from .run_layout import RunLayout  # noqa: E402
@@ -48,6 +51,20 @@ def _slugify(text: str, *, max_len: int = 48) -> str:
 def _write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def _remove_path(path: Path) -> None:
+    if not path.exists():
+        return
+    if path.is_dir():
+        shutil.rmtree(path)
+        return
+    path.unlink()
+
+
+def _reset_dir(path: Path) -> None:
+    _remove_path(path)
+    path.mkdir(parents=True, exist_ok=True)
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -78,6 +95,625 @@ def _safe_name(text: str) -> str:
     value = re.sub(r"[^A-Za-z0-9._-]+", "_", str(text).strip())
     value = value.strip("._-")
     return value or "unknown"
+
+
+def _clean_str_list(values: Any) -> list[str]:
+    if not isinstance(values, list):
+        return []
+    return [str(x).strip() for x in values if str(x).strip()]
+
+
+_SCENE_WORKFLOW_STEPS = {
+    "problem_intake",
+    "preview",
+    "goal_lock",
+    "model",
+    "method_choice",
+    "derive",
+    "check",
+    "recap",
+    "transfer",
+}
+_SCENE_PANEL_ROLES = {
+    "problem_panel",
+    "preview_panel",
+    "question_map_panel",
+    "diagram_panel",
+    "derivation_panel",
+    "checkpoint_panel",
+    "summary_panel",
+}
+_SCENE_ZONE_ROLES = {
+    "top",
+    "main",
+    "left",
+    "right",
+    "formula",
+    "summary",
+    "subtitle",
+}
+_SCENE_BEAT_PANEL_ACTIONS = {
+    "show",
+    "hide",
+    "highlight",
+    "update",
+    "freeze",
+}
+
+
+def _scene_brief(scene: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(scene, dict):
+        return {}
+    return {
+        "scene_id": str(scene.get("scene_id") or "").strip(),
+        "class_name": str(scene.get("class_name") or "").strip(),
+        "scene_goal": str(scene.get("scene_goal") or "").strip(),
+        "workflow_step": str(scene.get("workflow_step") or "").strip(),
+        "question_scope": str(scene.get("question_scope") or "").strip(),
+        "entry_requirement": str(scene.get("entry_requirement") or "").strip(),
+        "key_points": _clean_str_list(scene.get("key_points")),
+        "scene_outputs": _clean_str_list(scene.get("scene_outputs")),
+        "handoff_to_next": str(scene.get("handoff_to_next") or "").strip(),
+        "layout_prompt": str(scene.get("layout_prompt") or "").strip(),
+        "panels": scene.get("panels") if isinstance(scene.get("panels"), list) else [],
+        "beat_sequence": scene.get("beat_sequence") if isinstance(scene.get("beat_sequence"), list) else [],
+        "duration_s": scene.get("duration_s"),
+    }
+
+
+def validate_scene_plan_workflow(*, plan: dict[str, Any]) -> None:
+    if not isinstance(plan, dict):
+        raise ValueError("stage2 scene plan must be a JSON object")
+
+    if not str(plan.get("video_title") or "").strip():
+        raise ValueError("stage2 scene plan is missing video_title")
+
+    opening_strategy = str(plan.get("opening_strategy") or "").strip()
+    if opening_strategy not in {"preview_first", "model_first", "hybrid"}:
+        raise ValueError("stage2 scene plan has invalid opening_strategy")
+
+    question_structure = str(plan.get("question_structure") or "").strip()
+    if question_structure not in {"single_question", "multi_question"}:
+        raise ValueError("stage2 scene plan has invalid question_structure")
+
+    scenes = plan.get("scenes")
+    if not isinstance(scenes, list) or not scenes:
+        raise ValueError("stage2 scene plan is missing scenes")
+
+    for scene in scenes:
+        if not isinstance(scene, dict):
+            continue
+        sid = str(scene.get("scene_id") or "").strip() or "scene_unknown"
+        workflow_step = str(scene.get("workflow_step") or "").strip()
+        if workflow_step not in _SCENE_WORKFLOW_STEPS:
+            raise ValueError(f"{sid} has invalid workflow_step")
+        if not str(scene.get("question_scope") or "").strip():
+            raise ValueError(f"{sid} is missing question_scope")
+        if not str(scene.get("scene_goal") or "").strip():
+            raise ValueError(f"{sid} is missing scene_goal")
+        if not str(scene.get("entry_requirement") or "").strip():
+            raise ValueError(f"{sid} is missing entry_requirement")
+        key_points = scene.get("key_points")
+        if not isinstance(key_points, list) or not [x for x in key_points if str(x).strip()]:
+            raise ValueError(f"{sid} is missing key_points")
+        scene_outputs = scene.get("scene_outputs")
+        if not isinstance(scene_outputs, list) or not [x for x in scene_outputs if str(x).strip()]:
+            raise ValueError(f"{sid} is missing scene_outputs")
+        if not str(scene.get("handoff_to_next") or "").strip():
+            raise ValueError(f"{sid} is missing handoff_to_next")
+        if not str(scene.get("layout_prompt") or "").strip():
+            raise ValueError(f"{sid} is missing layout_prompt")
+
+        panels = scene.get("panels")
+        if not isinstance(panels, list) or not panels:
+            raise ValueError(f"{sid} is missing panels")
+        panel_ids: set[str] = set()
+        for panel in panels:
+            if not isinstance(panel, dict):
+                raise ValueError(f"{sid} has invalid panel entry")
+            panel_id = str(panel.get("panel_id") or "").strip()
+            panel_role = str(panel.get("panel_role") or "").strip()
+            zone_role = str(panel.get("zone_role") or "").strip()
+            if not panel_id:
+                raise ValueError(f"{sid} has panel without panel_id")
+            if panel_id in panel_ids:
+                raise ValueError(f"{sid} has duplicate panel_id: {panel_id}")
+            panel_ids.add(panel_id)
+            if panel_role not in _SCENE_PANEL_ROLES:
+                raise ValueError(f"{sid} has invalid panel_role: {panel_role}")
+            if zone_role not in _SCENE_ZONE_ROLES:
+                raise ValueError(f"{sid} has invalid zone_role: {zone_role}")
+
+        beat_sequence = scene.get("beat_sequence")
+        if not isinstance(beat_sequence, list) or not beat_sequence:
+            raise ValueError(f"{sid} is missing beat_sequence")
+        seen_beats: set[str] = set()
+        for beat in beat_sequence:
+            if not isinstance(beat, dict):
+                raise ValueError(f"{sid} has invalid beat entry")
+            beat_id = str(beat.get("beat_id") or "").strip()
+            intent = str(beat.get("intent") or "").strip()
+            if not beat_id:
+                raise ValueError(f"{sid} has beat without beat_id")
+            if beat_id in seen_beats:
+                raise ValueError(f"{sid} has duplicate beat_id: {beat_id}")
+            seen_beats.add(beat_id)
+            if not intent:
+                raise ValueError(f"{sid}:{beat_id} is missing intent")
+            panel_changes = beat.get("panel_changes")
+            if not isinstance(panel_changes, list) or not panel_changes:
+                raise ValueError(f"{sid}:{beat_id} is missing panel_changes")
+            for change in panel_changes:
+                if not isinstance(change, dict):
+                    raise ValueError(f"{sid}:{beat_id} has invalid panel_change entry")
+                panel_id = str(change.get("panel_id") or "").strip()
+                action = str(change.get("action") or "").strip()
+                if panel_id not in panel_ids:
+                    raise ValueError(f"{sid}:{beat_id} references unknown panel_id: {panel_id}")
+                if action not in _SCENE_BEAT_PANEL_ACTIONS:
+                    raise ValueError(f"{sid}:{beat_id} has invalid panel action: {action}")
+            try:
+                duration_num = float(beat.get("duration_s"))
+            except (TypeError, ValueError):
+                duration_num = 0.0
+            if duration_num <= 0.0:
+                raise ValueError(f"{sid}:{beat_id} has invalid duration_s")
+
+
+def validate_scene_boundary_alignment(
+    *,
+    scene: dict[str, Any],
+    scene_design: dict[str, Any],
+    previous_scene_design: dict[str, Any] | None,
+) -> None:
+    # Scenes are intentionally isolated: no cross-scene object inheritance is allowed.
+    return
+
+
+_FIXED_SUBTITLE_ZONE = {
+    "x0": 0.05,
+    "x1": 0.95,
+    "y0": 0.02,
+    "y1": 0.12,
+}
+_SUBTITLE_ZONE_TOLERANCE = 1e-3
+_SUBTITLE_MAX_LINES = 2
+_SUBTITLE_MAX_UNITS_PER_LINE = 30.0
+_SUBTITLE_ALLOWED_TOTAL_UNITS = _SUBTITLE_MAX_LINES * _SUBTITLE_MAX_UNITS_PER_LINE
+
+
+def _to_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _normalize_layout_contract(layout: Any) -> dict[str, Any]:
+    if not isinstance(layout, dict):
+        layout = {}
+
+    raw_global_rules = layout.get("global_rules") if isinstance(layout.get("global_rules"), dict) else {}
+    zones: list[dict[str, Any]] = []
+    for item in layout.get("zones") or []:
+        if not isinstance(item, dict):
+            continue
+        x0 = _to_float(item.get("x0"), 0.0)
+        x1 = _to_float(item.get("x1"), 0.0)
+        y0 = _to_float(item.get("y0"), 0.0)
+        y1 = _to_float(item.get("y1"), 0.0)
+        if x1 <= x0 or y1 <= y0:
+            continue
+        zones.append(
+            {
+                "id": str(item.get("id") or "").strip(),
+                "role": str(item.get("role") or "").strip(),
+                "x0": x0,
+                "x1": x1,
+                "y0": y0,
+                "y1": y1,
+            }
+        )
+
+    objects: list[dict[str, Any]] = []
+    for item in layout.get("objects") or []:
+        if not isinstance(item, dict):
+            continue
+        obj_id = str(item.get("id") or "").strip()
+        zone_id = str(item.get("zone") or "").strip()
+        if not obj_id or not zone_id:
+            continue
+        objects.append(
+            {
+                "id": obj_id,
+                "kind": str(item.get("kind") or "").strip(),
+                "zone": zone_id,
+                "priority": item.get("priority"),
+                "max_width_ratio": item.get("max_width_ratio"),
+                "max_height_ratio": item.get("max_height_ratio"),
+            }
+        )
+
+    step_visibility: list[dict[str, Any]] = []
+    for idx, item in enumerate(layout.get("step_visibility") or [], start=1):
+        if not isinstance(item, dict):
+            continue
+        zone_overrides = item.get("zone_overrides") if isinstance(item.get("zone_overrides"), dict) else {}
+        step_visibility.append(
+            {
+                "step": item.get("step") or idx,
+                "layout_objects": _clean_str_list(item.get("layout_objects")),
+                "zone_overrides": zone_overrides,
+            }
+        )
+
+    return {
+        "version": str(layout.get("version") or "v1").strip() or "v1",
+        "language": str(layout.get("language") or "zh-CN").strip() or "zh-CN",
+        "safe_margin": _to_float(layout.get("safe_margin"), 0.04),
+        "zones": zones,
+        "global_rules": {
+            "avoid_overlap": bool(raw_global_rules.get("avoid_overlap", True)),
+            "min_gap": _to_float(raw_global_rules.get("min_gap"), 0.02),
+            "formula_stack": str(raw_global_rules.get("formula_stack") or "arrange_down").strip() or "arrange_down",
+            "subtitle_reserved": bool(raw_global_rules.get("subtitle_reserved", True)),
+        },
+        "objects": objects,
+        "step_visibility": step_visibility,
+    }
+
+
+def _zones_overlap(a: dict[str, Any], b: dict[str, Any]) -> bool:
+    return (
+        float(a["x0"]) < float(b["x1"])
+        and float(a["x1"]) > float(b["x0"])
+        and float(a["y0"]) < float(b["y1"])
+        and float(a["y1"]) > float(b["y0"])
+    )
+
+
+def _subtitle_visual_units(text: str) -> float:
+    total = 0.0
+    for ch in str(text):
+        if ch == "\n":
+            continue
+        if ch.isspace():
+            total += 0.35
+            continue
+        total += 1.0 if unicodedata.east_asian_width(ch) in {"W", "F"} else 0.6
+    return total
+
+
+def _subtitle_line_count(text: str) -> int:
+    lines = 1
+    current = 0.0
+    for ch in str(text):
+        if ch == "\n":
+            lines += 1
+            current = 0.0
+            continue
+        units = 0.35 if ch.isspace() else (1.0 if unicodedata.east_asian_width(ch) in {"W", "F"} else 0.6)
+        if current + units > _SUBTITLE_MAX_UNITS_PER_LINE:
+            lines += 1
+            current = units
+        else:
+            current += units
+    return lines
+
+
+def _split_long_subtitle_clause(text: str) -> list[str]:
+    chunks: list[str] = []
+    current: list[str] = []
+    current_units = 0.0
+    for ch in str(text).strip():
+        if ch == "\n":
+            candidate = "".join(current).strip()
+            if candidate:
+                chunks.append(candidate)
+            current = []
+            current_units = 0.0
+            continue
+        units = 0.35 if ch.isspace() else (1.0 if unicodedata.east_asian_width(ch) in {"W", "F"} else 0.6)
+        if current and current_units + units > _SUBTITLE_ALLOWED_TOTAL_UNITS:
+            candidate = "".join(current).strip()
+            if candidate:
+                chunks.append(candidate)
+            current = [ch]
+            current_units = units
+        else:
+            current.append(ch)
+            current_units += units
+    candidate = "".join(current).strip()
+    if candidate:
+        chunks.append(candidate)
+    return chunks
+
+
+def _split_narration_segments(value: Any) -> list[str]:
+    if isinstance(value, list):
+        raise ValueError("steps[*].narration must be a string; runtime subtitle splitting is handled by LLM4 helpers.")
+
+    raw = str(value or "").strip()
+    if not raw:
+        return []
+
+    punctuation = "，。；：？！,.;:?!"
+    segments: list[str] = []
+    if _subtitle_line_count(raw) <= _SUBTITLE_MAX_LINES and _subtitle_visual_units(raw) <= _SUBTITLE_ALLOWED_TOTAL_UNITS:
+        segments.append(raw)
+        return segments
+
+    clauses: list[str] = []
+    current: list[str] = []
+    for ch in raw:
+        current.append(ch)
+        if ch in punctuation:
+            clause = "".join(current).strip()
+            if clause:
+                clauses.append(clause)
+            current = []
+    tail = "".join(current).strip()
+    if tail:
+        clauses.append(tail)
+    if not clauses:
+        clauses = [raw]
+
+    packed: list[str] = []
+    buffer = ""
+    for clause in clauses:
+        candidate = f"{buffer}{clause}".strip() if not buffer else f"{buffer}{clause}"
+        if (
+            buffer
+            and (
+                _subtitle_line_count(candidate) > _SUBTITLE_MAX_LINES
+                or _subtitle_visual_units(candidate) > _SUBTITLE_ALLOWED_TOTAL_UNITS
+            )
+        ):
+            if buffer.strip():
+                packed.append(buffer.strip())
+            buffer = clause.strip()
+        else:
+            buffer = candidate.strip()
+    if buffer.strip():
+        packed.append(buffer.strip())
+
+    for piece in packed:
+        if _subtitle_line_count(piece) <= _SUBTITLE_MAX_LINES and _subtitle_visual_units(piece) <= _SUBTITLE_ALLOWED_TOTAL_UNITS:
+            segments.append(piece)
+        else:
+            segments.extend(_split_long_subtitle_clause(piece))
+
+    return [segment for segment in segments if segment]
+
+
+def validate_scene_layout_contract(
+    *,
+    scene: dict[str, Any],
+    scene_design: dict[str, Any],
+) -> None:
+    layout = scene_design.get("layout_contract") if isinstance(scene_design.get("layout_contract"), dict) else {}
+    zones = layout.get("zones") if isinstance(layout.get("zones"), list) else []
+    subtitle_zones = [zone for zone in zones if isinstance(zone, dict) and str(zone.get("role") or "").strip() == "subtitle"]
+    scene_id = str(scene_design.get("scene_id") or scene.get("scene_id") or "").strip() or "<scene>"
+
+    if len(subtitle_zones) > 1:
+        raise ValueError(f"{scene_id}: layout_contract may contain at most one subtitle zone.")
+    if not subtitle_zones:
+        return
+
+    subtitle_zone = subtitle_zones[0]
+    for key, expected in _FIXED_SUBTITLE_ZONE.items():
+        actual = _to_float(subtitle_zone.get(key), float("nan"))
+        if abs(actual - expected) > _SUBTITLE_ZONE_TOLERANCE:
+            raise ValueError(
+                f"{scene_id}: subtitle zone must stay fixed at {_FIXED_SUBTITLE_ZONE}, got {subtitle_zone}."
+            )
+
+    global_rules = layout.get("global_rules") if isinstance(layout.get("global_rules"), dict) else {}
+    if not bool(global_rules.get("subtitle_reserved")):
+        raise ValueError(f"{scene_id}: layout_contract.global_rules.subtitle_reserved must be true.")
+
+    for zone in zones:
+        if not isinstance(zone, dict) or zone is subtitle_zone:
+            continue
+        if _zones_overlap(zone, subtitle_zone):
+            raise ValueError(
+                f"{scene_id}: zone '{zone.get('id')}' overlaps the reserved subtitle zone."
+            )
+
+    subtitle_zone_id = str(subtitle_zone.get("id") or "").strip()
+    for item in layout.get("objects") if isinstance(layout.get("objects"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("zone") or "").strip() == subtitle_zone_id:
+            raise ValueError(
+                f"{scene_id}: layout object '{item.get('id')}' may not occupy subtitle zone '{subtitle_zone_id}'."
+            )
+
+    for item in layout.get("step_visibility") if isinstance(layout.get("step_visibility"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        overrides = item.get("zone_overrides") if isinstance(item.get("zone_overrides"), dict) else {}
+        if subtitle_zone_id in overrides or "subtitle_zone" in overrides or "subtitle" in overrides:
+            raise ValueError(f"{scene_id}: step_visibility may not override subtitle zone.")
+
+    for idx, step in enumerate(scene_design.get("steps") or [], start=1):
+        if not isinstance(step, dict):
+            continue
+        narration_value = step.get("narration")
+        narration_segments = _split_narration_segments(narration_value)
+        if not narration_segments:
+            continue
+        for segment_idx, narration in enumerate(narration_segments, start=1):
+            total_units = _subtitle_visual_units(narration)
+            line_count = _subtitle_line_count(narration)
+            if line_count > _SUBTITLE_MAX_LINES or total_units > _SUBTITLE_ALLOWED_TOTAL_UNITS:
+                step_id = str(step.get("step_id") or "").strip() or f"step_{idx:02d}"
+                segment_label = f"{step_id}[{segment_idx}]"
+                raise ValueError(
+                    f"{scene_id}:{segment_label} narration is too long for the fixed subtitle zone even after splitting; "
+                    f"shorten the text."
+                )
+
+
+def build_scene_design_user_prompt(
+    *,
+    requirement: str,
+    analyst: dict[str, Any],
+    scene: dict[str, Any],
+    prev_scene: dict[str, Any] | None = None,
+    next_scene: dict[str, Any] | None = None,
+    plan: dict[str, Any] | None = None,
+) -> str:
+    return (
+        "[用户需求]\n"
+        f"{requirement.strip()}\n\n"
+        "[全局分析 JSON]\n"
+        f"{json.dumps(analyst, ensure_ascii=False, indent=2)}\n\n"
+        "[上一 Scene 摘要]\n"
+        f"{json.dumps(_scene_brief(prev_scene or {}), ensure_ascii=False, indent=2)}\n\n"
+        "[当前 Scene]\n"
+        f"{json.dumps(scene, ensure_ascii=False, indent=2)}\n\n"
+        "[下一 Scene 摘要]\n"
+        f"{json.dumps(_scene_brief(next_scene or {}), ensure_ascii=False, indent=2)}\n"
+    )
+
+
+def build_scene_designs_batch_user_prompt(
+    *,
+    requirement: str,
+    analyst: dict[str, Any],
+    plan: dict[str, Any],
+) -> str:
+    scenes = plan.get("scenes") or []
+    if not isinstance(scenes, list):
+        scenes = []
+
+    scene_payload: list[dict[str, Any]] = []
+    for scene in scenes:
+        if not isinstance(scene, dict):
+            continue
+        payload = dict(scene)
+        payload["scene_brief"] = _scene_brief(scene)
+        scene_payload.append(payload)
+
+    return (
+        "[用户需求]\n"
+        f"{requirement.strip()}\n\n"
+        "[全局分析 JSON]\n"
+        f"{json.dumps(analyst, ensure_ascii=False, indent=2)}\n\n"
+        "[整片 Scene 规划]\n"
+        f"{json.dumps(scene_payload, ensure_ascii=False, indent=2)}\n"
+    )
+
+
+def _normalize_scene_design_payload(
+    data: dict[str, Any],
+    *,
+    scene: dict[str, Any],
+) -> dict[str, Any]:
+    payload = dict(data or {})
+
+    raw_registry = payload.get("object_registry")
+
+    registry: list[dict[str, Any]] = []
+    if isinstance(raw_registry, list):
+        for item in raw_registry:
+            if not isinstance(item, dict):
+                continue
+            obj_id = str(item.get("id") or "").strip()
+            if not obj_id:
+                continue
+            registry.append(
+                {
+                    "id": obj_id,
+                    "kind": str(item.get("kind") or "").strip(),
+                    "role": str(item.get("role") or item.get("visual_role") or "").strip(),
+                    "lifecycle_role": str(item.get("lifecycle_role") or "").strip(),
+                    "description": str(item.get("description") or "").strip(),
+                }
+            )
+
+    entry_state = payload.get("entry_state") if isinstance(payload.get("entry_state"), dict) else {}
+    exit_state = payload.get("exit_state") if isinstance(payload.get("exit_state"), dict) else {}
+
+    entry_objects: list[str] = []
+    entry_focus = str(
+        entry_state.get("visual_focus")
+        or scene.get("entry_requirement")
+        or scene.get("scene_goal")
+        or ""
+    ).strip()
+
+    exit_objects: list[str] = []
+
+    raw_steps = payload.get("steps") or []
+    steps: list[dict[str, Any]] = []
+    if isinstance(raw_steps, list):
+        for idx, step in enumerate(raw_steps, start=1):
+            if not isinstance(step, dict):
+                continue
+            object_ops = step.get("object_ops") if isinstance(step.get("object_ops"), dict) else {}
+            narration_value = step.get("narration")
+            _split_narration_segments(narration_value)
+            narration_text = str(narration_value or "").strip()
+            create_ids = _clean_str_list(object_ops.get("create"))
+            update_ids = _clean_str_list(object_ops.get("update"))
+            remove_ids = _clean_str_list(object_ops.get("remove"))
+            keep_ids = _clean_str_list(object_ops.get("keep"))
+            end_state_objects = _clean_str_list(step.get("end_state_objects"))
+            if not end_state_objects:
+                end_state_objects = keep_ids
+            if not keep_ids and end_state_objects:
+                keep_ids = list(end_state_objects)
+
+            steps.append(
+                {
+                    **step,
+                    "step_id": str(step.get("step_id") or "").strip() or f"step_{idx:02d}",
+                    "narration": narration_text,
+                    "object_ops": {
+                        "create": create_ids,
+                        "update": update_ids,
+                        "remove": remove_ids,
+                        "keep": keep_ids,
+                    },
+                    "end_state_objects": end_state_objects,
+                }
+            )
+
+    payload["object_registry"] = registry
+    payload["entry_state"] = {
+        "objects_on_screen": entry_objects,
+        "visual_focus": entry_focus,
+    }
+    payload["steps"] = steps
+    payload["exit_state"] = {
+        "objects_on_screen": exit_objects,
+        "handoff_intent": str(
+            exit_state.get("handoff_intent")
+            or scene.get("handoff_to_next")
+            or ""
+        ).strip(),
+    }
+    payload["layout_contract"] = _normalize_layout_contract(payload.get("layout_contract"))
+
+    allowed_keys = {
+        "scene_id",
+        "class_name",
+        "goal",
+        "key_points",
+        "duration_s",
+        "narration",
+        "on_screen_text",
+        "object_registry",
+        "entry_state",
+        "steps",
+        "exit_state",
+        "layout_contract",
+        "motion_contract",
+    }
+    return {key: value for key, value in payload.items() if key in allowed_keys}
 
 
 def _write_global_llm4_error_log(
@@ -119,6 +755,24 @@ def _write_global_llm4_error_log(
         pass
 
 
+def reset_case_outputs(layout: RunLayout, *, from_stage: int) -> None:
+    if from_stage <= 1:
+        _reset_dir(layout.llm1_dir)
+    if from_stage <= 2:
+        _reset_dir(layout.llm2_dir)
+    if from_stage <= 3:
+        _reset_dir(layout.llm3_dir)
+    if from_stage <= 4:
+        _reset_dir(layout.llm4_dir)
+        _remove_path(layout.exported_scene_py)
+    if from_stage <= 5:
+        _reset_dir(layout.llm5_dir)
+        _reset_dir(layout.render_dir)
+        _remove_path(layout.exported_final_mp4)
+
+    _remove_path(layout.run_dir / "FAILED.txt")
+
+
 def build_client() -> LLMClient:
     # 复用 MVP/configs/llm.yaml 里的 stage 采样 profile
     stage_map = {
@@ -133,7 +787,26 @@ def build_client() -> LLMClient:
             zhipu_stage="scene_designer",
             prompt_bundle="llm3_scene_designer",
         ),
-        "codegen": LLMStage(name="codegen", zhipu_stage="codegen", prompt_bundle="llm4_codegen"),
+        "codegen_framework": LLMStage(
+            name="codegen_framework",
+            zhipu_stage="codegen",
+            prompt_bundle="llm4a_framework_codegen",
+        ),
+        "codegen_scene": LLMStage(
+            name="codegen_scene",
+            zhipu_stage="codegen",
+            prompt_bundle="llm4b_scene_codegen",
+        ),
+        "codegen_motion": LLMStage(
+            name="codegen_motion",
+            zhipu_stage="codegen",
+            prompt_bundle="llm4c_motion_codegen",
+        ),
+        "codegen_assemble": LLMStage(
+            name="codegen_assemble",
+            zhipu_stage="codegen",
+            prompt_bundle="llm4d_assemble_codegen",
+        ),
         "fixer": LLMStage(name="fixer", zhipu_stage="fixer", prompt_bundle="llm5_fixer"),
     }
     return LLMClient(prompts_dir=PROMPTS_DIR, stage_map=stage_map)
@@ -172,14 +845,21 @@ def stage_scene_plan(
     if not isinstance(scenes, list):
         scenes = []
 
+    video_title = str(data.get("video_title") or "").strip()
+    opening_strategy = str(data.get("opening_strategy") or "").strip().lower()
+    if opening_strategy not in {"preview_first", "model_first", "hybrid"}:
+        opening_strategy = ""
+    question_structure = str(data.get("question_structure") or "").strip().lower()
+    if question_structure not in {"single_question", "multi_question"}:
+        question_structure = ""
+
     normalized: list[dict[str, Any]] = []
     for idx, sc in enumerate(scenes, start=1):
         if not isinstance(sc, dict):
             continue
         scene_id = str(sc.get("scene_id") or "").strip() or f"scene_{idx:02d}"
         class_name = str(sc.get("class_name") or "").strip() or f"Scene{idx:02d}"
-        title = str(sc.get("title") or "").strip() or scene_id
-        goal = str(sc.get("goal") or "").strip()
+        scene_goal = str(sc.get("scene_goal") or "").strip()
         key_points = sc.get("key_points")
         if not isinstance(key_points, list):
             key_points = []
@@ -189,35 +869,77 @@ def stage_scene_plan(
         except Exception:  # noqa: BLE001
             duration_num = 0.0
 
-        # 额外字段（可选）：用于后续做“单文件串联”时的连贯性与聚合规划
-        concepts = sc.get("concepts")
-        if not isinstance(concepts, list):
-            concepts = []
+        workflow_step = str(sc.get("workflow_step") or "").strip().lower()
+        if workflow_step not in _SCENE_WORKFLOW_STEPS:
+            workflow_step = ""
 
-        importance = str(sc.get("importance") or "").strip().lower()
-        if importance not in {"core", "supporting"}:
-            importance = ""
+        question_scope = str(sc.get("question_scope") or "").strip()
+        entry_requirement = str(sc.get("entry_requirement") or "").strip()
+        scene_outputs = _clean_str_list(sc.get("scene_outputs"))
+        handoff_to_next = str(sc.get("handoff_to_next") or "").strip()
+        layout_prompt = str(sc.get("layout_prompt") or "").strip()
 
-        transition_in = str(sc.get("transition_in") or "").strip()
-        transition_out = str(sc.get("transition_out") or "").strip()
+        panels: list[dict[str, Any]] = []
+        raw_panels = sc.get("panels")
+        if isinstance(raw_panels, list):
+            for panel in raw_panels:
+                if not isinstance(panel, dict):
+                    continue
+                panels.append(
+                    {
+                        "panel_id": str(panel.get("panel_id") or "").strip(),
+                        "panel_role": str(panel.get("panel_role") or "").strip(),
+                        "zone_role": str(panel.get("zone_role") or "").strip(),
+                    }
+                )
 
-        carry_over = sc.get("carry_over")
-        if not isinstance(carry_over, list):
-            carry_over = []
+        beat_sequence: list[dict[str, Any]] = []
+        raw_beats = sc.get("beat_sequence")
+        if isinstance(raw_beats, list):
+            for beat in raw_beats:
+                if not isinstance(beat, dict):
+                    continue
+                try:
+                    beat_duration = float(beat.get("duration_s"))
+                except (TypeError, ValueError):
+                    beat_duration = 0.0
+                raw_panel_changes = beat.get("panel_changes")
+                panel_changes: list[dict[str, Any]] = []
+                if isinstance(raw_panel_changes, list):
+                    for change in raw_panel_changes:
+                        if not isinstance(change, dict):
+                            continue
+                        panel_changes.append(
+                            {
+                                "panel_id": str(change.get("panel_id") or "").strip(),
+                                "action": str(change.get("action") or "").strip(),
+                            }
+                        )
+                beat_sequence.append(
+                    {
+                        "beat_id": str(beat.get("beat_id") or "").strip(),
+                        "intent": str(beat.get("intent") or "").strip(),
+                        "panel_changes": panel_changes,
+                        "duration_s": beat_duration,
+                        "optional_prompt": str(beat.get("optional_prompt") or "").strip(),
+                    }
+                )
 
         normalized.append(
             {
                 "scene_id": scene_id,
                 "class_name": class_name,
-                "title": title,
-                "goal": goal,
+                "scene_goal": scene_goal,
                 "key_points": [str(x) for x in key_points if str(x).strip()],
                 "duration_s": duration_num,
-                "concepts": [str(x) for x in concepts if str(x).strip()],
-                "importance": importance,
-                "transition_in": transition_in,
-                "transition_out": transition_out,
-                "carry_over": [str(x) for x in carry_over if str(x).strip()],
+                "workflow_step": workflow_step,
+                "question_scope": question_scope,
+                "entry_requirement": entry_requirement,
+                "scene_outputs": scene_outputs,
+                "handoff_to_next": handoff_to_next,
+                "layout_prompt": layout_prompt,
+                "panels": panels,
+                "beat_sequence": beat_sequence,
             }
         )
 
@@ -227,71 +949,17 @@ def stage_scene_plan(
             per = max(5.0, total_s_num / len(normalized))
             for sc in normalized:
                 sc["duration_s"] = round(per, 2)
-        data["scenes"] = normalized
+        data = {
+            "video_title": video_title,
+            "opening_strategy": opening_strategy,
+            "question_structure": question_structure,
+            "scenes": normalized,
+        }
+
+    validate_scene_plan_workflow(plan=data)
 
     client.save_json(out_dir / "stage2_scene_plan.json", data)
     return data
-
-
-def stage_scene_design(
-    client: LLMClient,
-    *,
-    requirement: str,
-    analyst: dict[str, Any],
-    scene: dict[str, Any],
-    scene_dir: Path,
-) -> dict[str, Any]:
-    system = client.load_stage_system_prompt("scene_designer")
-    user = (
-        "【用户需求】\n"
-        f"{requirement.strip()}\n\n"
-        "【全局分析 JSON】\n"
-        f"{json.dumps(analyst, ensure_ascii=False, indent=2)}\n\n"
-        "【当前 Scene】\n"
-        f"{json.dumps(scene, ensure_ascii=False, indent=2)}\n"
-    )
-    data, raw = client.generate_json(stage_key="scene_designer", system_prompt=system, user_prompt=user)
-    _write_text(scene_dir / "design_raw.txt", raw)
-
-    # 强制对齐 scene_id / class_name（避免后续 codegen 与渲染找不到类）
-    expected_scene_id = str(scene.get("scene_id") or "").strip()
-    expected_class = str(scene.get("class_name") or "").strip()
-    if expected_scene_id:
-        data["scene_id"] = expected_scene_id
-    if expected_class:
-        data["class_name"] = expected_class
-
-    client.save_json(scene_dir / "design.json", data)
-    return data
-
-
-def stage_codegen(
-    client: LLMClient,
-    *,
-    scene_design: dict[str, Any],
-    scene_dir: Path,
-) -> tuple[str, str]:
-    system = client.load_stage_system_prompt("codegen")
-    user = json.dumps(scene_design, ensure_ascii=False, indent=2)
-    merged, raw, chunks = client.generate_code(
-        stage_key="codegen",
-        system_prompt=system,
-        user_prompt=user,
-        max_continue_rounds=3,
-    )
-    _write_text(scene_dir / "codegen_raw.txt", raw)
-    for idx, chunk in enumerate(chunks, start=1):
-        _write_text(scene_dir / f"codegen_continue_{idx}.txt", chunk)
-    code = _normalize_manim_ce_api(_extract_python_code(merged))
-
-    classes = detect_scene_classes(code)
-    class_name = str(scene_design.get("class_name") or "").strip()
-    if class_name and class_name not in classes and classes:
-        # 兜底：如果模型没按约定类名输出，取第一个 Scene 子类名
-        class_name = classes[0]
-    if not class_name:
-        class_name = classes[0] if classes else "GeneratedScene"
-    return class_name, code + "\n"
 
 
 def generate_scene_design(
@@ -300,6 +968,10 @@ def generate_scene_design(
     requirement: str,
     analyst: dict[str, Any],
     scene: dict[str, Any],
+    prev_scene: dict[str, Any] | None = None,
+    next_scene: dict[str, Any] | None = None,
+    previous_scene_design: dict[str, Any] | None = None,
+    plan: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], str]:
     """
     为单个 scene 生成“分镜级设计稿”。
@@ -307,15 +979,27 @@ def generate_scene_design(
     """
 
     system = client.load_stage_system_prompt("scene_designer")
+    prompt_user = build_scene_design_user_prompt(
+        requirement=requirement,
+        analyst=analyst,
+        scene=scene,
+        prev_scene=prev_scene,
+        next_scene=next_scene,
+        plan=plan,
+    )
     user = (
         "【用户需求】\n"
         f"{requirement.strip()}\n\n"
         "【全局分析 JSON】\n"
         f"{json.dumps(analyst, ensure_ascii=False, indent=2)}\n\n"
+        "【上一 Scene 摘要】\n"
+        f"{json.dumps(_scene_brief(prev_scene or {}), ensure_ascii=False, indent=2)}\n\n"
         "【当前 Scene（来自 Scene Planner）】\n"
-        f"{json.dumps(scene, ensure_ascii=False, indent=2)}\n"
+        f"{json.dumps(scene, ensure_ascii=False, indent=2)}\n\n"
+        "【下一 Scene 摘要】\n"
+        f"{json.dumps(_scene_brief(next_scene or {}), ensure_ascii=False, indent=2)}\n"
     )
-    data, raw = client.generate_json(stage_key="scene_designer", system_prompt=system, user_prompt=user)
+    data, raw = client.generate_json(stage_key="scene_designer", system_prompt=system, user_prompt=prompt_user)
 
     # 强制对齐 scene_id / class_name（避免后续 codegen/渲染找不到类）
     expected_scene_id = str(scene.get("scene_id") or "").strip()
@@ -326,11 +1010,99 @@ def generate_scene_design(
         data["class_name"] = expected_class
 
     # 把规划信息也带上，方便后续“单文件”代码生成整合
-    for key in ("title", "goal", "key_points", "duration_s"):
+    for key in ("goal", "key_points", "duration_s"):
         if key in scene and key not in data:
             data[key] = scene.get(key)
 
+    data = _normalize_scene_design_payload(data, scene=scene)
+    validate_scene_boundary_alignment(scene=scene, scene_design=data, previous_scene_design=previous_scene_design)
+    validate_scene_layout_contract(scene=scene, scene_design=data)
+
     return data, raw
+
+
+def generate_scene_designs_batch(
+    client: LLMClient,
+    *,
+    requirement: str,
+    analyst: dict[str, Any],
+    plan: dict[str, Any],
+) -> tuple[dict[str, Any], str]:
+    """
+    一次调用 LLM3，为整片 scenes 生成设计稿。
+    返回：
+    - payload: {"video_title": str, "scenes": [...]}
+    - raw_text
+    """
+
+    system = client.load_stage_system_prompt("scene_designer")
+    prompt_user = build_scene_designs_batch_user_prompt(
+        requirement=requirement,
+        analyst=analyst,
+        plan=plan,
+    )
+    data, raw = client.generate_json(stage_key="scene_designer", system_prompt=system, user_prompt=prompt_user)
+
+    planned_scenes = plan.get("scenes") or []
+    if not isinstance(planned_scenes, list):
+        planned_scenes = []
+    planned_scenes = [scene for scene in planned_scenes if isinstance(scene, dict)]
+
+    raw_scenes = data.get("scenes") if isinstance(data.get("scenes"), list) else []
+    raw_by_id = {
+        str(scene.get("scene_id") or "").strip(): scene
+        for scene in raw_scenes
+        if isinstance(scene, dict) and str(scene.get("scene_id") or "").strip()
+    }
+
+    normalized_scenes: list[dict[str, Any]] = []
+    previous_scene_design: dict[str, Any] | None = None
+    for idx, scene in enumerate(planned_scenes, start=1):
+        sid = str(scene.get("scene_id") or "").strip() or f"scene_{idx:02d}"
+        raw_scene = raw_by_id.get(sid)
+        if raw_scene is None and idx - 1 < len(raw_scenes) and isinstance(raw_scenes[idx - 1], dict):
+            raw_scene = raw_scenes[idx - 1]
+        if not isinstance(raw_scene, dict):
+            raw_scene = {}
+
+        raw_scene = dict(raw_scene)
+        raw_scene["scene_id"] = sid
+        if str(scene.get("class_name") or "").strip():
+            raw_scene["class_name"] = str(scene.get("class_name") or "").strip()
+        for key in ("goal", "key_points", "duration_s"):
+            if key in scene and key not in raw_scene:
+                raw_scene[key] = scene.get(key)
+
+        normalized = _normalize_scene_design_payload(raw_scene, scene=scene)
+        validate_scene_boundary_alignment(scene=scene, scene_design=normalized, previous_scene_design=previous_scene_design)
+        validate_scene_layout_contract(scene=scene, scene_design=normalized)
+        normalized_scenes.append(normalized)
+        previous_scene_design = normalized
+
+    payload = {
+        "video_title": str(data.get("video_title") or plan.get("video_title") or "").strip(),
+        "scenes": normalized_scenes,
+    }
+    return payload, raw
+
+
+def write_split_scene_design_files(
+    *,
+    out_dir: Path,
+    scene_designs: dict[str, Any],
+) -> None:
+    scenes = scene_designs.get("scenes") or []
+    if not isinstance(scenes, list):
+        return
+    for scene in scenes:
+        if not isinstance(scene, dict):
+            continue
+        sid = str(scene.get("scene_id") or "").strip()
+        if not sid:
+            continue
+        scene_dir = out_dir / "scenes" / sid
+        scene_dir.mkdir(parents=True, exist_ok=True)
+        _write_text(scene_dir / "design.json", json.dumps(scene, ensure_ascii=False, indent=2) + "\n")
 
 
 def stage_scene_designs(
@@ -343,40 +1115,96 @@ def stage_scene_designs(
     scene_id: str = "",
 ) -> dict[str, Any]:
     """
-    逐 scene 生成设计稿，但把结果聚合到一个 JSON 文件里：
-    - stage3_scene_designs.json
-    - stage3_<scene_id>_raw.txt（便于排查某个 scene 的输出）
+    生成 stage3 设计稿。
+    - 全量运行时：一次调用 LLM3，输出整片 scenes，并按 scene 拆分落盘
+    - 单 scene 运行时：只重跑指定 scene，并更新聚合文件与拆分文件
     """
 
-    scenes = plan.get("scenes") or []
-    if not isinstance(scenes, list) or not scenes:
+    all_scenes = plan.get("scenes") or []
+    if not isinstance(all_scenes, list) or not all_scenes:
         raise RuntimeError("stage2_scene_plan.json 中缺少 scenes 列表")
+    all_scenes = [sc for sc in all_scenes if isinstance(sc, dict)]
 
     wanted = scene_id.strip()
-    if wanted:
-        scenes = [sc for sc in scenes if isinstance(sc, dict) and str(sc.get("scene_id") or "").strip() == wanted]
-        if not scenes:
-            raise RuntimeError(f"未找到 scene_id={wanted}（请检查 stage2_scene_plan.json）")
-    else:
-        scenes = [sc for sc in scenes if isinstance(sc, dict)]
+    _remove_path(out_dir / "object_boundary_memory.json")
+    scene_index_by_id = {
+        str(sc.get("scene_id") or "").strip(): idx for idx, sc in enumerate(all_scenes)
+    }
 
-    designs: list[dict[str, Any]] = []
-    for sc in scenes:
-        sid = str(sc.get("scene_id") or "").strip() or "scene_unknown"
-        design, raw = generate_scene_design(
+    if not wanted:
+        payload, raw = generate_scene_designs_batch(
             client,
             requirement=requirement,
             analyst=analyst,
-            scene=sc,
+            plan=plan,
         )
-        _write_text(out_dir / f"stage3_{sid}_raw.txt", raw)
-        designs.append(design)
+        _write_text(out_dir / "stage3_scene_designs_raw.txt", raw)
+        client.save_json(out_dir / "stage3_scene_designs.json", payload)
+        write_split_scene_design_files(out_dir=out_dir, scene_designs=payload)
+        return payload
+
+    current_scene = next((sc for sc in all_scenes if str(sc.get("scene_id") or "").strip() == wanted), None)
+    if current_scene is None:
+        raise RuntimeError(f"未找到 scene_id={wanted}（请检查 stage2_scene_plan.json）")
+
+    existing_payload: dict[str, Any] = {}
+    stage3_path = out_dir / "stage3_scene_designs.json"
+    if stage3_path.exists():
+        try:
+            existing_payload = _load_json(stage3_path)
+        except Exception:  # noqa: BLE001
+            existing_payload = {}
+
+    existing_scenes = existing_payload.get("scenes") if isinstance(existing_payload, dict) else None
+    existing_map = {
+        str(it.get("scene_id") or "").strip(): it
+        for it in existing_scenes
+        if isinstance(existing_scenes, list) and isinstance(it, dict) and str(it.get("scene_id") or "").strip()
+    } if isinstance(existing_scenes, list) else {}
+
+    full_idx = scene_index_by_id.get(wanted, -1)
+    prev_scene = all_scenes[full_idx - 1] if full_idx > 0 else None
+    previous_scene_design = (
+        existing_map.get(str(prev_scene.get("scene_id") or "").strip())
+        if isinstance(prev_scene, dict)
+        else None
+    )
+    next_scene = all_scenes[full_idx + 1] if 0 <= full_idx + 1 < len(all_scenes) else None
+
+    design, raw = generate_scene_design(
+        client,
+        requirement=requirement,
+        analyst=analyst,
+        scene=current_scene,
+        prev_scene=prev_scene,
+        next_scene=next_scene,
+        previous_scene_design=previous_scene_design,
+        plan=plan,
+    )
+    _write_text(out_dir / f"stage3_{wanted}_raw.txt", raw)
+    existing_map[wanted] = design
+
+    ordered: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for sc in all_scenes:
+        sid = str(sc.get("scene_id") or "").strip()
+        if not sid:
+            continue
+        it = existing_map.get(sid)
+        if it is None:
+            continue
+        ordered.append(it)
+        seen.add(sid)
+    for sid, it in existing_map.items():
+        if sid not in seen:
+            ordered.append(it)
 
     payload = {
-        "video_title": str(plan.get("video_title") or "").strip(),
-        "scenes": designs,
+        "video_title": str(existing_payload.get("video_title") or plan.get("video_title") or "").strip(),
+        "scenes": ordered,
     }
-    client.save_json(out_dir / "stage3_scene_designs.json", payload)
+    client.save_json(stage3_path, payload)
+    write_split_scene_design_files(out_dir=out_dir, scene_designs=payload)
     return payload
 
 
@@ -389,43 +1217,176 @@ def stage_codegen_video(
     out_dir: Path,
 ) -> tuple[str, str]:
     """
-    把多个 scene 的设计稿整合成一个可直接运行的单文件：scene.py（单一 Scene 类）。
+    把多个 scene 的设计稿拆成 framework / scene / motion / assembler 四段 codegen，
+    最终仍产出一个可直接运行的单文件：scene.py（单一 Scene 类）。
     返回：(class_name, code)
     """
 
-    system = client.load_stage_system_prompt("codegen")
-    user_payload = {
-        "analyst": analyst,
-        "scene_plan": plan,
-        "scene_designs": scene_designs,
-        "output_contract": {
-            "single_file": True,
-            "preferred_class_name": "MainScene",
-            "file_name": "scene.py",
-        },
+    def _generate_fragment(
+        *,
+        stage_key: str,
+        payload: dict[str, Any],
+        target_dir: Path,
+        raw_name: str,
+        chunk_prefix: str,
+        fragment_name: str,
+        max_continue_rounds: int = 3,
+    ) -> str:
+        system = client.load_stage_system_prompt(stage_key)
+        _write_text(target_dir / "system_prompt.md", system.strip() + "\n")
+        user = json.dumps(payload, ensure_ascii=False, indent=2)
+        merged, raw, chunks = client.generate_code(
+            stage_key=stage_key,
+            system_prompt=system,
+            user_prompt=user,
+            max_continue_rounds=max_continue_rounds,
+        )
+        _write_text(target_dir / raw_name, raw)
+        for idx, chunk in enumerate(chunks, start=1):
+            _write_text(target_dir / f"{chunk_prefix}_{idx}.txt", chunk)
+
+        fragment = _normalize_manim_ce_api(_extract_python_code(merged)).strip() + "\n"
+        _write_text(target_dir / fragment_name, fragment)
+        return fragment
+
+    scenes = scene_designs.get("scenes") or []
+    if not isinstance(scenes, list) or not scenes:
+        raise RuntimeError("scene_designs.scenes 为空，无法执行拆分式 codegen")
+
+    scene_design_by_id = {
+        str(scene.get("scene_id") or "").strip(): scene for scene in scenes if isinstance(scene, dict)
     }
-    user = json.dumps(user_payload, ensure_ascii=False, indent=2)
-    merged, raw, chunks = client.generate_code(
-        stage_key="codegen",
-        system_prompt=system,
-        user_prompt=user,
+    plan_scenes = plan.get("scenes") or []
+    if not isinstance(plan_scenes, list):
+        plan_scenes = []
+    plan_by_id = {
+        str(scene.get("scene_id") or "").strip(): scene for scene in plan_scenes if isinstance(scene, dict)
+    }
+
+    interface_contract = build_codegen_interface_contract(
+        plan=plan,
+        scene_designs=scene_designs,
+        preferred_class_name="MainScene",
+    )
+    _write_text(
+        out_dir / "code_interface_contract.json",
+        json.dumps(interface_contract, ensure_ascii=False, indent=2) + "\n",
+    )
+    _write_text(
+        out_dir / "system_prompt.md",
+        (
+            "# Split LLM4 orchestration\n"
+            "- framework: llm4/framework/\n"
+            "- scenes: llm4/scenes/<scene_id>/\n"
+            "- motion: llm4/motion/<scene_id>/\n"
+            "- assemble: llm4/assemble/\n"
+            "- interface_contract: llm4/code_interface_contract.json\n"
+        ),
+    )
+
+    framework_code = _generate_fragment(
+        stage_key="codegen_framework",
+        payload={
+            "role": "framework_codegen",
+            "interface_contract": interface_contract,
+            "analyst": analyst,
+            "scene_plan": plan,
+        },
+        target_dir=out_dir / "framework",
+        raw_name="framework_raw.txt",
+        chunk_prefix="framework_continue",
+        fragment_name="framework_fragment.py",
+        max_continue_rounds=3,
+    )
+
+    scene_fragments: list[dict[str, Any]] = []
+    motion_fragments: list[dict[str, Any]] = []
+
+    for scene_entry in interface_contract.get("scenes") or []:
+        if not isinstance(scene_entry, dict):
+            continue
+
+        scene_id = str(scene_entry.get("scene_id") or "").strip()
+        scene_design = scene_design_by_id.get(scene_id)
+        if not isinstance(scene_design, dict):
+            raise RuntimeError(f"scene_designs 中缺少 scene_id={scene_id}")
+
+        scene_plan = plan_by_id.get(scene_id, {})
+        scene_dir = out_dir / "scenes" / scene_id
+        motion_dir = out_dir / "motion" / scene_id
+
+        scene_code = _generate_fragment(
+            stage_key="codegen_scene",
+            payload={
+                "role": "scene_codegen",
+                "interface_contract": interface_contract,
+                "scene_contract": scene_entry,
+                "scene_plan_scene": scene_plan,
+                "scene_design": scene_design,
+            },
+            target_dir=scene_dir,
+            raw_name="scene_method_raw.txt",
+            chunk_prefix="scene_method_continue",
+            fragment_name="scene_method.py",
+            max_continue_rounds=3,
+        )
+        scene_fragments.append(
+            {
+                "scene_id": scene_id,
+                "scene_method_name": scene_entry.get("scene_method_name"),
+                "code": scene_code,
+            }
+        )
+
+        motion_code = _generate_fragment(
+            stage_key="codegen_motion",
+            payload={
+                "role": "motion_codegen",
+                "interface_contract": interface_contract,
+                "scene_contract": scene_entry,
+                "scene_plan_scene": scene_plan,
+                "scene_design": scene_design,
+            },
+            target_dir=motion_dir,
+            raw_name="motion_raw.txt",
+            chunk_prefix="motion_continue",
+            fragment_name="motion_method.py",
+            max_continue_rounds=3,
+        )
+        motion_fragments.append(
+            {
+                "scene_id": scene_id,
+                "motion_method_name": scene_entry.get("motion_method_name"),
+                "code": motion_code,
+            }
+        )
+
+    final_code = _generate_fragment(
+        stage_key="codegen_assemble",
+        payload={
+            "role": "assemble_codegen",
+            "interface_contract": interface_contract,
+            "framework_code": framework_code,
+            "scene_fragments": scene_fragments,
+            "motion_fragments": motion_fragments,
+        },
+        target_dir=out_dir / "assemble",
+        raw_name="assemble_raw.txt",
+        chunk_prefix="assemble_continue",
+        fragment_name="scene.py",
         max_continue_rounds=4,
     )
-    _write_text(out_dir / "stage4_codegen_raw.txt", raw)
-    for idx, chunk in enumerate(chunks, start=1):
-        _write_text(out_dir / f"stage4_codegen_continue_{idx}.txt", chunk)
+    _write_text(out_dir / "stage4_codegen_raw.txt", final_code)
 
-    code = _normalize_manim_ce_api(_extract_python_code(merged))
-
-    classes = detect_scene_classes(code)
-    class_name = "MainScene"
+    classes = detect_scene_classes(final_code)
+    class_name = str(interface_contract.get("preferred_class_name") or "MainScene")
     if classes and class_name not in classes:
         # 兜底：如果模型没按约定输出 MainScene，则用第一个 Scene 子类名渲染
         class_name = classes[0]
     if not classes:
         class_name = "MainScene"
 
-    return class_name, code + "\n"
+    return class_name, final_code + ("\n" if not final_code.endswith("\n") else "")
 
 
 def stage_fix_code(
@@ -660,6 +1621,7 @@ def main() -> int:
     run_dir = Path(args.run_dir) if args.run_dir else (inferred or (RUNS_DIR / f"{run_id}_{slug}"))
     run_dir.mkdir(parents=True, exist_ok=True)
     layout = RunLayout.from_run_dir(run_dir)
+    reset_case_outputs(layout, from_stage=1)
 
     print(f"[MVP] 运行目录: {run_dir}")
     _write_text(layout.requirement_txt, requirement + "\n")
@@ -683,7 +1645,6 @@ def main() -> int:
     )
     print(f"[MVP] 已输出: {layout.stage3_json}")
     print("[MVP] Stage 4/4: 单文件代码生成（scene.py） ...")
-    _write_text(layout.llm4_system_prompt, client.load_stage_system_prompt("codegen").strip() + "\n")
     class_name, code = stage_codegen_video(
         client,
         analyst=analyst,
@@ -698,14 +1659,23 @@ def main() -> int:
     _write_text(layout.exported_scene_py, code)
     _write_text(
         layout.stage4_meta,
-        json.dumps({"class_name": class_name}, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(
+            {
+                "class_name": class_name,
+                "codegen_mode": "split_llm4",
+                "sub_stages": ["framework", "scene", "motion", "assemble"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
     )
     print(f"[MVP] 已生成: {py_file}（class_name={class_name}）")
 
     if args.no_render:
         return 0
 
-    print("[MVP] 开始执行：渲染失败驱动修复循环（LLM4 -> manim -> LLM5 -> 重试）")
+    print("[MVP] 开始执行：渲染失败驱动修复循环（LLM4A-D -> scene.py -> manim -> LLM5 -> 重试）")
     class_name, ok, mp4_path, last_err, _last_attempt = stage_render_fix_loop(
         client,
         class_name=class_name,
