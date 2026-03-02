@@ -10,7 +10,7 @@ if __package__ in {None, ""}:
         sys.path.insert(0, str(MVP_ROOT))
 
 from pipeline.cli_utils import load_json, read_requirement, write_text  # noqa: E402
-from pipeline.run_mvp import build_client, stage_scene_plan  # noqa: E402
+from pipeline.run_mvp import build_client, reset_case_outputs, stage_scene_plan  # noqa: E402
 from pipeline.run_layout import RunLayout  # noqa: E402
 
 
@@ -30,6 +30,7 @@ def main() -> int:
     if not run_dir.exists():
         raise SystemExit(f"--run-dir 不存在: {run_dir}")
     layout = RunLayout.from_run_dir(run_dir)
+    reset_case_outputs(layout, from_stage=2)
 
     requirement = read_requirement(
         requirement=args.requirement,

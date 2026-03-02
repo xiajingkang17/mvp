@@ -100,9 +100,20 @@ class RunLayout:
     def stage3_json(self) -> Path:
         return self.llm3_dir / "stage3_scene_designs.json"
 
+    @property
+    def stage3_raw_batch(self) -> Path:
+        return self.llm3_dir / "stage3_scene_designs_raw.txt"
+
     def stage3_raw_scene(self, scene_id: str) -> Path:
         sid = scene_id.strip() or "scene_unknown"
         return self.llm3_dir / f"stage3_{sid}_raw.txt"
+
+    def stage3_scene_dir(self, scene_id: str) -> Path:
+        sid = scene_id.strip() or "scene_unknown"
+        return self.llm3_dir / "scenes" / sid
+
+    def stage3_scene_json(self, scene_id: str) -> Path:
+        return self.stage3_scene_dir(scene_id) / "design.json"
 
     # -------- llm4 --------
     @property
@@ -140,4 +151,3 @@ class RunLayout:
     @property
     def render_final_mp4(self) -> Path:
         return self.render_dir / "final.mp4"
-

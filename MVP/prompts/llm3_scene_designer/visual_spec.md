@@ -33,5 +33,5 @@
 
 - 颜色：优先使用 Manim 颜色常量（例如 BLUE/RED/GREEN/YELLOW/ORANGE/WHITE），避免过多颜色导致噪音。
 - 位置：尽量用 Manim 常见方位词描述（LEFT/RIGHT/UP/DOWN/ORIGIN）或“相对关系”（next_to/to_edge/shift）。
-- 一致性：若输入 scene 中包含 `carry_over`，请尽量复用这些关键对象（同一个元素名称/含义保持一致），不要每幕换一套命名与配色。
+- 一致性：若前后 scene 摘要里出现同一关键主线，请尽量复用这些关键对象（同一个元素名称/含义保持一致），不要每幕换一套命名与配色。
 - 镜头：默认 `camera_movement="none"`；除非明确需要 3D，否则不要引入 ThreeDScene 相关设定。
