@@ -1,9 +1,0 @@
-{
-  "base": "stages/llm_codegen_py/base_system.md",
-  "always": [
-    "fragments/llm_codegen_py/output_contract.md",
-    "fragments/llm_codegen_py/runtime_rules.md",
-    "fragments/llm_codegen_py/security_rules.md"
-  ],
-  "conditional": []
-}

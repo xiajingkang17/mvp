@@ -1,9 +1,0 @@
-{
-  "base": "stages/llm_codegen_manifest/base_system.md",
-  "always": [
-    "fragments/llm_codegen_manifest/output_contract.md",
-    "fragments/llm_codegen_manifest/planning_rules.md",
-    "fragments/llm_codegen_manifest/output_style.md"
-  ],
-  "conditional": []
-}
