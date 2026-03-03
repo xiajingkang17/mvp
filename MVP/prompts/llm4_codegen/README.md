@@ -4,11 +4,8 @@ This directory no longer defines a standalone `LLM4 codegen` stage.
 
 It is kept only as shared reference material for:
 
-- `LLM4A framework_codegen`
 - `LLM4B scene_codegen`
 - `LLM4C motion_codegen`
-- `LLM4D assemble_codegen`
-
 The reusable files here are:
 
 - `layout_contract.md`

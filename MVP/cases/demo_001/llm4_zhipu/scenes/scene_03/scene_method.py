@@ -1,0 +1,141 @@
+def scene_scene_03(self):
+    reset_scene(self, self.objects)
+
+    zone_main = (0.05, 0.6, 0.2, 0.9)
+    zone_formula = (0.65, 0.95, 0.2, 0.9)
+    zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+    def step_01():
+        # Diagram A (Block)
+        block_A = Rectangle(width=1.2, height=0.8, color=BLUE, stroke_width=4)
+        block_A.shift(LEFT * 1.5)
+        label_A = Text("A", font_size=24, color=BLUE).move_to(block_A)
+        
+        # Force f_req on A (Right)
+        f_req_arrow = Arrow(start=block_A.get_right(), end=block_A.get_right() + RIGHT * 1.2, buff=0, color=YELLOW, stroke_width=4)
+        f_req_label = Text("f_req", font_size=20, color=YELLOW).next_to(f_req_arrow, UP, buff=0.1)
+        
+        # Acceleration a (Right)
+        a_arrow_A = Arrow(start=block_A.get_bottom(), end=block_A.get_bottom() + RIGHT * 1.0, buff=0, color=WHITE, stroke_width=3)
+        a_label_A = Text("a", font_size=20, color=WHITE).next_to(a_arrow_A, DOWN, buff=0.1)
+
+        diagram_A = VGroup(block_A, label_A, f_req_arrow, f_req_label, a_arrow_A, a_label_A)
+        place_in_zone(diagram_A, zone_main, offset=(-0.2, 0.2))
+        register_obj(self, self.objects, "diagram_A", diagram_A)
+        self.add(diagram_A)
+
+        # Diagram B (Board)
+        block_B = Rectangle(width=2.0, height=0.4, color=GREEN, stroke_width=4)
+        block_B.shift(RIGHT * 1.5)
+        label_B = Text("B", font_size=24, color=GREEN).move_to(block_B)
+        
+        # Force F on B (Right)
+        F_arrow = Arrow(start=block_B.get_right(), end=block_B.get_right() + RIGHT * 1.5, buff=0, color=RED, stroke_width=4)
+        F_label = Text("F", font_size=20, color=RED).next_to(F_arrow, UP, buff=0.1)
+        
+        # Force f_req' on B (Left)
+        f_req_prime_arrow = Arrow(start=block_B.get_left(), end=block_B.get_left() + LEFT * 1.2, buff=0, color=YELLOW, stroke_width=4)
+        f_req_prime_label = Text("f_req'", font_size=20, color=YELLOW).next_to(f_req_prime_arrow, UP, buff=0.1)
+
+        # Acceleration a (Right)
+        a_arrow_B = Arrow(start=block_B.get_bottom(), end=block_B.get_bottom() + RIGHT * 1.0, buff=0, color=WHITE, stroke_width=3)
+        a_label_B = Text("a", font_size=20, color=WHITE).next_to(a_arrow_B, DOWN, buff=0.1)
+
+        diagram_B = VGroup(block_B, label_B, F_arrow, F_label, f_req_prime_arrow, f_req_prime_label, a_arrow_B, a_label_B)
+        place_in_zone(diagram_B, zone_main, offset=(0.2, -0.2))
+        register_obj(self, self.objects, "diagram_B", diagram_B)
+        self.add(diagram_B)
+
+        # Derivation Text
+        line1 = Text("假设整体加速：", font_size=24, color=WHITE)
+        line2 = MathTex("a = \\frac{F}{M+m} = \\frac{20}{4} = 5 \\, m/s^2", font_size=24, color=WHITE)
+        line3 = Text("所需静摩擦力：", font_size=24, color=WHITE)
+        line4 = MathTex("f_{req} = ma = 1 \\times 5 = 5 \\, N", font_size=24, color=WHITE)
+        
+        derivation_text = VGroup(line1, line2, line3, line4).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+        place_in_zone(derivation_text, zone_formula, offset=(0.0, 0.3))
+        register_obj(self, self.objects, "derivation_text", derivation_text)
+        self.add(derivation_text)
+
+    run_step(
+        self,
+        self.objects,
+        "先假设A和B相对静止，计算整体加速度和A所需的静摩擦力。",
+        zone_subtitle,
+        ["diagram_A", "diagram_B", "derivation_text"],
+        step_01,
+    )
+
+    def step_02():
+        # Update Diagram A: Change f_req to f_k
+        old_diagram_A = self.objects["diagram_A"]
+        self.remove(old_diagram_A)
+        
+        block_A = Rectangle(width=1.2, height=0.8, color=BLUE, stroke_width=4)
+        block_A.shift(LEFT * 1.5)
+        label_A = Text("A", font_size=24, color=BLUE).move_to(block_A)
+        
+        # Force f_k on A (Right)
+        f_k_arrow = Arrow(start=block_A.get_right(), end=block_A.get_right() + RIGHT * 1.2, buff=0, color=YELLOW, stroke_width=4)
+        f_k_label = Text("f_k", font_size=20, color=YELLOW).next_to(f_k_arrow, UP, buff=0.1)
+        
+        # Acceleration a_A (Right)
+        a_A_arrow = Arrow(start=block_A.get_bottom(), end=block_A.get_bottom() + RIGHT * 1.0, buff=0, color=WHITE, stroke_width=3)
+        a_A_label = Text("a_A", font_size=20, color=WHITE).next_to(a_A_arrow, DOWN, buff=0.1)
+
+        diagram_A = VGroup(block_A, label_A, f_k_arrow, f_k_label, a_A_arrow, a_A_label)
+        place_in_zone(diagram_A, zone_main, offset=(-0.2, 0.2))
+        register_obj(self, self.objects, "diagram_A", diagram_A)
+        self.add(diagram_A)
+
+        # Update Diagram B: Change f_req' to f_k'
+        old_diagram_B = self.objects["diagram_B"]
+        self.remove(old_diagram_B)
+        
+        block_B = Rectangle(width=2.0, height=0.4, color=GREEN, stroke_width=4)
+        block_B.shift(RIGHT * 1.5)
+        label_B = Text("B", font_size=24, color=GREEN).move_to(block_B)
+        
+        # Force F on B (Right)
+        F_arrow = Arrow(start=block_B.get_right(), end=block_B.get_right() + RIGHT * 1.5, buff=0, color=RED, stroke_width=4)
+        F_label = Text("F", font_size=20, color=RED).next_to(F_arrow, UP, buff=0.1)
+        
+        # Force f_k' on B (Left)
+        f_k_prime_arrow = Arrow(start=block_B.get_left(), end=block_B.get_left() + LEFT * 1.2, buff=0, color=YELLOW, stroke_width=4)
+        f_k_prime_label = Text("f_k'", font_size=20, color=YELLOW).next_to(f_k_prime_arrow, UP, buff=0.1)
+
+        # Acceleration a_B (Right)
+        a_B_arrow = Arrow(start=block_B.get_bottom(), end=block_B.get_bottom() + RIGHT * 1.0, buff=0, color=WHITE, stroke_width=3)
+        a_B_label = Text("a_B", font_size=20, color=WHITE).next_to(a_B_arrow, DOWN, buff=0.1)
+
+        diagram_B = VGroup(block_B, label_B, F_arrow, F_label, f_k_prime_arrow, f_k_prime_label, a_B_arrow, a_B_label)
+        place_in_zone(diagram_B, zone_main, offset=(0.2, -0.2))
+        register_obj(self, self.objects, "diagram_B", diagram_B)
+        self.add(diagram_B)
+
+        # Update Derivation Text
+        old_derivation = self.objects["derivation_text"]
+        self.remove(old_derivation)
+
+        line1 = Text("最大静摩擦力：", font_size=24, color=WHITE)
+        line2 = MathTex("f_{max} = \\mu_s mg = 0.4 \\times 1 \\times 10 = 4 \\, N", font_size=24, color=WHITE)
+        line3 = Text("因为 f_req > f_max，发生相对滑动。", font_size=24, color=YELLOW)
+        line4 = Text("滑动时受力分析：", font_size=24, color=WHITE)
+        line5 = MathTex("A: f_k = \\mu_k mg \\quad (向右)", font_size=24, color=BLUE)
+        line6 = MathTex("B: F \\quad (向右), \\quad f_k' \\quad (向左)", font_size=24, color=GREEN)
+        
+        derivation_text = VGroup(line1, line2, line3, line4, line5, line6).arrange(DOWN, aligned_edge=LEFT, buff=0.2)
+        place_in_zone(derivation_text, zone_formula, offset=(0.0, 0.2))
+        register_obj(self, self.objects, "derivation_text", derivation_text)
+        self.add(derivation_text)
+
+    run_step(
+        self,
+        self.objects,
+        "比较发现所需静摩擦力大于最大静摩擦力，所以假设不成立，物块会滑动。此时A受到向右的滑动摩擦力，B受到向右的拉力和向左的滑动摩擦力。",
+        zone_subtitle,
+        ["diagram_A", "diagram_B", "derivation_text"],
+        step_02,
+    )
+
+    cleanup_scene(self, self.objects, [])

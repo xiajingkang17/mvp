@@ -1,0 +1,39 @@
+```python
+def motion_scene_06(self, step_id):
+    if step_id == "step_01":
+        panel = self.objects.get("derive_panel_q2")
+        if panel is None:
+            return []
+        
+        # Step 1: Show relative acceleration and time derivation
+        # Text: "1. 计算相对加速度：\na_rel = a_B - a_A = 17/3 - 3 = 8/3 m/s²"
+        # Text: "2. 计算时间 t：\nl = 1/2 * a_rel * t²\n0.4 = 1/2 * (8/3) * t²\nt² = 0.3\nt = √0.3 ≈ 0.55 s"
+        
+        # Assuming panel is a VGroup or similar container that supports Write
+        # We animate the writing of the first two blocks of text
+        return [
+            Write(panel, run_time=2.0)
+        ]
+    
+    if step_id == "step_02":
+        panel = self.objects.get("derive_panel_q2")
+        if panel is None:
+            return []
+        
+        # Step 2: Show velocity calculation
+        # Text: "3. 计算速度：\nv_A = a_A * t = 3 * √0.3 ≈ 1.65 m/s\nv_B = a_B * t = (17/3) * √0.3 ≈ 3.11 m/s"
+        
+        # Assuming the panel object has been updated in scene method to include the new text
+        # or we are appending to it. Here we assume the scene method handles the structure
+        # and we just animate the appearance of the new content.
+        # Since the object_ops says "update", we might be replacing or adding to the mobject.
+        # If the scene method replaced the object in self.objects, we fetch it again.
+        # If the scene method added submobjects, we animate the new ones.
+        # Given the constraints, we assume the scene method prepared the object and we just animate it.
+        
+        return [
+            Write(panel, run_time=2.0)
+        ]
+    
+    return []
+```

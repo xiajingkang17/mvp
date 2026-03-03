@@ -1,0 +1,199 @@
+{
+  "preferred_class_name": "MainScene",
+  "runtime_contract": {
+    "objects_registry_attr": "objects",
+    "scene_state_attr": "scene_state",
+    "motion_cache_attr": "motion_cache",
+    "subtitle_object_id": "current_subtitle",
+    "allowed_top_level_helpers": [
+      "reset_scene",
+      "prepare_scene_entry",
+      "fit_in_zone",
+      "place_in_zone",
+      "layout_formula_group",
+      "register_obj",
+      "remove_registered_obj",
+      "cleanup_step",
+      "cleanup_scene",
+      "show_subtitle",
+      "run_step"
+    ],
+    "scene_method_signature": "def <scene_method_name>(self):",
+    "motion_method_signature": "def <motion_method_name>(self, step_id):",
+    "shared_state_access": {
+      "objects": "self.objects",
+      "scene_state": "self.scene_state",
+      "motion_cache": "self.motion_cache"
+    }
+  },
+  "construct_order": [
+    "scene_scene_01",
+    "scene_scene_02",
+    "scene_scene_03",
+    "scene_scene_04",
+    "scene_scene_05",
+    "scene_scene_06",
+    "scene_scene_07",
+    "scene_scene_08",
+    "scene_scene_09",
+    "scene_scene_10"
+  ],
+  "scenes": [
+    {
+      "scene_index": 1,
+      "scene_id": "scene_01",
+      "title": "",
+      "scene_method_name": "scene_scene_01",
+      "motion_method_name": "motion_scene_01",
+      "step_ids": [
+        "step_01",
+        "step_02"
+      ],
+      "object_ids": [
+        "problem_text",
+        "preview_diagram",
+        "block_A",
+        "board_B"
+      ],
+      "has_motion_contract": true
+    },
+    {
+      "scene_index": 2,
+      "scene_id": "scene_02",
+      "title": "",
+      "scene_method_name": "scene_scene_02",
+      "motion_method_name": "motion_scene_02",
+      "step_ids": [
+        "step_01",
+        "step_02"
+      ],
+      "object_ids": [
+        "problem_text",
+        "goal_panel"
+      ],
+      "has_motion_contract": true
+    },
+    {
+      "scene_index": 3,
+      "scene_id": "scene_03",
+      "title": "",
+      "scene_method_name": "scene_scene_03",
+      "motion_method_name": "motion_scene_03",
+      "step_ids": [
+        "step_01",
+        "step_02"
+      ],
+      "object_ids": [
+        "diagram_A",
+        "diagram_B",
+        "derivation_text"
+      ],
+      "has_motion_contract": true
+    },
+    {
+      "scene_index": 4,
+      "scene_id": "scene_04",
+      "title": "",
+      "scene_method_name": "scene_scene_04",
+      "motion_method_name": "motion_scene_04",
+      "step_ids": [
+        "step_01",
+        "step_02"
+      ],
+      "object_ids": [
+        "calc_panel"
+      ],
+      "has_motion_contract": true
+    },
+    {
+      "scene_index": 5,
+      "scene_id": "scene_05",
+      "title": "",
+      "scene_method_name": "scene_scene_05",
+      "motion_method_name": "motion_scene_05",
+      "step_ids": [
+        "step_01",
+        "step_02"
+      ],
+      "object_ids": [
+        "diagram_rel",
+        "goal_panel_q2"
+      ],
+      "has_motion_contract": true
+    },
+    {
+      "scene_index": 6,
+      "scene_id": "scene_06",
+      "title": "",
+      "scene_method_name": "scene_scene_06",
+      "motion_method_name": "motion_scene_06",
+      "step_ids": [
+        "step_01",
+        "step_02"
+      ],
+      "object_ids": [
+        "derive_panel_q2"
+      ],
+      "has_motion_contract": true
+    },
+    {
+      "scene_index": 7,
+      "scene_id": "scene_07",
+      "title": "",
+      "scene_method_name": "scene_scene_07",
+      "motion_method_name": "motion_scene_07",
+      "step_ids": [
+        "step_01"
+      ],
+      "object_ids": [
+        "goal_panel_q3"
+      ],
+      "has_motion_contract": true
+    },
+    {
+      "scene_index": 8,
+      "scene_id": "scene_08",
+      "title": "",
+      "scene_method_name": "scene_scene_08",
+      "motion_method_name": "motion_scene_08",
+      "step_ids": [
+        "step_01",
+        "step_02"
+      ],
+      "object_ids": [
+        "calc_panel_q3"
+      ],
+      "has_motion_contract": true
+    },
+    {
+      "scene_index": 9,
+      "scene_id": "scene_09",
+      "title": "",
+      "scene_method_name": "scene_scene_09",
+      "motion_method_name": "motion_scene_09",
+      "step_ids": [
+        "step_01",
+        "step_02"
+      ],
+      "object_ids": [
+        "check_panel",
+        "summary_panel"
+      ],
+      "has_motion_contract": true
+    },
+    {
+      "scene_index": 10,
+      "scene_id": "scene_10",
+      "title": "",
+      "scene_method_name": "scene_scene_10",
+      "motion_method_name": "motion_scene_10",
+      "step_ids": [
+        "step_01"
+      ],
+      "object_ids": [
+        "transfer_panel"
+      ],
+      "has_motion_contract": true
+    }
+  ]
+}

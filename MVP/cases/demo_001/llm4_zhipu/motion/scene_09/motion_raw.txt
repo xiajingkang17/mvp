@@ -1,0 +1,16 @@
+```python
+def motion_scene_09(self, step_id):
+    if step_id == "step_01":
+        check_panel = self.objects.get("check_panel")
+        if check_panel is None:
+            return []
+        return [FadeIn(check_panel)]
+    
+    if step_id == "step_02":
+        summary_panel = self.objects.get("summary_panel")
+        if summary_panel is None:
+            return []
+        return [FadeIn(summary_panel)]
+    
+    return []
+```

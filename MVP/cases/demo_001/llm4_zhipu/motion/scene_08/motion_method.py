@@ -1,0 +1,14 @@
+def motion_scene_08(self, step_id):
+    if step_id == "step_01":
+        calc_panel = self.objects.get("calc_panel_q3")
+        if calc_panel is None:
+            return []
+        return [Write(calc_panel, run_time=2.0)]
+    
+    if step_id == "step_02":
+        calc_panel = self.objects.get("calc_panel_q3")
+        if calc_panel is None:
+            return []
+        return [Write(calc_panel, run_time=2.0)]
+    
+    return []

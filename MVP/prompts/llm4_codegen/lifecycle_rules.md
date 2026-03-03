@@ -17,14 +17,15 @@
 3. 所有在 step 中创建并需要后续引用的对象，都必须先 `register_obj(...)`。
 4. 同 id 重注册时，`register_obj(...)` 必须先退休旧对象。
 5. 对每个 step，严格按 `create/update/remove/keep` 执行。
-6. step 结束时，必须清理不在 keep 集合中的对象。
+6. step 结束时，必须清理不在 keep 集合中的对象；清理由 `cleanup_step(...)` 统一执行，不要在 scene 方法里手写循环逐个 `FadeOut` / `remove`。
 7. `steps[*].end_state_objects` 必须与 `object_ops.keep` 一致；如有冲突，以 `end_state_objects` 为准理解。
 8. 不允许跳过 `cleanup_step(...)`。
-9. scene 结束时，必须执行 `cleanup_scene(...)`，并且 keep 集合必须精确等于 `[]`。
+9. scene 结束时，必须执行 `cleanup_scene(...)`，并且 keep 集合必须精确等于 `[]`；scene 边界清理统一依赖 helper 内部的批量并行清除。
 
 ## 禁止项
 
 - 禁止把 `layout_contract.step_visibility` 当作 show/hide/remove 指令。
 - 禁止把所有对象挂到 scene 结束再一次性清空。
+- 禁止在 scene 方法里手写 for 循环逐个 `FadeOut`、`Uncreate` 或 `remove` 已注册对象。
 - 禁止忽略 `remove` 指令。
 - 禁止让任何旧 object 悄悄残留到下一幕。

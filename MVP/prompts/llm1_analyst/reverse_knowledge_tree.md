@@ -29,7 +29,6 @@ class KnowledgeNode:
     # 由内容增强模块补充
     equations: Optional[List[str]]        # LaTeX 公式
     definitions: Optional[Dict[str, str]] # 变量定义
-    visual_spec: Optional[Dict]           # 动画规格
     narrative: Optional[str]              # 场景描述文本
 ```
 

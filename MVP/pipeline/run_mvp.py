@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import ast
 import argparse
 import json
 import re
 import shutil
 import sys
+import textwrap
 import time
 import unicodedata
 from pathlib import Path
@@ -23,6 +25,7 @@ if __package__ in {None, ""}:
     from pipeline.codegen_contract import build_codegen_interface_contract  # noqa: E402
     from pipeline.config import ERROR_DIR, PROMPTS_DIR, RUNS_DIR  # noqa: E402
     from pipeline.llm_client import LLMClient, LLMStage  # noqa: E402
+    from pipeline.llm.types import ProviderName  # noqa: E402
     from pipeline.run_layout import RunLayout  # noqa: E402
     from pipeline.static_checks import run_static_checks  # noqa: E402
     from pipeline.rendering import (  # noqa: E402
@@ -33,6 +36,7 @@ else:
     from .codegen_contract import build_codegen_interface_contract  # noqa: E402
     from .config import ERROR_DIR, PROMPTS_DIR, RUNS_DIR  # noqa: E402
     from .llm_client import LLMClient, LLMStage  # noqa: E402
+    from .llm.types import ProviderName  # noqa: E402
     from .run_layout import RunLayout  # noqa: E402
     from .static_checks import run_static_checks  # noqa: E402
     from .rendering import (  # noqa: E402
@@ -71,6 +75,96 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _split_analyst_payload(data: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    payload = dict(data or {})
+    problem_solving = payload.get("problem_solving")
+    if not isinstance(problem_solving, dict):
+        problem_solving = {}
+
+    drawing_brief = payload.get("particle_motion_brief")
+    if not isinstance(drawing_brief, dict):
+        drawing_brief = {}
+
+    analysis = {
+        key: value
+        for key, value in payload.items()
+        if key not in {"problem_solving", "particle_motion_brief"}
+    }
+    return analysis, problem_solving, drawing_brief
+
+
+def assemble_analyst_payload(
+    *,
+    analysis: dict[str, Any] | None,
+    problem_solving: dict[str, Any] | None,
+    drawing_brief: dict[str, Any] | None,
+) -> dict[str, Any]:
+    payload = dict(analysis or {})
+    payload["problem_solving"] = dict(problem_solving or {})
+    payload["particle_motion_brief"] = dict(drawing_brief or {})
+    return payload
+
+
+def load_stage1_analysis(*, layout: RunLayout, path: Path | None = None) -> dict[str, Any]:
+    if path is not None:
+        return _load_json(path)
+    if layout.stage1_analysis_json.exists():
+        return _load_json(layout.stage1_analysis_json)
+    if layout.stage1_json.exists():
+        analysis, _problem_solving, _drawing_brief = _split_analyst_payload(_load_json(layout.stage1_json))
+        return analysis
+    raise FileNotFoundError(f"missing llm1 analysis output: {layout.stage1_analysis_json}")
+
+
+def load_stage1_problem_solving(*, layout: RunLayout) -> dict[str, Any]:
+    if layout.stage1_problem_solving_json.exists():
+        return _load_json(layout.stage1_problem_solving_json)
+    if layout.stage1_json.exists():
+        _analysis, problem_solving, _drawing_brief = _split_analyst_payload(_load_json(layout.stage1_json))
+        return problem_solving
+    raise FileNotFoundError(f"missing llm1 problem solving output: {layout.stage1_problem_solving_json}")
+
+
+def load_stage1_drawing_brief(*, layout: RunLayout) -> dict[str, Any]:
+    if layout.stage1_drawing_brief_json.exists():
+        return _load_json(layout.stage1_drawing_brief_json)
+    if layout.stage1_json.exists():
+        _analysis, _problem_solving, drawing_brief = _split_analyst_payload(_load_json(layout.stage1_json))
+        return drawing_brief
+    raise FileNotFoundError(f"missing llm1 drawing brief output: {layout.stage1_drawing_brief_json}")
+
+
+def load_analyst_bundle(
+    *,
+    layout: RunLayout,
+    analyst_json: Path | None = None,
+) -> dict[str, Any]:
+    if analyst_json is not None:
+        return _load_json(analyst_json)
+
+    analysis_path = layout.stage1_analysis_json
+    problem_solving_path = layout.stage1_problem_solving_json
+    drawing_brief_path = layout.stage1_drawing_brief_json
+
+    if analysis_path.exists() and problem_solving_path.exists():
+        analysis = _load_json(analysis_path)
+        problem_solving = _load_json(problem_solving_path)
+        drawing_brief = _load_json(drawing_brief_path) if drawing_brief_path.exists() else {}
+        return assemble_analyst_payload(
+            analysis=analysis,
+            problem_solving=problem_solving,
+            drawing_brief=drawing_brief,
+        )
+
+    legacy = layout.stage1_json
+    if legacy.exists():
+        return _load_json(legacy)
+
+    raise FileNotFoundError(
+        f"missing llm1 outputs: {analysis_path}, {problem_solving_path}"
+    )
+
+
 def _extract_python_code(text: str) -> str:
     code = text.strip()
     if "```" in code:
@@ -89,6 +183,237 @@ def _normalize_manim_ce_api(code: str) -> str:
     normalized = code
     normalized = re.sub(r"\bShowCreation\s*\(", "Create(", normalized)
     return normalized
+
+
+def _source_segment(text: str, node: ast.AST) -> str:
+    segment = ast.get_source_segment(text, node)
+    if segment is not None:
+        return segment
+
+    start = getattr(node, "lineno", None)
+    end = getattr(node, "end_lineno", None)
+    if start is None or end is None:
+        return ""
+    lines = text.splitlines()
+    return "\n".join(lines[start - 1 : end])
+
+
+def _strip_module_docstring(nodes: list[ast.stmt]) -> list[ast.stmt]:
+    if not nodes:
+        return nodes
+    first = nodes[0]
+    if isinstance(first, ast.Expr) and isinstance(getattr(first, "value", None), ast.Constant):
+        if isinstance(first.value.value, str):
+            return nodes[1:]
+    return nodes
+
+
+def _extract_framework_fragment_parts(code: str) -> tuple[str, str]:
+    module = ast.parse(code)
+    body = _strip_module_docstring(list(module.body))
+
+    imports: list[str] = []
+    helpers: list[str] = []
+    for node in body:
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            imports.append(_source_segment(code, node).strip())
+            continue
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            helpers.append(_source_segment(code, node).rstrip())
+            continue
+        raise ValueError(f"framework fragment 包含不允许的顶层节点: {type(node).__name__}")
+
+    if not helpers:
+        raise ValueError("framework fragment 为空，未生成任何 helper")
+
+    imports_code = "\n".join(part for part in imports if part).strip()
+    helpers_code = "\n\n".join(part for part in helpers if part).strip()
+    return imports_code, helpers_code
+
+
+def _make_motion_stub(method_name: str) -> str:
+    return (
+        f"def {method_name}(self, step_id):\n"
+        "    return []\n"
+    )
+
+
+def _extract_method_fragment(
+    code: str,
+    *,
+    expected_name: str,
+    fragment_label: str,
+    allow_stub: bool = False,
+) -> str:
+    cleaned = _extract_python_code(code).strip()
+    if not cleaned:
+        if allow_stub:
+            return _make_motion_stub(expected_name)
+        raise ValueError(f"{fragment_label} 为空")
+
+    try:
+        module = ast.parse(cleaned)
+    except SyntaxError:
+        if allow_stub and cleaned.strip("`\r\n\t ") == "":
+            return _make_motion_stub(expected_name)
+        raise
+
+    body = _strip_module_docstring(list(module.body))
+    funcs = [node for node in body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    if len(funcs) != 1:
+        if allow_stub and cleaned.strip("`\r\n\t ") == "":
+            return _make_motion_stub(expected_name)
+        raise ValueError(f"{fragment_label} 必须只包含一个顶层方法，当前为 {len(funcs)} 个")
+
+    for node in body:
+        if node is funcs[0]:
+            continue
+        if isinstance(node, ast.Pass):
+            continue
+        raise ValueError(f"{fragment_label} 包含额外顶层节点: {type(node).__name__}")
+
+    func = funcs[0]
+    if func.name != expected_name:
+        raise ValueError(f"{fragment_label} 方法名不匹配: 期望 {expected_name}，实际 {func.name}")
+    return _source_segment(cleaned, func).rstrip() + "\n"
+
+
+def _build_program_assembled_scene(
+    *,
+    class_name: str,
+    construct_order: list[str],
+    framework_code: str,
+    scene_methods: list[str],
+    motion_methods: list[str],
+) -> str:
+    imports_code, helper_code = _extract_framework_fragment_parts(framework_code)
+
+    construct_lines = [
+        "def construct(self):",
+        "    self.objects = {}",
+        "    self.scene_state = {}",
+        "    self.motion_cache = {}",
+    ]
+    construct_lines.extend(f"    self.{method_name}()" for method_name in construct_order if method_name.strip())
+    construct_block = "\n".join(construct_lines)
+
+    class_parts = [construct_block]
+    class_parts.extend(method.rstrip() for method in scene_methods if method.strip())
+    class_parts.extend(method.rstrip() for method in motion_methods if method.strip())
+    class_body = "\n\n".join(class_parts).rstrip()
+    class_code = f"class {class_name}(Scene):\n{textwrap.indent(class_body, '    ')}\n"
+
+    parts = []
+    if imports_code:
+        parts.append(imports_code)
+    if helper_code:
+        parts.append(helper_code)
+    parts.append(class_code.rstrip())
+    return "\n\n\n".join(part for part in parts if part.strip()) + "\n"
+
+
+def assemble_existing_llm4_fragments(*, out_dir: Path) -> tuple[str, str]:
+    contract_path = out_dir / "code_interface_contract.json"
+    if not contract_path.exists():
+        raise FileNotFoundError(f"missing interface contract: {contract_path}")
+
+    interface_contract = _load_json(contract_path)
+    class_name = str(interface_contract.get("preferred_class_name") or "MainScene").strip() or "MainScene"
+
+    framework_path = out_dir / "framework" / "framework_fragment.py"
+    if not framework_path.exists():
+        raise FileNotFoundError(f"missing framework fragment: {framework_path}")
+    framework_code = framework_path.read_text(encoding="utf-8")
+
+    scene_methods: list[str] = []
+    motion_methods: list[str] = []
+    manifest_scenes: list[dict[str, Any]] = []
+    manifest_motion: list[dict[str, Any]] = []
+
+    for entry in interface_contract.get("scenes") or []:
+        if not isinstance(entry, dict):
+            continue
+
+        scene_id = str(entry.get("scene_id") or "").strip()
+        scene_method_name = str(entry.get("scene_method_name") or "").strip()
+        motion_method_name = str(entry.get("motion_method_name") or "").strip()
+
+        scene_path = out_dir / "scenes" / scene_id / "scene_method.py"
+        if not scene_path.exists():
+            raise FileNotFoundError(f"missing scene fragment: {scene_path}")
+        scene_code = scene_path.read_text(encoding="utf-8")
+        scene_methods.append(
+            _extract_method_fragment(
+                scene_code,
+                expected_name=scene_method_name,
+                fragment_label=f"scene fragment {scene_id}",
+            )
+        )
+        manifest_scenes.append(
+            {"scene_id": scene_id, "scene_method_name": scene_method_name, "path": str(scene_path)}
+        )
+
+        motion_path = out_dir / "motion" / scene_id / "motion_method.py"
+        if not motion_path.exists():
+            raise FileNotFoundError(f"missing motion fragment: {motion_path}")
+        motion_code = motion_path.read_text(encoding="utf-8")
+        motion_methods.append(
+            _extract_method_fragment(
+                motion_code,
+                expected_name=motion_method_name,
+                fragment_label=f"motion fragment {scene_id}",
+                allow_stub=True,
+            )
+        )
+        manifest_motion.append(
+            {"scene_id": scene_id, "motion_method_name": motion_method_name, "path": str(motion_path)}
+        )
+
+    final_code = _build_program_assembled_scene(
+        class_name=class_name,
+        construct_order=[str(name).strip() for name in interface_contract.get("construct_order") or []],
+        framework_code=framework_code,
+        scene_methods=scene_methods,
+        motion_methods=motion_methods,
+    )
+
+    assemble_dir = out_dir / "assemble"
+    _write_text(
+        assemble_dir / "system_prompt.md",
+        (
+            "# Programmatic assemble\n"
+            "LLM4 final assembly is deterministic.\n"
+            "- imports + helpers: framework/framework_fragment.py\n"
+            "- class shell + construct order: code_interface_contract.json\n"
+            "- scene methods: scenes/<scene_id>/scene_method.py\n"
+            "- motion methods: motion/<scene_id>/motion_method.py\n"
+        ),
+    )
+    _write_text(assemble_dir / "assemble_raw.txt", "Programmatic assemble; no LLM output.\n")
+    _write_text(
+        assemble_dir / "assemble_manifest.json",
+        json.dumps(
+            {
+                "class_name": class_name,
+                "construct_order": interface_contract.get("construct_order") or [],
+                "scene_fragments": manifest_scenes,
+                "motion_fragments": manifest_motion,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+    )
+    _write_text(assemble_dir / "scene.py", final_code)
+    _write_text(out_dir / "stage4_codegen_raw.txt", final_code)
+
+    classes = detect_scene_classes(final_code)
+    if classes and class_name not in classes:
+        class_name = classes[0]
+    if not classes:
+        class_name = "MainScene"
+
+    return class_name, final_code + ("\n" if not final_code.endswith("\n") else "")
 
 
 def _safe_name(text: str) -> str:
@@ -559,7 +884,7 @@ def validate_scene_layout_contract(
 def build_scene_design_user_prompt(
     *,
     requirement: str,
-    analyst: dict[str, Any],
+    drawing_brief: dict[str, Any],
     scene: dict[str, Any],
     prev_scene: dict[str, Any] | None = None,
     next_scene: dict[str, Any] | None = None,
@@ -568,8 +893,8 @@ def build_scene_design_user_prompt(
     return (
         "[用户需求]\n"
         f"{requirement.strip()}\n\n"
-        "[全局分析 JSON]\n"
-        f"{json.dumps(analyst, ensure_ascii=False, indent=2)}\n\n"
+        "[画图提示 JSON]\n"
+        f"{json.dumps(drawing_brief, ensure_ascii=False, indent=2)}\n\n"
         "[上一 Scene 摘要]\n"
         f"{json.dumps(_scene_brief(prev_scene or {}), ensure_ascii=False, indent=2)}\n\n"
         "[当前 Scene]\n"
@@ -582,7 +907,7 @@ def build_scene_design_user_prompt(
 def build_scene_designs_batch_user_prompt(
     *,
     requirement: str,
-    analyst: dict[str, Any],
+    drawing_brief: dict[str, Any],
     plan: dict[str, Any],
 ) -> str:
     scenes = plan.get("scenes") or []
@@ -600,8 +925,8 @@ def build_scene_designs_batch_user_prompt(
     return (
         "[用户需求]\n"
         f"{requirement.strip()}\n\n"
-        "[全局分析 JSON]\n"
-        f"{json.dumps(analyst, ensure_ascii=False, indent=2)}\n\n"
+        "[画图提示 JSON]\n"
+        f"{json.dumps(drawing_brief, ensure_ascii=False, indent=2)}\n\n"
         "[整片 Scene 规划]\n"
         f"{json.dumps(scene_payload, ensure_ascii=False, indent=2)}\n"
     )
@@ -629,7 +954,6 @@ def _normalize_scene_design_payload(
                     "id": obj_id,
                     "kind": str(item.get("kind") or "").strip(),
                     "role": str(item.get("role") or item.get("visual_role") or "").strip(),
-                    "lifecycle_role": str(item.get("lifecycle_role") or "").strip(),
                     "description": str(item.get("description") or "").strip(),
                 }
             )
@@ -773,41 +1097,49 @@ def reset_case_outputs(layout: RunLayout, *, from_stage: int) -> None:
     _remove_path(layout.run_dir / "FAILED.txt")
 
 
-def build_client() -> LLMClient:
+def build_client(*, llm4_provider: ProviderName = "anthropic") -> LLMClient:
     # 复用 MVP/configs/llm.yaml 里的 stage 采样 profile
+    llm4_profile_stage = {
+        "codegen_scene": "codegen_scene",
+        "codegen_motion": "codegen_motion",
+    }
     stage_map = {
-        "analyst": LLMStage(name="analyst", zhipu_stage="analyst", prompt_bundle="llm1_analyst"),
+        "analyst": LLMStage(
+            name="analyst",
+            provider="zhipu",
+            profile_stage="analyst",
+            prompt_bundle="llm1_analyst",
+        ),
         "scene_planner": LLMStage(
             name="scene_planner",
-            zhipu_stage="scene_planner",
+            provider="zhipu",
+            profile_stage="scene_planner",
             prompt_bundle="llm2_scene_planner",
         ),
         "scene_designer": LLMStage(
             name="scene_designer",
-            zhipu_stage="scene_designer",
+            provider="zhipu",
+            profile_stage="scene_designer",
             prompt_bundle="llm3_scene_designer",
-        ),
-        "codegen_framework": LLMStage(
-            name="codegen_framework",
-            zhipu_stage="codegen",
-            prompt_bundle="llm4a_framework_codegen",
         ),
         "codegen_scene": LLMStage(
             name="codegen_scene",
-            zhipu_stage="codegen",
+            provider=llm4_provider,
+            profile_stage=llm4_profile_stage["codegen_scene"],
             prompt_bundle="llm4b_scene_codegen",
         ),
         "codegen_motion": LLMStage(
             name="codegen_motion",
-            zhipu_stage="codegen",
+            provider=llm4_provider,
+            profile_stage=llm4_profile_stage["codegen_motion"],
             prompt_bundle="llm4c_motion_codegen",
         ),
-        "codegen_assemble": LLMStage(
-            name="codegen_assemble",
-            zhipu_stage="codegen",
-            prompt_bundle="llm4d_assemble_codegen",
+        "fixer": LLMStage(
+            name="fixer",
+            provider="zhipu",
+            profile_stage="fixer",
+            prompt_bundle="llm5_fixer",
         ),
-        "fixer": LLMStage(name="fixer", zhipu_stage="fixer", prompt_bundle="llm5_fixer"),
     }
     return LLMClient(prompts_dir=PROMPTS_DIR, stage_map=stage_map)
 
@@ -817,25 +1149,39 @@ def stage_analyst(client: LLMClient, *, requirement: str, out_dir: Path) -> dict
     user = requirement.strip()
     data, raw = client.generate_json(stage_key="analyst", system_prompt=system, user_prompt=user)
     _write_text(out_dir / "stage1_analyst_raw.txt", raw)
-    client.save_json(out_dir / "stage1_analyst.json", data)
-    return data
+    analysis, problem_solving, drawing_brief = _split_analyst_payload(data)
+    client.save_json(out_dir / "stage1_analysis.json", analysis)
+    client.save_json(out_dir / "stage1_problem_solving.json", problem_solving)
+    client.save_json(out_dir / "stage1_drawing_brief.json", drawing_brief)
+    return assemble_analyst_payload(
+        analysis=analysis,
+        problem_solving=problem_solving,
+        drawing_brief=drawing_brief,
+    )
 
 
 def stage_scene_plan(
-    client: LLMClient, *, requirement: str, analyst: dict[str, Any], out_dir: Path
+    client: LLMClient,
+    *,
+    requirement: str,
+    analysis: dict[str, Any],
+    problem_solving: dict[str, Any],
+    out_dir: Path,
 ) -> dict[str, Any]:
     system = client.load_stage_system_prompt("scene_planner")
     user = (
         "【用户需求】\n"
         f"{requirement.strip()}\n\n"
         "【分析与前置探索 JSON】\n"
-        f"{json.dumps(analyst, ensure_ascii=False, indent=2)}\n"
+        f"{json.dumps(analysis, ensure_ascii=False, indent=2)}\n\n"
+        "【完整解题 JSON】\n"
+        f"{json.dumps(problem_solving, ensure_ascii=False, indent=2)}\n"
     )
     data, raw = client.generate_json(stage_key="scene_planner", system_prompt=system, user_prompt=user)
     _write_text(out_dir / "stage2_scene_plan_raw.txt", raw)
 
     # 轻量补全：保证 scenes 可用（避免后续因为字段缺失直接崩）
-    total_s = analyst.get("total_duration_s")
+    total_s = analysis.get("total_duration_s")
     try:
         total_s_num = float(total_s) if total_s is not None else 120.0
     except Exception:  # noqa: BLE001
@@ -966,7 +1312,7 @@ def generate_scene_design(
     client: LLMClient,
     *,
     requirement: str,
-    analyst: dict[str, Any],
+    drawing_brief: dict[str, Any],
     scene: dict[str, Any],
     prev_scene: dict[str, Any] | None = None,
     next_scene: dict[str, Any] | None = None,
@@ -981,23 +1327,11 @@ def generate_scene_design(
     system = client.load_stage_system_prompt("scene_designer")
     prompt_user = build_scene_design_user_prompt(
         requirement=requirement,
-        analyst=analyst,
+        drawing_brief=drawing_brief,
         scene=scene,
         prev_scene=prev_scene,
         next_scene=next_scene,
         plan=plan,
-    )
-    user = (
-        "【用户需求】\n"
-        f"{requirement.strip()}\n\n"
-        "【全局分析 JSON】\n"
-        f"{json.dumps(analyst, ensure_ascii=False, indent=2)}\n\n"
-        "【上一 Scene 摘要】\n"
-        f"{json.dumps(_scene_brief(prev_scene or {}), ensure_ascii=False, indent=2)}\n\n"
-        "【当前 Scene（来自 Scene Planner）】\n"
-        f"{json.dumps(scene, ensure_ascii=False, indent=2)}\n\n"
-        "【下一 Scene 摘要】\n"
-        f"{json.dumps(_scene_brief(next_scene or {}), ensure_ascii=False, indent=2)}\n"
     )
     data, raw = client.generate_json(stage_key="scene_designer", system_prompt=system, user_prompt=prompt_user)
 
@@ -1025,7 +1359,7 @@ def generate_scene_designs_batch(
     client: LLMClient,
     *,
     requirement: str,
-    analyst: dict[str, Any],
+    drawing_brief: dict[str, Any],
     plan: dict[str, Any],
 ) -> tuple[dict[str, Any], str]:
     """
@@ -1038,10 +1372,17 @@ def generate_scene_designs_batch(
     system = client.load_stage_system_prompt("scene_designer")
     prompt_user = build_scene_designs_batch_user_prompt(
         requirement=requirement,
-        analyst=analyst,
+        drawing_brief=drawing_brief,
         plan=plan,
     )
     data, raw = client.generate_json(stage_key="scene_designer", system_prompt=system, user_prompt=prompt_user)
+
+    if isinstance(data, dict) and not isinstance(data.get("scenes"), list):
+        if str(data.get("scene_id") or "").strip():
+            raise RuntimeError(
+                "LLM3 多 scene 模式返回了单个 scene 顶层 JSON；期望格式应为 "
+                '{"video_title": "...", "scenes": [...]}'
+            )
 
     planned_scenes = plan.get("scenes") or []
     if not isinstance(planned_scenes, list):
@@ -1109,7 +1450,7 @@ def stage_scene_designs(
     client: LLMClient,
     *,
     requirement: str,
-    analyst: dict[str, Any],
+    drawing_brief: dict[str, Any],
     plan: dict[str, Any],
     out_dir: Path,
     scene_id: str = "",
@@ -1135,7 +1476,7 @@ def stage_scene_designs(
         payload, raw = generate_scene_designs_batch(
             client,
             requirement=requirement,
-            analyst=analyst,
+            drawing_brief=drawing_brief,
             plan=plan,
         )
         _write_text(out_dir / "stage3_scene_designs_raw.txt", raw)
@@ -1174,7 +1515,7 @@ def stage_scene_designs(
     design, raw = generate_scene_design(
         client,
         requirement=requirement,
-        analyst=analyst,
+        drawing_brief=drawing_brief,
         scene=current_scene,
         prev_scene=prev_scene,
         next_scene=next_scene,
@@ -1211,7 +1552,8 @@ def stage_scene_designs(
 def stage_codegen_video(
     client: LLMClient,
     *,
-    analyst: dict[str, Any],
+    stage1_problem_solving: dict[str, Any],
+    stage1_drawing_brief: dict[str, Any],
     plan: dict[str, Any],
     scene_designs: dict[str, Any],
     out_dir: Path,
@@ -1276,28 +1618,23 @@ def stage_codegen_video(
         out_dir / "system_prompt.md",
         (
             "# Split LLM4 orchestration\n"
-            "- framework: llm4/framework/\n"
+            "- framework: llm4/framework/ (copied from prompts/llm4_codegen/execution_helpers.py)\n"
             "- scenes: llm4/scenes/<scene_id>/\n"
             "- motion: llm4/motion/<scene_id>/\n"
-            "- assemble: llm4/assemble/\n"
+            "- assemble: llm4/assemble/ (programmatic template assembly)\n"
             "- interface_contract: llm4/code_interface_contract.json\n"
         ),
     )
 
-    framework_code = _generate_fragment(
-        stage_key="codegen_framework",
-        payload={
-            "role": "framework_codegen",
-            "interface_contract": interface_contract,
-            "analyst": analyst,
-            "scene_plan": plan,
-        },
-        target_dir=out_dir / "framework",
-        raw_name="framework_raw.txt",
-        chunk_prefix="framework_continue",
-        fragment_name="framework_fragment.py",
-        max_continue_rounds=3,
+    framework_dir = out_dir / "framework"
+    framework_template = PROMPTS_DIR / "llm4_codegen" / "execution_helpers.py"
+    framework_code = _normalize_manim_ce_api(framework_template.read_text(encoding="utf-8")).strip() + "\n"
+    _write_text(
+        framework_dir / "system_prompt.md",
+        "# Programmatic framework\nCopied from prompts/llm4_codegen/execution_helpers.py.\n",
     )
+    _write_text(framework_dir / "framework_raw.txt", "Programmatic framework copy; no LLM output.\n")
+    _write_text(framework_dir / "framework_fragment.py", framework_code)
 
     scene_fragments: list[dict[str, Any]] = []
     motion_fragments: list[dict[str, Any]] = []
@@ -1320,6 +1657,8 @@ def stage_codegen_video(
             payload={
                 "role": "scene_codegen",
                 "interface_contract": interface_contract,
+                "stage1_problem_solving": stage1_problem_solving,
+                "stage1_drawing_brief": stage1_drawing_brief,
                 "scene_contract": scene_entry,
                 "scene_plan_scene": scene_plan,
                 "scene_design": scene_design,
@@ -1343,6 +1682,8 @@ def stage_codegen_video(
             payload={
                 "role": "motion_codegen",
                 "interface_contract": interface_contract,
+                "stage1_problem_solving": stage1_problem_solving,
+                "stage1_drawing_brief": stage1_drawing_brief,
                 "scene_contract": scene_entry,
                 "scene_plan_scene": scene_plan,
                 "scene_design": scene_design,
@@ -1361,32 +1702,7 @@ def stage_codegen_video(
             }
         )
 
-    final_code = _generate_fragment(
-        stage_key="codegen_assemble",
-        payload={
-            "role": "assemble_codegen",
-            "interface_contract": interface_contract,
-            "framework_code": framework_code,
-            "scene_fragments": scene_fragments,
-            "motion_fragments": motion_fragments,
-        },
-        target_dir=out_dir / "assemble",
-        raw_name="assemble_raw.txt",
-        chunk_prefix="assemble_continue",
-        fragment_name="scene.py",
-        max_continue_rounds=4,
-    )
-    _write_text(out_dir / "stage4_codegen_raw.txt", final_code)
-
-    classes = detect_scene_classes(final_code)
-    class_name = str(interface_contract.get("preferred_class_name") or "MainScene")
-    if classes and class_name not in classes:
-        # 兜底：如果模型没按约定输出 MainScene，则用第一个 Scene 子类名渲染
-        class_name = classes[0]
-    if not classes:
-        class_name = "MainScene"
-
-    return class_name, final_code + ("\n" if not final_code.endswith("\n") else "")
+    return assemble_existing_llm4_fragments(out_dir=out_dir)
 
 
 def stage_fix_code(
@@ -1631,15 +1947,22 @@ def main() -> int:
     print("[MVP] Stage 1/4: 分析 + 前置探索 ...")
     _write_text(layout.llm1_system_prompt, client.load_stage_system_prompt("analyst").strip() + "\n")
     analyst = stage_analyst(client, requirement=requirement, out_dir=layout.llm1_dir)
+    analysis, problem_solving, drawing_brief = _split_analyst_payload(analyst)
     print("[MVP] Stage 2/4: Scene 拆分规划 ...")
     _write_text(layout.llm2_system_prompt, client.load_stage_system_prompt("scene_planner").strip() + "\n")
-    plan = stage_scene_plan(client, requirement=requirement, analyst=analyst, out_dir=layout.llm2_dir)
+    plan = stage_scene_plan(
+        client,
+        requirement=requirement,
+        analysis=analysis,
+        problem_solving=problem_solving,
+        out_dir=layout.llm2_dir,
+    )
     print("[MVP] Stage 3/4: 逐 Scene 设计（分镜稿） ...")
     _write_text(layout.llm3_system_prompt, client.load_stage_system_prompt("scene_designer").strip() + "\n")
     scene_designs = stage_scene_designs(
         client,
         requirement=requirement,
-        analyst=analyst,
+        drawing_brief=drawing_brief,
         plan=plan,
         out_dir=layout.llm3_dir,
     )
@@ -1647,7 +1970,8 @@ def main() -> int:
     print("[MVP] Stage 4/4: 单文件代码生成（scene.py） ...")
     class_name, code = stage_codegen_video(
         client,
-        analyst=analyst,
+        stage1_problem_solving=problem_solving,
+        stage1_drawing_brief=drawing_brief,
         plan=plan,
         scene_designs=scene_designs,
         out_dir=layout.llm4_dir,

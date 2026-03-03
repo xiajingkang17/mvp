@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import ast
-from typing import Callable
+from typing import Any, Callable
 
 from .json_utils import strip_code_fences
 from .llm.types import ChatMessage
-from .llm.zhipu import ZhipuConfig, chat_completion
 
 
 _CONTINUATION_INSTRUCTION = (
@@ -90,7 +89,8 @@ def continue_code_output(
     system_prompt: str,
     user_payload: str,
     max_rounds: int = 3,
-    llm_cfg: ZhipuConfig | None = None,
+    chat_fn: Callable[[list[ChatMessage], Any], str],
+    llm_cfg: Any = None,
 ) -> tuple[str, list[str]]:
     merged = strip_code_fences(content).strip()
     chunks: list[str] = []
@@ -103,14 +103,14 @@ def continue_code_output(
         if not is_incomplete_python_error(parse_error):
             break
 
-        continuation = chat_completion(
+        continuation = chat_fn(
             [
                 ChatMessage(role="system", content=system_prompt),
                 ChatMessage(role="user", content=user_payload),
                 ChatMessage(role="assistant", content=merged),
                 ChatMessage(role="user", content=_CODE_CONTINUATION_INSTRUCTION),
             ],
-            cfg=llm_cfg,
+            llm_cfg,
         )
         if not continuation.strip():
             break
@@ -127,7 +127,8 @@ def continue_json_output(
     user_payload: str,
     parse_fn: Callable[[str], object],
     max_rounds: int = 2,
-    llm_cfg: ZhipuConfig | None = None,
+    chat_fn: Callable[[list[ChatMessage], Any], str],
+    llm_cfg: Any = None,
 ) -> tuple[str, list[str]]:
     merged = content
     chunks: list[str] = []
@@ -141,14 +142,14 @@ def continue_json_output(
             if not is_incomplete_json_error(e):
                 break
 
-        continuation = chat_completion(
+        continuation = chat_fn(
             [
                 ChatMessage(role="system", content=system_prompt),
                 ChatMessage(role="user", content=user_payload),
                 ChatMessage(role="assistant", content=merged),
                 ChatMessage(role="user", content=_CONTINUATION_INSTRUCTION),
             ],
-            cfg=llm_cfg,
+            llm_cfg,
         )
         if not continuation.strip():
             break

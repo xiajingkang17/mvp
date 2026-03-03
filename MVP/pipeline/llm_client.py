@@ -7,7 +7,9 @@ from typing import Any, Literal
 
 from .env import load_dotenv
 from .json_utils import load_json_from_llm
-from .llm.types import ChatMessage
+from .llm.anthropic import chat_completion as anthropic_chat_completion
+from .llm.anthropic import load_anthropic_stage_config
+from .llm.types import ChatMessage, ProviderName
 from .llm.zhipu import chat_completion, load_zhipu_stage_config
 from .llm_continuation import continue_code_output, continue_json_output
 
@@ -20,7 +22,8 @@ class LLMStage:
     """把“业务角色”映射到 `configs/llm.yaml` 里的 stage 配置名。"""
 
     name: str
-    zhipu_stage: str
+    provider: ProviderName
+    profile_stage: str
     prompt_bundle: str | None = None
 
 
@@ -40,18 +43,27 @@ class LLMClient:
         self.stage_map = stage_map
 
     def _cfg(self, stage_key: str, mode: Mode):
-        stage = self.stage_map[stage_key].zhipu_stage
-        return load_zhipu_stage_config(stage=stage, mode=mode)
+        stage = self.stage_map[stage_key]
+        if stage.provider == "anthropic":
+            return load_anthropic_stage_config(stage=stage.profile_stage, mode=mode)
+        return load_zhipu_stage_config(stage=stage.profile_stage, mode=mode)
+
+    def _chat_completion(self, provider: ProviderName, messages: list[ChatMessage], cfg: Any) -> str:
+        if provider == "anthropic":
+            return anthropic_chat_completion(messages, cfg=cfg)
+        return chat_completion(messages, cfg=cfg)
 
     def chat(self, *, stage_key: str, mode: Mode, system_prompt: str, user_prompt: str) -> str:
         load_dotenv()
+        stage = self.stage_map[stage_key]
         cfg = self._cfg(stage_key, mode)
-        return chat_completion(
+        return self._chat_completion(
+            stage.provider,
             [
                 ChatMessage(role="system", content=system_prompt),
                 ChatMessage(role="user", content=user_prompt),
             ],
-            cfg=cfg,
+            cfg,
         )
 
     def load_system_prompt(self, filename: str) -> str:
@@ -131,6 +143,7 @@ class LLMClient:
             user_payload=user_prompt,
             parse_fn=load_json_from_llm,
             max_rounds=max_continue_rounds,
+            chat_fn=lambda messages, cfg: self._chat_completion(self.stage_map[stage_key].provider, messages, cfg),
             llm_cfg=self._cfg(stage_key, "continue"),
         )
 
@@ -164,6 +177,7 @@ class LLMClient:
                     user_payload=repair_user,
                     parse_fn=load_json_from_llm,
                     max_rounds=max_continue_rounds,
+                    chat_fn=lambda messages, cfg: self._chat_completion(self.stage_map[stage_key].provider, messages, cfg),
                     llm_cfg=self._cfg(stage_key, "continue"),
                 )
                 data = load_json_from_llm(repaired_merged)
@@ -193,6 +207,7 @@ class LLMClient:
             system_prompt=system_prompt,
             user_payload=user_prompt,
             max_rounds=max_continue_rounds,
+            chat_fn=lambda messages, cfg: self._chat_completion(self.stage_map[stage_key].provider, messages, cfg),
             llm_cfg=self._cfg(stage_key, "continue"),
         )
         return merged, raw, chunks

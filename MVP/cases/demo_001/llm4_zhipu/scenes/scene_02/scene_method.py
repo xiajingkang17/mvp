@@ -1,0 +1,61 @@
+def scene_scene_02(self):
+    reset_scene(self, self.objects)
+
+    zone_left = (0.05, 0.45, 0.2, 0.9)
+    zone_right = (0.55, 0.95, 0.2, 0.9)
+    zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+    def step_01():
+        problem_content = (
+            "质量为 M=3.0kg 的长木板 B 放在光滑水平面上，长度 L=2.0m。\n"
+            "质量为 m=1.0kg 的物块 A 静置在木板上，距左端 l=0.40m。\n"
+            "物块与木板间动摩擦因数 μ_k=0.30，静摩擦因数 μ_s=0.40。\n"
+            "取 g=10m/s^2。从 t=0 起，对木板施加水平向右的恒力 F=20N。\n"
+            "忽略空气阻力。若物块运动到木板左端则立即滑落。"
+        )
+        problem_text = Text(problem_content, font_size=24, color=WHITE)
+        fit_in_zone(problem_text, zone_left)
+        register_obj(self, self.objects, "problem_text", problem_text)
+        self.add(problem_text)
+
+        goal_text = Text(
+            "(1) 判断物块A是否从一开始就相对木板滑动；\n并求滑动阶段物块A与木板B相对于地面的加速度。",
+            font_size=28,
+            color=YELLOW
+        )
+        fit_in_zone(goal_text, zone_right)
+        register_obj(self, self.objects, "goal_panel", goal_text)
+        self.add(goal_text)
+
+    run_step(
+        self,
+        self.objects,
+        "第一问的核心在于判断静摩擦力是否被突破。我们先锁定这一问的目标。",
+        zone_subtitle,
+        ["problem_text", "goal_panel"],
+        step_01,
+    )
+
+    def step_02():
+        logic_content = (
+            "1. 假设A、B相对静止，求共同加速度 a。\n"
+            "2. 求A所需的静摩擦力 f_req。\n"
+            "3. 比较 f_req 与 f_max (μ_s mg)。\n"
+            "4. 若 f_req > f_max，则发生相对滑动，隔离求解 a_A, a_B。"
+        )
+        logic_text = Text(logic_content, font_size=26, color=WHITE)
+        fit_in_zone(logic_text, zone_right)
+        
+        register_obj(self, self.objects, "goal_panel", logic_text)
+        self.add(logic_text)
+
+    run_step(
+        self,
+        self.objects,
+        "判断的逻辑是：先假设它们一起加速，算出A需要的静摩擦力，再和最大静摩擦力比较。如果超过了，就会发生相对滑动，这时就要隔离物体分别求加速度。",
+        zone_subtitle,
+        ["problem_text", "goal_panel"],
+        step_02,
+    )
+
+    cleanup_scene(self, self.objects, [])

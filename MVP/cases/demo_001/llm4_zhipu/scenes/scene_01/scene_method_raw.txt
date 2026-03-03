@@ -1,0 +1,66 @@
+```python
+def scene_scene_01(self):
+    reset_scene(self, self.objects)
+
+    zone_top = (0.05, 0.95, 0.88, 0.98)
+    zone_problem = (0.05, 0.95, 0.55, 0.86)
+    zone_main = (0.05, 0.95, 0.16, 0.53)
+    zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+    def step_01():
+        title = Text("高三力学大题：板块模型", font_size=36, color=WHITE)
+        place_in_zone(title, zone_top, offset=(0.0, 0.0))
+        register_obj(self, self.objects, "title", title)
+        self.add(title)
+
+        problem_str = (
+            "如图，一质量为 M=3.0kg 的长木板 B 放在光滑水平面上，木板长度 L=2.0m。\n"
+            "一小物块 A（可视为质点）质量 m=1.0kg，静置在木板上，且物块到木板左端的距离为 l=0.40m。\n"
+            "物块与木板间的动摩擦因数 μ_k=0.30，静摩擦因数 μ_s=0.40。取 g=10m/s²。\n"
+            "从 t=0 起，对木板施加水平向右的恒力 F=20N。\n\n"
+            "(1) 判断物块A是否从一开始就相对木板滑动；并求滑动阶段物块A与木板B相对于地面的加速度。\n"
+            "(2) 求物块从开始受力到滑落所用时间t；物块滑落瞬间的速度v_A与v_B。\n"
+            "(3) 求外力F对木板所做的功W_F；物块与木板间摩擦产生的内能Q。"
+        )
+        problem_text = Text(problem_str, font_size=20, color=WHITE)
+        fit_in_zone(problem_text, zone_problem, width_ratio=0.95, height_ratio=0.95)
+        register_obj(self, self.objects, "problem_text", problem_text)
+        self.add(problem_text)
+
+        board_B = Rectangle(width=3.0, height=0.4, color=BLUE, fill_opacity=0.2, stroke_width=4)
+        board_B.shift(LEFT * 0.5)
+        register_obj(self, self.objects, "board_B", board_B)
+        self.add(board_B)
+
+        block_A = Rectangle(width=0.6, height=0.4, color=YELLOW, fill_opacity=0.5, stroke_width=4)
+        block_A.next_to(board_B.get_left(), RIGHT, buff=0.4)
+        block_A.align_to(board_B, DOWN)
+        register_obj(self, self.objects, "block_A", block_A)
+        self.add(block_A)
+
+        preview_diagram = VGroup(board_B, block_A)
+        register_obj(self, self.objects, "preview_diagram", preview_diagram)
+
+    run_step(
+        self,
+        self.objects,
+        "首先，我们来看一下题目描述。木板B放在光滑水平面上，物块A静止在木板上，距离左端0.4米。",
+        zone_subtitle,
+        ["title", "problem_text", "preview_diagram", "block_A", "board_B"],
+        step_01,
+    )
+
+    def step_02():
+        self.motion_scene_01("step_02")
+
+    run_step(
+        self,
+        self.objects,
+        "从t=0时刻起，对木板施加水平向右的恒力F。物块A和木板B都会向右加速，但由于加速度不同，物块会相对于木板向左滑动，最终从左端滑落。",
+        zone_subtitle,
+        ["title", "problem_text", "preview_diagram", "block_A", "board_B"],
+        step_02,
+    )
+
+    cleanup_scene(self, self.objects, [])
+```
