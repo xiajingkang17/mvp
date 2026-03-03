@@ -18,10 +18,11 @@ class RunLayout:
     """
 
     run_dir: Path
+    llm4_dir_name: str = "llm4"
 
     @classmethod
-    def from_run_dir(cls, run_dir: Path) -> "RunLayout":
-        return cls(run_dir=run_dir)
+    def from_run_dir(cls, run_dir: Path, *, llm4_dir_name: str = "llm4") -> "RunLayout":
+        return cls(run_dir=run_dir, llm4_dir_name=llm4_dir_name)
 
     # -------- dirs --------
     @property
@@ -38,7 +39,7 @@ class RunLayout:
 
     @property
     def llm4_dir(self) -> Path:
-        return self.run_dir / "llm4"
+        return self.run_dir / self.llm4_dir_name
 
     @property
     def llm5_dir(self) -> Path:
@@ -69,6 +70,18 @@ class RunLayout:
     @property
     def llm1_system_prompt(self) -> Path:
         return self.llm1_dir / "system_prompt.md"
+
+    @property
+    def stage1_analysis_json(self) -> Path:
+        return self.llm1_dir / "stage1_analysis.json"
+
+    @property
+    def stage1_problem_solving_json(self) -> Path:
+        return self.llm1_dir / "stage1_problem_solving.json"
+
+    @property
+    def stage1_drawing_brief_json(self) -> Path:
+        return self.llm1_dir / "stage1_drawing_brief.json"
 
     @property
     def stage1_json(self) -> Path:

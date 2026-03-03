@@ -16,6 +16,7 @@ from pipeline.run_mvp import (  # noqa: E402
     build_client,
     generate_scene_designs_batch,
     generate_scene_design,
+    load_stage1_drawing_brief,
     reset_case_outputs,
     write_split_scene_design_files,
 )
@@ -62,24 +63,19 @@ def main() -> int:
 
     requirement = read_requirement(run_dir=run_dir)
 
-    analyst_path = layout.stage1_json
     plan_path = layout.stage2_json
-    if not analyst_path.exists():
-        # 兼容旧布局：<run_dir>/stage1_analyst.json
-        legacy = run_dir / "stage1_analyst.json"
-        if legacy.exists():
-            analyst_path = legacy
     if not plan_path.exists():
         # 兼容旧布局：<run_dir>/stage2_scene_plan.json
         legacy = run_dir / "stage2_scene_plan.json"
         if legacy.exists():
             plan_path = legacy
-    if not analyst_path.exists():
-        raise SystemExit(f"缺少: {analyst_path}（请先运行 run_llm1.py）")
     if not plan_path.exists():
         raise SystemExit(f"缺少: {plan_path}（请先运行 run_llm2.py）")
 
-    analyst = load_json(analyst_path)
+    try:
+        drawing_brief = load_stage1_drawing_brief(layout=layout)
+    except FileNotFoundError as e:
+        raise SystemExit(f"缺少 llm1 输出: {e}（请先运行 run_llm1.py）") from e
     plan = load_json(plan_path)
 
     scenes = pick_scenes(plan, scene_id=args.scene_id)
@@ -103,7 +99,7 @@ def main() -> int:
         payload, raw = generate_scene_designs_batch(
             client,
             requirement=requirement,
-            analyst=analyst,
+            drawing_brief=drawing_brief,
             plan=plan,
         )
         write_text(layout.stage3_raw_batch, raw)
@@ -139,7 +135,7 @@ def main() -> int:
         design, raw = generate_scene_design(
             client,
             requirement=requirement,
-            analyst=analyst,
+            drawing_brief=drawing_brief,
             scene=scene,
             prev_scene=prev_scene,
             next_scene=all_scenes[full_idx + 1]

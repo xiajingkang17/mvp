@@ -20,7 +20,9 @@
 
 产物：
 
-- `llm1/stage1_analyst.json`
+- `llm1/stage1_analysis.json`
+- `llm1/stage1_problem_solving.json`
+- `llm1/stage1_drawing_brief.json`
 
 ### LLM2: scene planner
 
@@ -113,7 +115,7 @@ LLM4 拆成 4 个子阶段：
 - `LLM4A`: 共享 helper 与框架代码
 - `LLM4B`: 单 scene 方法代码
 - `LLM4C`: 单 scene motion 代码
-- `LLM4D`: 最终装配单文件 `scene.py`
+- 程序模板装配：最终单文件 `scene.py`
 
 LLM4 现在严格按以下边界执行：
 
@@ -164,21 +166,20 @@ LLM4 现在严格按以下边界执行：
 - `prompts/llm1_analyst/`
 - `prompts/llm2_scene_planner/`
 - `prompts/llm3_scene_designer/`
-- `prompts/llm4a_framework_codegen/`
 - `prompts/llm4b_scene_codegen/`
 - `prompts/llm4c_motion_codegen/`
-- `prompts/llm4d_assemble_codegen/`
 - `prompts/llm4_codegen/`
 - `prompts/llm5_fixer/`
 
 `llm3_scene_designer` 当前 bundle 包含：
 
 - `system.md`
+- `scene_workflow_template.md`
+- `batch_generation_guidelines.md`
+- `workflow_phase_guidelines.md`
 - `layout_reference_templates.md`
 - `../draw/physics/mechanics_motion_contract.md`
-- `lifecycle.md`
 - `layout_contract.md`
-- `visual_spec.md`
 - `narrative_guidelines.md`
 
 ## 安装
@@ -258,7 +259,10 @@ python pipeline/run_llm4.py --run-dir runs/<...> --max-fix-rounds 10 --quality l
 python pipeline/run_llm1.py --requirement-file cases/demo_001/problem.txt --run-dir cases/demo_001
 python pipeline/run_llm2.py --run-dir cases/demo_001
 python pipeline/run_llm3.py --run-dir cases/demo_001
-python pipeline/run_llm4.py --run-dir cases/demo_001 --max-fix-rounds 10
+python pipeline/run_llm4_claude.py --run-dir cases/demo_001 --max-fix-rounds 10
+python pipeline/run_llm4_zhipu.py --run-dir cases/demo_001 --max-fix-rounds 10
+
+
 ```
 
 ### 只重跑单个 scene
@@ -296,7 +300,9 @@ python pipeline/run_llm4.py --run-dir runs/<...> --scene-id scene_02 --max-fix-r
 常见文件：
 
 - `requirement.txt`
-- `llm1/stage1_analyst.json`
+- `llm1/stage1_analysis.json`
+- `llm1/stage1_problem_solving.json`
+- `llm1/stage1_drawing_brief.json`
 - `llm2/stage2_scene_plan.json`
 - `llm3/stage3_scene_designs.json`
 - `llm3/stage3_scene_designs_raw.txt`

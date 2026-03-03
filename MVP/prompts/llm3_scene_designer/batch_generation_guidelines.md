@@ -1,28 +1,46 @@
-# 批量生成模式
+# 多 scene 输出模式说明
 
-在完整执行 `LLM3` 时，输入可能一次性提供整份 scene plan，而不是只提供当前单个 scene。
+当输入里给出 llm2 规划出的完整 scene 列表时，你处于“多 scene 输出模式”。
 
-当输入中给出了完整且有顺序的 scene 列表时，你必须切换到“批量生成模式”。
+注意：
 
-## 批量输出契约
+- 你的工作单元仍然是单个 scene
+- 但这次你要把列表里的每个 scene 都依次设计出来
+- 最终一次性输出整片结果，而不是只输出第一个 scene
 
-你必须输出一个顶层 JSON 对象：
+## 顶层输出格式
+
+多 scene 模式下，顶层必须严格输出：
 
 ```json
 {
   "video_title": "string",
   "scenes": [
     {
-      "... 单个 scene design schema ..."
+      "... scene_01 的 design ..."
+    },
+    {
+      "... scene_02 的 design ..."
     }
   ]
 }
 ```
 
-规则：
+## 强规则
 
-1. `scenes` 的顺序必须与 planner 输入中的顺序一致。
-2. planner 中的每个 scene 都必须且只能对应一个 scene design。
-3. 必须保留 planner 给出的 `scene_id` 和 `class_name`。
-4. 在批量模式下，你必须从全局角度思考叙事顺序，但不要做跨 scene object 继承；每个 scene 的 `entry_state` 与 `exit_state` 都应为空。
-5. 在批量模式下，不要设计任何跨 scene object 继承；每一幕需要的对象都在本幕内重新创建。
+1. 顶层必须有 `scenes` 数组，不能直接把单个 scene 放在顶层。
+2. `scenes` 数组中的每个元素，才是单个 scene 的 design JSON。
+3. `scenes` 的顺序必须与 llm2 输入中的顺序完全一致。
+4. llm2 中的每个 `scene_id` 都必须出现，不能漏，不能重复。
+5. 不要把多个 scene 合并成一个 scene design。
+6. 即使是多 scene 模式，每个 scene 仍然独立开场、独立清场，不做跨 scene object 继承。
+
+## 单 scene 重跑模式提醒
+
+如果输入只给了当前 scene 及前后摘要，而没有给完整 scene 列表，那么你不在多 scene 模式。
+
+此时：
+
+1. 顶层只输出当前 scene 的 design JSON
+2. 不要输出 `video_title`
+3. 不要输出 `scenes: [...]`

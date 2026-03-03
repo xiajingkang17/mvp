@@ -1,0 +1,119 @@
+{
+  "class_name": "MainScene",
+  "construct_order": [
+    "scene_scene_01",
+    "scene_scene_02",
+    "scene_scene_03",
+    "scene_scene_04",
+    "scene_scene_05",
+    "scene_scene_06",
+    "scene_scene_07",
+    "scene_scene_08",
+    "scene_scene_09",
+    "scene_scene_10"
+  ],
+  "scene_fragments": [
+    {
+      "scene_id": "scene_01",
+      "scene_method_name": "scene_scene_01",
+      "path": "cases\\demo_001\\llm4_zhipu\\scenes\\scene_01\\scene_method.py"
+    },
+    {
+      "scene_id": "scene_02",
+      "scene_method_name": "scene_scene_02",
+      "path": "cases\\demo_001\\llm4_zhipu\\scenes\\scene_02\\scene_method.py"
+    },
+    {
+      "scene_id": "scene_03",
+      "scene_method_name": "scene_scene_03",
+      "path": "cases\\demo_001\\llm4_zhipu\\scenes\\scene_03\\scene_method.py"
+    },
+    {
+      "scene_id": "scene_04",
+      "scene_method_name": "scene_scene_04",
+      "path": "cases\\demo_001\\llm4_zhipu\\scenes\\scene_04\\scene_method.py"
+    },
+    {
+      "scene_id": "scene_05",
+      "scene_method_name": "scene_scene_05",
+      "path": "cases\\demo_001\\llm4_zhipu\\scenes\\scene_05\\scene_method.py"
+    },
+    {
+      "scene_id": "scene_06",
+      "scene_method_name": "scene_scene_06",
+      "path": "cases\\demo_001\\llm4_zhipu\\scenes\\scene_06\\scene_method.py"
+    },
+    {
+      "scene_id": "scene_07",
+      "scene_method_name": "scene_scene_07",
+      "path": "cases\\demo_001\\llm4_zhipu\\scenes\\scene_07\\scene_method.py"
+    },
+    {
+      "scene_id": "scene_08",
+      "scene_method_name": "scene_scene_08",
+      "path": "cases\\demo_001\\llm4_zhipu\\scenes\\scene_08\\scene_method.py"
+    },
+    {
+      "scene_id": "scene_09",
+      "scene_method_name": "scene_scene_09",
+      "path": "cases\\demo_001\\llm4_zhipu\\scenes\\scene_09\\scene_method.py"
+    },
+    {
+      "scene_id": "scene_10",
+      "scene_method_name": "scene_scene_10",
+      "path": "cases\\demo_001\\llm4_zhipu\\scenes\\scene_10\\scene_method.py"
+    }
+  ],
+  "motion_fragments": [
+    {
+      "scene_id": "scene_01",
+      "motion_method_name": "motion_scene_01",
+      "path": "cases\\demo_001\\llm4_zhipu\\motion\\scene_01\\motion_method.py"
+    },
+    {
+      "scene_id": "scene_02",
+      "motion_method_name": "motion_scene_02",
+      "path": "cases\\demo_001\\llm4_zhipu\\motion\\scene_02\\motion_method.py"
+    },
+    {
+      "scene_id": "scene_03",
+      "motion_method_name": "motion_scene_03",
+      "path": "cases\\demo_001\\llm4_zhipu\\motion\\scene_03\\motion_method.py"
+    },
+    {
+      "scene_id": "scene_04",
+      "motion_method_name": "motion_scene_04",
+      "path": "cases\\demo_001\\llm4_zhipu\\motion\\scene_04\\motion_method.py"
+    },
+    {
+      "scene_id": "scene_05",
+      "motion_method_name": "motion_scene_05",
+      "path": "cases\\demo_001\\llm4_zhipu\\motion\\scene_05\\motion_method.py"
+    },
+    {
+      "scene_id": "scene_06",
+      "motion_method_name": "motion_scene_06",
+      "path": "cases\\demo_001\\llm4_zhipu\\motion\\scene_06\\motion_method.py"
+    },
+    {
+      "scene_id": "scene_07",
+      "motion_method_name": "motion_scene_07",
+      "path": "cases\\demo_001\\llm4_zhipu\\motion\\scene_07\\motion_method.py"
+    },
+    {
+      "scene_id": "scene_08",
+      "motion_method_name": "motion_scene_08",
+      "path": "cases\\demo_001\\llm4_zhipu\\motion\\scene_08\\motion_method.py"
+    },
+    {
+      "scene_id": "scene_09",
+      "motion_method_name": "motion_scene_09",
+      "path": "cases\\demo_001\\llm4_zhipu\\motion\\scene_09\\motion_method.py"
+    },
+    {
+      "scene_id": "scene_10",
+      "motion_method_name": "motion_scene_10",
+      "path": "cases\\demo_001\\llm4_zhipu\\motion\\scene_10\\motion_method.py"
+    }
+  ]
+}

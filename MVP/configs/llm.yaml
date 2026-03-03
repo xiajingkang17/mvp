@@ -69,6 +69,28 @@ zhipu:
         temperature: 0.05
         top_p: 0.80
 
+    codegen_scene:
+      generate:
+        temperature: 0.20
+        top_p: 0.90
+      continue:
+        temperature: 0.10
+        top_p: 0.84
+      repair:
+        temperature: 0.05
+        top_p: 0.80
+
+    codegen_motion:
+      generate:
+        temperature: 0.18
+        top_p: 0.90
+      continue:
+        temperature: 0.10
+        top_p: 0.84
+      repair:
+        temperature: 0.05
+        top_p: 0.80
+
     fixer:
       generate:
         temperature: 0.15
@@ -80,3 +102,50 @@ zhipu:
         temperature: 0.05
         top_p: 0.80
 
+anthropic:
+  # Claude 代理；优先读取 MVP/.env 中的 ANTHROPIC_AUTH_TOKEN，其次 ANTHROPIC_API_KEY
+  model: claude-sonnet-4-6
+  # 默认采样参数（可被 MVP/.env 覆盖）
+  temperature: 0.20
+  top_p: 0.90
+  max_tokens: 1800
+
+  # 请求超时（秒）
+  timeout_s: 240
+
+  # 重试
+  retries: 2
+  retry_backoff_s: 1.5
+
+  # 代理根地址；代码会请求 <base_url>/v1/messages
+  base_url: https://ai.jiexi6.cn/
+
+  # llm4 拆分式 codegen 的四个子阶段默认都走 Claude Sonnet 4
+  stages:
+    codegen_scene:
+      generate:
+        max_tokens: 2200
+        temperature: 0.20
+        top_p: 0.90
+      continue:
+        max_tokens: 1100
+        temperature: 0.10
+        top_p: 0.84
+      repair:
+        max_tokens: 700
+        temperature: 0.05
+        top_p: 0.80
+
+    codegen_motion:
+      generate:
+        max_tokens: 1500
+        temperature: 0.20
+        top_p: 0.90
+      continue:
+        max_tokens: 900
+        temperature: 0.10
+        top_p: 0.84
+      repair:
+        max_tokens: 700
+        temperature: 0.05
+        top_p: 0.80

@@ -51,8 +51,9 @@ def main() -> int:
     write_text(layout.llm1_system_prompt, system.strip() + "\n")
 
     stage_analyst(client, requirement=requirement, out_dir=layout.llm1_dir)
-    out_json = layout.stage1_json
-    print(f"[LLM1] 输出: {out_json}")
+    print(f"[LLM1] 输出: {layout.stage1_analysis_json}")
+    print(f"[LLM1] 输出: {layout.stage1_problem_solving_json}")
+    print(f"[LLM1] 输出: {layout.stage1_drawing_brief_json}")
     return 0
 
 
