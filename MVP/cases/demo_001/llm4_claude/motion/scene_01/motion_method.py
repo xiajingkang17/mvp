@@ -1,0 +1,28 @@
+def motion_scene_01(self, step_id):
+    if step_id == "step_02":
+        block_B = self.objects.get("block_B")
+        block_A = self.objects.get("block_A")
+        
+        if block_B is None or block_A is None:
+            return []
+        
+        p0_B = np.array([0, 0, 0])
+        p1_B = np.array([4, 0, 0])
+        
+        p0_A = np.array([0.4, 0.2, 0])
+        p1_A = np.array([1.0, 0.2, 0])
+        
+        def update_B(mob, alpha):
+            pos = p0_B + alpha * (p1_B - p0_B)
+            mob.move_to(pos)
+        
+        def update_A(mob, alpha):
+            pos = p0_A + alpha * (p1_A - p0_A)
+            mob.move_to(pos)
+        
+        return [
+            UpdateFromAlphaFunc(block_B, update_B, run_time=6),
+            UpdateFromAlphaFunc(block_A, update_A, run_time=6)
+        ]
+    
+    return []

@@ -166,9 +166,7 @@ LLM4 现在严格按以下边界执行：
 - `prompts/llm1_analyst/`
 - `prompts/llm2_scene_planner/`
 - `prompts/llm3_scene_designer/`
-- `prompts/llm4b_scene_codegen/`
-- `prompts/llm4c_motion_codegen/`
-- `prompts/llm4_codegen/`
+- `prompts/llm4e_batch_codegen/`
 - `prompts/llm5_fixer/`
 
 `llm3_scene_designer` 当前 bundle 包含：
@@ -348,6 +346,9 @@ python pipeline/run_llm4.py --run-dir runs/<...> --scene-id scene_02 --max-fix-r
 检查：
 
 - `MVP/.env` 是否包含 `ZHIPUAI_API_KEY=...`
+- 如果使用 Claude，还需要：
+  - `ANTHROPIC_AUTH_TOKEN=...`
+  - 或 `ANTHROPIC_API_KEY=...`
 
 ### 找不到 `manim`
 
@@ -356,3 +357,25 @@ python pipeline/run_llm4.py --run-dir runs/<...> --scene-id scene_02 --max-fix-r
 - 当前环境是否已安装 `manim`
 - 是否已激活正确的虚拟环境
 - `manim` 是否在 PATH 中
+
+## 推荐运行命令
+
+### 纯净智谱
+
+```powershell
+python pipeline/run_llm1_zhipu.py --run-dir cases/demo_001
+python pipeline/run_llm2.py --run-dir cases/demo_001
+python pipeline/run_llm3.py --run-dir cases/demo_001
+python pipeline/run_llm35_zhipu.py --run-dir cases/demo_001
+python pipeline/run_llm4_zhipu.py --run-dir cases/demo_001 --max-fix-rounds 10
+```
+
+### 有 Claude
+
+```powershell
+python pipeline/run_llm1_claude.py --run-dir cases/demo_001
+python pipeline/run_llm2.py --run-dir cases/demo_001
+python pipeline/run_llm3.py --run-dir cases/demo_001
+python pipeline/run_llm35_claude.py --run-dir cases/demo_001
+python pipeline/run_llm4_claude.py --run-dir cases/demo_001 --max-fix-rounds 10
+```

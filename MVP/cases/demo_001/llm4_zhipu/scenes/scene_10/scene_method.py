@@ -1,37 +1,35 @@
 def scene_scene_10(self):
     reset_scene(self, self.objects)
 
-    zone_main = (0.1, 0.9, 0.2, 0.85)
     zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+    zone_main = (0.1, 0.9, 0.2, 0.9)
 
     def step_01():
-        title = Text("方法总结：板块模型", font_size=36, color=WHITE)
-        place_in_zone(title, zone_main, offset=(0.0, 0.35))
+        title = Text("方法总结", font_size=40, color=WHITE)
+        title.to_edge(UP, buff=0.2)
         register_obj(self, self.objects, "title", title)
         self.add(title)
 
-        points_text = (
-            "1. 受力分析：隔离A、B，判断静摩擦力是否突破。\n"
-            "2. 运动学：利用相对加速度 a_rel = a_B - a_A 求解时间。\n"
-            "3. 能量：摩擦生热 Q = f_k * x_rel (相对路程)。\n\n"
-            "易错点：\n"
-            "- 相对位移的方向不要搞反。\n"
-            "- 求生热时要用相对路程，而不是对地位移。"
-        )
-        content = Text(points_text, font_size=28, color=WHITE)
-        place_in_zone(content, zone_main, offset=(0.0, -0.1))
-        register_obj(self, self.objects, "content", content)
-        self.add(content)
+        item1_text = Text("1. 隔离受力，判断运动状态", font_size=32, color=WHITE)
+        item2_text = Text("2. 相对运动，求几何量", font_size=32, color=WHITE)
+        item3_text = Text("3. 能量观点，求功或热", font_size=32, color=WHITE)
+        
+        caution_text = Text("易错点：相对位移方向、Q=f*l", font_size=32, color=YELLOW)
 
-        transfer_panel = VGroup(title, content)
-        register_obj(self, self.objects, "transfer_panel", transfer_panel)
+        items = VGroup(item1_text, item2_text, item3_text, caution_text)
+        items.arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+        items.next_to(title, DOWN, buff=0.5)
+
+        register_obj(self, self.objects, "method_map", items)
+        self.add(items)
 
     run_step(
         self,
         self.objects,
-        "最后，我们总结一下板块模型的通用解法和易错点。",
+        "掌握这套方法，以后遇到类似的板块问题，就可以按部就班地解决了。",
         zone_subtitle,
-        ["transfer_panel"],
+        ["method_map"],
         step_01,
     )
+
     cleanup_scene(self, self.objects, [])

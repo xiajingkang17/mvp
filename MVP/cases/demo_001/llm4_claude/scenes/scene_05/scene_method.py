@@ -1,0 +1,65 @@
+def scene_scene_05(self):
+    reset_scene(self, self.objects)
+
+    zone_diagram_left = (0.05, 0.48, 0.16, 0.92)
+    zone_goal_right = (0.52, 0.95, 0.16, 0.92)
+    zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+    def step_01():
+        block_B = Rectangle(width=2.0, height=0.4, stroke_color=WHITE, stroke_width=3, fill_color=BLACK, fill_opacity=1.0)
+        block_A = Rectangle(width=0.5, height=0.3, stroke_color=YELLOW, stroke_width=3, fill_color=BLACK, fill_opacity=1.0)
+        block_A.next_to(block_B.get_left(), RIGHT, buff=0.2)
+        
+        label_B = Text("B", font_size=24, color=WHITE).move_to(block_B.get_center())
+        label_A = Text("A", font_size=20, color=YELLOW).move_to(block_A.get_center())
+        
+        arrow_rel = Arrow(
+            start=block_A.get_left() + np.array([0, -0.5, 0]),
+            end=block_B.get_left() + np.array([0, -0.5, 0]),
+            buff=0.0,
+            stroke_width=3,
+            color=RED
+        )
+        label_l = MathTex("l = 0.40\\text{m}", font_size=28, color=RED).next_to(arrow_rel, DOWN, buff=0.1)
+        
+        diagram_rel = VGroup(block_B, block_A, label_B, label_A, arrow_rel, label_l)
+        fit_in_zone(diagram_rel, zone_diagram_left, width_ratio=0.8, height_ratio=0.6)
+        
+        register_obj(self, self.objects, "diagram_rel", diagram_rel)
+        self.add(diagram_rel)
+
+    run_step(
+        self,
+        self.objects,
+        "因为B的加速度大于A的加速度,A相对于B向左运动。当A相对于B移动了0.4米时,就会从左端滑落。",
+        zone_subtitle,
+        ["diagram_rel"],
+        step_01
+    )
+
+    def step_02():
+        text_q2 = Text("第二问:求滑落时间t与速度", font_size=26, color=WHITE)
+        formula_rel = MathTex(
+            "l = \\frac{1}{2}a_{rel}t^2",
+            font_size=32,
+            color=WHITE
+        )
+        
+        goal_formula_group = VGroup(text_q2, formula_rel).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+        place_in_zone(goal_formula_group, zone_goal_right, offset=(0.0, 0.2))
+        
+        register_obj(self, self.objects, "text_q2", text_q2)
+        register_obj(self, self.objects, "formula_rel", formula_rel)
+        self.play(Write(text_q2), run_time=1.0)
+        self.play(Write(formula_rel), run_time=1.5)
+
+    run_step(
+        self,
+        self.objects,
+        "利用相对运动的位移公式,l等于二分之一倍相对加速度乘以t的平方。我们可以先求出相对加速度,进而求出时间t。",
+        zone_subtitle,
+        ["diagram_rel", "text_q2", "formula_rel"],
+        step_02
+    )
+
+    cleanup_scene(self, self.objects, [])

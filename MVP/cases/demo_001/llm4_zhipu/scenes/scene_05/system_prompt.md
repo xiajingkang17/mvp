@@ -203,7 +203,7 @@ run_step(
 
 1. 解析 `layout_contract.zones`，每个 zone 必须有 `role`。
 2. 解析 `layout_contract.objects`，按 `zone` 放置对象。
-3. 解析 `layout_contract.step_visibility`，它只表示“参与布局计算的对象”，不表示创建或销毁。
+3. 解析 `layout_contract.step_layouts`，它只表示“当前 step 参与布局的对象组以及局部 zone 变化”，不表示创建或销毁。
 4. 标题、公式、总结、字幕的位置必须从 zone 推导；最终代码里应保留 primitive zone rect，而不是 `layout_contract = {...}`。
 5. 如果 scene 提供了 `subtitle` zone，`steps[*].narration` 必须实际渲染为 subtitle 对象并放入该区域；如果 scene 没有 `subtitle` zone，就不要额外发明第二个字幕区。
 6. 优先复用 `fit_in_zone / place_in_zone / layout_formula_group / show_subtitle`。
@@ -242,7 +242,7 @@ run_step(
 1. 所有 scene 都必须从空画面开始，因此 scene 开头真源固定是空集合。
 2. `steps[*].object_ops` 与 `steps[*].end_state_objects` 是 step 级显隐真源。
 3. 所有 scene 都必须在结尾清空，因此 scene 收场真源固定是空集合。
-4. `layout_contract.step_visibility` 只用于布局参与对象，不用于显隐。
+4. `layout_contract.step_layouts` 只用于布局参与对象和局部布局变化，不用于显隐。
 5. `scene_plan_scene` 中的 `entry_requirement / handoff_to_next` 只提供叙事语义，不是 object 生命周期真源。
 
 ## 执行要求
@@ -259,7 +259,7 @@ run_step(
 
 ## 禁止项
 
-- 禁止把 `layout_contract.step_visibility` 当作 show/hide/remove 指令。
+- 禁止把 `layout_contract.step_layouts` 当作 show/hide/remove 指令。
 - 禁止把所有对象挂到 scene 结束再一次性清空。
 - 禁止在 scene 方法里手写 for 循环逐个 `FadeOut`、`Uncreate` 或 `remove` 已注册对象。
 - 禁止忽略 `remove` 指令。
@@ -345,6 +345,92 @@ run_step(
 1. 这四份参考的目标是给你提供安全 API 范式，不是要求你逐字复刻。
 2. 如果某种图形用基础图元更稳定，就优先选基础图元，不要为了“像组件”而冒险。
 3. 先保证能正确渲染，再考虑视觉包装。
+
+# 推导逐行呈现与标签规则（LLM4B）
+
+本文件只约束 `scene_codegen` 的代码写法。
+
+## 1. 推导类 scene 中，公式必须逐行出现
+
+- 如果某个 step 要呈现两行及以上公式，不要把整组公式一次性 `self.add(...)` 或一次 `Write(group)` 全部打出来。
+- 正确做法是：
+  - 每一行公式单独创建对象
+  - 先用 `VGroup(...).arrange(DOWN, aligned_edge=LEFT, buff=...)` 排好版
+  - 再按推理顺序逐行 `Write(...)` / `FadeIn(...)`
+- 对于“方程 -> 代入 -> 化简 -> 结论”链条，优先保持一行一行动画出现，并让字幕对应当前新增的那一行。
+
+## 2. 明确禁止的错误写法
+
+- 禁止对“包含多行推导公式的 `VGroup`”直接执行：
+  - `self.add(group)`
+  - `self.play(Write(group))`
+  - `self.play(FadeIn(group))`
+- 禁止把 2 行及以上的推导链压成一个整体对象后瞬间上屏。
+- 如果当前 step 内必须出现多行公式，也应拆成多次动画，而不是一次动画打完整组。
+
+## 3. 公式区与主图区不要混放
+
+- 推导类 scene 中，公式默认应放在独立公式区，不要压在坐标轴、轨迹、场区域或粒子主图上。
+- 如果画面同时有主图和公式，优先采用“主图一侧 + 公式一侧”或“主图上方 + 公式下方”的分区，而不是全部放到 `zone_main` 中心。
+
+## 4. 标签命名统一：原点用 O，数值零用 0
+
+- 原点标签统一使用 `O`，不要把原点写成数字 `0`。
+- 坐标表达式中的零统一写作 `0`，例如 `(0,h)`、`(0,0.10m)`。
+- 不要出现把原点标签 `O` 和数值零 `0` 混用的情况。
+
+## 5. 点标签建议拆成“点名 + 坐标”两部分
+
+- 对关键点，优先使用：
+  - 点名：`Text("P")`
+  - 坐标：`MathTex("(0,h)")`
+  - 再用 `VGroup(...)` 组合
+- 不要把“中文 + 点名 + 坐标 + 公式”全塞进一个 `Tex/MathTex`。
+- 如果只需要点名，不必强行带坐标；如果需要坐标，点名与坐标应保持视觉上可分离。
+
+## 6. 标签位置要服从主图，不要压图
+
+- 标签优先相对锚点摆放，例如 `next_to(point, UP)`、`next_to(dot, RIGHT)`，不要无依据地 `move_to(...)` 到主图中心。
+- 不要让点标签压住：
+  - 粒子运动轨迹
+  - 坐标轴箭头
+  - 公式区
+  - 当前问题卡片
+- 如果一个点附近已有多个对象，优先把标签移到空白侧，并适当缩小字号或拆分点名与坐标。
+
+## 7. 高优先级自检
+
+输出前自检：
+
+- 两行及以上推导是否是逐行出现，而不是整组瞬间出现
+- 是否存在 `self.add(group)`、`Write(group)`、`FadeIn(group)` 直接作用于多行推导组
+- 原点是否统一为 `O`
+- 坐标中的零是否统一为 `0`
+- 标签是否压住主图、轨迹、公式或题干卡片
+
+# 布局来源优先级（LLM4B）
+
+如果输入同时提供：
+
+- `scene_design.layout_contract`
+- `scene_layout.layout_contract`
+
+则你必须把 `scene_layout.layout_contract` 视为布局真源。
+
+## 优先级
+
+1. `scene_layout.layout_contract`
+2. `scene_design` 中的对象与步骤内容
+3. `scene_plan_scene.layout_prompt`
+
+## 执行规则
+
+- 不要在已有 `scene_layout.layout_contract` 的情况下重新发明 zone。
+- 不要把多个对象组重新塞回一个大 `zone_main`。
+- 必须优先服从 `scene_layout.layout_contract.zones` 的精确坐标。
+- 必须优先服从 `scene_layout.layout_contract.objects` 的 zone 分配与摆放规则。
+- 必须优先服从 `scene_layout.layout_contract.step_layouts` 中当前 step 的局部布局变化。
+- 如果 `scene_layout.layout_prompt` 已明确，优先按这段布局提示组织画面。
 
 # 仅供 prompt 参考，不要在 runtime 里直接 import。
 # 这里提供 scene_codegen 可模仿的安全箭头写法。

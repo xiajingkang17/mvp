@@ -38,6 +38,10 @@ class RunLayout:
         return self.run_dir / "llm3"
 
     @property
+    def llm35_dir(self) -> Path:
+        return self.run_dir / "llm35"
+
+    @property
     def llm4_dir(self) -> Path:
         return self.run_dir / self.llm4_dir_name
 
@@ -127,6 +131,30 @@ class RunLayout:
 
     def stage3_scene_json(self, scene_id: str) -> Path:
         return self.stage3_scene_dir(scene_id) / "design.json"
+
+    # -------- llm3.5 --------
+    @property
+    def llm35_system_prompt(self) -> Path:
+        return self.llm35_dir / "system_prompt.md"
+
+    @property
+    def stage35_json(self) -> Path:
+        return self.llm35_dir / "stage35_scene_layouts.json"
+
+    @property
+    def stage35_raw_batch(self) -> Path:
+        return self.llm35_dir / "stage35_scene_layouts_raw.txt"
+
+    def stage35_raw_scene(self, scene_id: str) -> Path:
+        sid = scene_id.strip() or "scene_unknown"
+        return self.llm35_dir / f"stage35_{sid}_raw.txt"
+
+    def stage35_scene_dir(self, scene_id: str) -> Path:
+        sid = scene_id.strip() or "scene_unknown"
+        return self.llm35_dir / "scenes" / sid
+
+    def stage35_scene_json(self, scene_id: str) -> Path:
+        return self.stage35_scene_dir(scene_id) / "layout.json"
 
     # -------- llm4 --------
     @property

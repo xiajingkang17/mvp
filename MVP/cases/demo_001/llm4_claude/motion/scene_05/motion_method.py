@@ -1,0 +1,2 @@
+def motion_scene_05(self, step_id):
+    return []

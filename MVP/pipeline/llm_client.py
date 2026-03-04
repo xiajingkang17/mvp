@@ -9,6 +9,8 @@ from .env import load_dotenv
 from .json_utils import load_json_from_llm
 from .llm.anthropic import chat_completion as anthropic_chat_completion
 from .llm.anthropic import load_anthropic_stage_config
+from .llm.kimi import chat_completion as kimi_chat_completion
+from .llm.kimi import load_kimi_stage_config
 from .llm.types import ChatMessage, ProviderName
 from .llm.zhipu import chat_completion, load_zhipu_stage_config
 from .llm_continuation import continue_code_output, continue_json_output
@@ -46,11 +48,15 @@ class LLMClient:
         stage = self.stage_map[stage_key]
         if stage.provider == "anthropic":
             return load_anthropic_stage_config(stage=stage.profile_stage, mode=mode)
+        if stage.provider == "kimi":
+            return load_kimi_stage_config(stage=stage.profile_stage, mode=mode)
         return load_zhipu_stage_config(stage=stage.profile_stage, mode=mode)
 
     def _chat_completion(self, provider: ProviderName, messages: list[ChatMessage], cfg: Any) -> str:
         if provider == "anthropic":
             return anthropic_chat_completion(messages, cfg=cfg)
+        if provider == "kimi":
+            return kimi_chat_completion(messages, cfg=cfg)
         return chat_completion(messages, cfg=cfg)
 
     def chat(self, *, stage_key: str, mode: Mode, system_prompt: str, user_prompt: str) -> str:

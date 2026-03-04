@@ -2,31 +2,32 @@
 def scene_scene_07(self):
     reset_scene(self, self.objects)
 
-    zone_main = (0.15, 0.85, 0.25, 0.85)
     zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+    zone_main = (0.15, 0.85, 0.2, 0.9)
 
     def step_01():
-        title = Text("(3) 求外力做功 W_F 与摩擦生热 Q", font_size=36, color=WHITE)
-        place_in_zone(title, zone_main, offset=(0.0, 0.35))
-        register_obj(self, self.objects, "goal_panel_q3_title", title)
-        self.add(title)
+        text_q3 = Text("第三问：求W_F与Q", font_size=36, color=WHITE)
+        place_in_zone(text_q3, zone_main, offset=(0.0, 0.35))
+        register_obj(self, self.objects, "text_q3", text_q3)
+        self.add(text_q3)
 
-        plan_text = Text(
-            "1. 求 W_F：需要先求木板对地位移 x_B\n   W_F = F * x_B\n\n2. 求 Q：利用相对位移\n   Q = f_k * x_rel = f_k * l",
-            font_size=28,
-            color=WHITE,
-            line_spacing=0.5
-        )
-        place_in_zone(plan_text, zone_main, offset=(0.0, -0.15))
-        register_obj(self, self.objects, "goal_panel_q3", plan_text)
-        self.add(plan_text)
+        formula_W = MathTex("W_F = F \\cdot x_B", font_size=40, color=YELLOW)
+        formula_Q = MathTex("Q = f_k \\cdot l", font_size=40, color=YELLOW)
+        
+        formulas = VGroup(formula_W, formula_Q)
+        formulas.arrange(DOWN, buff=0.4, aligned_edge=LEFT)
+        place_in_zone(formulas, zone_main, offset=(0.0, -0.1))
+        
+        register_obj(self, self.objects, "formula_W", formula_W)
+        register_obj(self, self.objects, "formula_Q", formula_Q)
+        self.add(formulas)
 
     run_step(
         self,
         self.objects,
-        "最后是第三问，求外力做功W_F和摩擦生热Q。外力做功等于力乘以木板的位移，所以我们需要先求出木板B的位移。而摩擦生热Q有一个简便算法，它等于滑动摩擦力乘以相对位移。",
+        "计算外力做功，我们需要先求出木板B在这0.6秒内发生的位移。摩擦生热有一个简便公式，直接用摩擦力乘以相对路程即可。",
         zone_subtitle,
-        ["goal_panel_q3", "goal_panel_q3_title"],
+        ["text_q3", "formula_W", "formula_Q"],
         step_01,
     )
     cleanup_scene(self, self.objects, [])

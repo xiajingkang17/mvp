@@ -1,54 +1,43 @@
 ```python
 def motion_scene_01(self, step_id):
     if step_id == "step_02":
-        board_B = self.objects.get("board_B")
+        block_B = self.objects.get("block_B")
         block_A = self.objects.get("block_A")
+        force_arrow_F = self.objects.get("force_arrow_F")
         
-        if board_B is None or block_A is None:
+        if block_B is None or block_A is None or force_arrow_F is None:
             return []
 
-        # Step 02: 板块模型运动演示
-        # 运动参数：木板B向右加速，物块A向右加速但较慢
-        # 模拟时间 t = 0.55s (sqrt(0.3))
-        # a_A = 3.0, a_B = 17/3 ≈ 5.67
-        # x_B = 0.5 * a_B * t^2 ≈ 0.85
-        # x_A = 0.4 + 0.5 * a_A * t^2 ≈ 0.45
+        # Motion parameters based on physics solution
+        # a_A = 3.0, a_B = 17/3, t_fall = sqrt(0.3)
+        # x_B_final = 0.5 * (17/3) * 0.3 = 0.85
+        # x_A_final = 0.4 + 0.5 * 3.0 * 0.3 = 0.85 (Wait, relative motion logic check)
+        # Relative displacement: x_B - x_A = 0.4 (A moves left relative to B)
+        # x_A_final = 0.4 + 0.5 * 3.0 * 0.3 = 0.85
+        # x_B_final = 0.5 * (17/3) * 0.3 = 0.85
+        # Wait, if x_A_final = x_B_final, A is at the right edge of B?
+        # Initial: A at 0.4 (relative to B's left edge at 0).
+        # Final: A at 0.0 (relative to B's left edge).
+        # So x_A_world = x_B_world + 0.0.
+        # x_A_world = 0.4 + 0.5 * 3 * t^2
+        # x_B_world = 0.5 * (17/3) * t^2
+        # x_B - x_A = 0.5 * (8/3) * t^2 = 0.4 -> t^2 = 0.3.
+        # x_B_final = 0.5 * (17/3) * 0.3 = 0.85.
+        # x_A_final = 0.4 + 0.5 * 3 * 0.3 = 0.85.
+        # Yes, they meet at world coordinate 0.85.
         
-        # 视觉缩放比例 (将物理位移映射到屏幕坐标)
-        # 假设屏幕上 1 unit 对应 1 meter
-        scale = 1.0
+        run_time = 3.0
         
-        # 计算终点位置 (相对于初始位置)
-        # 初始位置由 scene 方法设定，这里计算位移量
-        t_final = 0.55
-        a_B = 17.0 / 3.0
-        a_A = 3.0
+        # Block B motion: 0 -> 0.85
+        anim_B = block_B.animate.shift(RIGHT * 0.85).set(run_time=run_time)
         
-        disp_B = 0.5 * a_B * t_final**2
-        disp_A = 0.5 * a_A * t_final**2
+        # Block A motion: 0.4 -> 0.85
+        anim_A = block_A.animate.shift(RIGHT * 0.45).set(run_time=run_time)
         
-        # 获取初始位置 (假设初始时刻已由 scene 设置好)
-        # 这里我们通过获取当前对象的中心点作为起点
-        start_pos_B = board_B.get_center()
-        start_pos_A = block_A.get_center()
-        
-        # 计算终点坐标
-        # 运动方向向右 (x轴正方向)
-        end_pos_B = start_pos_B + np.array([disp_B * scale, 0, 0])
-        end_pos_A = start_pos_A + np.array([disp_A * scale, 0, 0])
-        
-        # 动画时长
-        run_time = 8.0
-        
-        # 创建动画
-        # 使用 MoveAlongPath 或直接使用 target 参数的动画
-        # 这里使用 MoveToPoint (通过 animate 语法或 MoveTo)
-        # 为了平滑，使用 UpdateFromAlpha 或者简单的 MoveTo
-        
-        anim_board = board_B.animate.move_to(end_pos_B).set(run_time=run_time)
-        anim_block = block_A.animate.move_to(end_pos_A).set(run_time=run_time)
-        
-        return [anim_board, anim_block]
-        
+        # Force arrow moves with Block B
+        anim_F = force_arrow_F.animate.shift(RIGHT * 0.85).set(run_time=run_time)
+
+        return [anim_B, anim_A, anim_F]
+    
     return []
 ```

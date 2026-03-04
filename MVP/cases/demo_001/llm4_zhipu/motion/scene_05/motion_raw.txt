@@ -4,13 +4,17 @@ def motion_scene_05(self, step_id):
         diagram = self.objects.get("diagram_rel")
         if diagram is None:
             return []
+        
+        # Fade in the relative motion diagram
         return [FadeIn(diagram)]
     
     if step_id == "step_02":
-        goal_panel = self.objects.get("goal_panel_q2")
-        if goal_panel is None:
+        formula = self.objects.get("formula_rel")
+        if formula is None:
             return []
-        return [FadeIn(goal_panel)]
+        
+        # Fade in the relative motion formula
+        return [FadeIn(formula)]
     
     return []
 ```

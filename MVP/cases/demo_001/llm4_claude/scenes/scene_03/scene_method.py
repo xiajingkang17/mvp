@@ -1,0 +1,80 @@
+def scene_scene_03(self):
+    reset_scene(self, self.objects)
+
+    zone_diagram_left = (0.05, 0.48, 0.16, 0.92)
+    zone_formula_right = (0.52, 0.95, 0.16, 0.92)
+    zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+    def step_01():
+        block_A = Rectangle(width=0.6, height=0.4, color=BLUE, stroke_width=3, fill_opacity=0.3)
+        block_B = Rectangle(width=1.2, height=0.3, color=GREEN, stroke_width=3, fill_opacity=0.3)
+        block_B.next_to(block_A, DOWN, buff=0)
+        
+        force_F = Arrow(start=block_B.get_right(), end=block_B.get_right() + RIGHT * 0.8, buff=0, color=RED, stroke_width=3)
+        label_F = Text("F", font_size=24, color=RED).next_to(force_F, UP, buff=0.1)
+        
+        force_fs = Arrow(start=block_A.get_left(), end=block_A.get_left() + RIGHT * 0.6, buff=0, color=YELLOW, stroke_width=3)
+        label_fs = MathTex("f_s", font_size=24, color=YELLOW).next_to(force_fs, UP, buff=0.1)
+        
+        label_A = Text("A", font_size=20, color=WHITE).move_to(block_A.get_center())
+        label_B = Text("B", font_size=20, color=WHITE).move_to(block_B.get_center())
+        
+        diagram_group = VGroup(block_A, block_B, force_F, label_F, force_fs, label_fs, label_A, label_B)
+        fit_in_zone(diagram_group, zone_diagram_left, width_ratio=0.8, height_ratio=0.6)
+        register_obj(self, self.objects, "diagram_system", diagram_group)
+        self.add(diagram_group)
+        
+        eq1 = MathTex("F = (M+m)a", font_size=32, color=WHITE)
+        eq2 = MathTex("a = \\frac{20}{4} = 5\\,\\text{m/s}^2", font_size=32, color=WHITE)
+        eq3 = MathTex("f_s = ma = 5\\,\\text{N}", font_size=32, color=WHITE)
+        
+        equations = VGroup(eq1, eq2, eq3).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+        fit_in_zone(equations, zone_formula_right, width_ratio=0.85, height_ratio=0.7)
+        register_obj(self, self.objects, "equation_1", eq1)
+        register_obj(self, self.objects, "equation_2", eq2)
+        self.add(eq1)
+        self.wait(0.3)
+        self.add(eq2)
+        self.wait(0.3)
+        self.add(eq3)
+
+    run_step(
+        self,
+        self.objects,
+        "假设A、B相对静止，整体加速度a为5米每二次方秒。此时A需要5牛的静摩擦力来维持这个加速度。",
+        zone_subtitle,
+        ["diagram_system", "equation_1", "equation_2"],
+        step_01
+    )
+
+    def step_02():
+        diagram_group = self.objects["diagram_system"]
+        force_fs_arrow = diagram_group[4]
+        label_fs = diagram_group[5]
+        
+        label_fk = MathTex("f_k", font_size=24, color=YELLOW).move_to(label_fs.get_center())
+        diagram_group.remove(label_fs)
+        diagram_group.add(label_fk)
+        
+        eq4 = MathTex("f_{\\text{max}} = \\mu_s mg = 4\\,\\text{N}", font_size=32, color=WHITE)
+        eq5 = MathTex("5\\,\\text{N} > 4\\,\\text{N}", font_size=32, color=ORANGE)
+        eq6 = MathTex("\\Rightarrow \\text{滑动}", font_size=32, color=ORANGE)
+        
+        new_eqs = VGroup(eq4, eq5, eq6).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+        fit_in_zone(new_eqs, zone_formula_right, width_ratio=0.85, height_ratio=0.7)
+        self.add(eq4)
+        self.wait(0.3)
+        self.add(eq5)
+        self.wait(0.3)
+        self.add(eq6)
+
+    run_step(
+        self,
+        self.objects,
+        "但是，A与B间的最大静摩擦力f_max只有4牛。因为需要的5牛大于最大的4牛，所以假设不成立，A会相对B滑动。摩擦力变为滑动摩擦力f_k。",
+        zone_subtitle,
+        ["diagram_system", "equation_1", "equation_2"],
+        step_02
+    )
+
+    cleanup_scene(self, self.objects, [])

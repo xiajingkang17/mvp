@@ -2,65 +2,54 @@
 def scene_scene_08(self):
     reset_scene(self, self.objects)
 
-    zone_main = (0.15, 0.85, 0.2, 0.85)
     zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+    zone_main = (0.15, 0.85, 0.2, 0.9)
 
     def step_01():
-        # Step 1: Calculate displacement and Work
-        # Text content for step 1
-        text_1 = Text("1. 计算木板位移 x_B：", font_size=32, color=WHITE)
-        math_1 = MathTex("x_B = \\frac{1}{2} a_B t^2 = 0.5 \\cdot \\frac{17}{3} \\cdot 0.3 \\approx 0.85 \\, \\text{m}", font_size=32, color=WHITE)
+        # Line 1: x_B calculation
+        line1 = MathTex("x_B = \\frac{1}{2} a_B t^2 \\approx 1.02 \\, \\text{m}", font_size=40, color=WHITE)
+        # Line 2: W_F calculation
+        line2 = MathTex("W_F = F x_B = 20 \\times 1.02 = 20.4 \\, \\text{J}", font_size=40, color=WHITE)
         
-        text_2 = Text("2. 计算外力做功 W_F：", font_size=32, color=WHITE)
-        math_2 = MathTex("W_F = F \\cdot x_B = 20 \\cdot 0.85 = 17.0 \\, \\text{J}", font_size=32, color=WHITE)
-
-        # Group and arrange
-        group = VGroup(text_1, math_1, text_2, math_2)
-        group.arrange(DOWN, aligned_edge=LEFT, buff=0.4)
-        
-        # Place in zone
+        # Group and layout
+        group = VGroup(line1, line2).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
         place_in_zone(group, zone_main, offset=(0.0, 0.2))
         
-        register_obj(self, self.objects, "calc_panel_q3", group)
+        # Register and add
+        register_obj(self, self.objects, "calc_xB", line1)
+        register_obj(self, self.objects, "calc_WF", line2)
         self.add(group)
 
     run_step(
         self,
         self.objects,
-        "首先计算木板B的位移，然后求出外力做功W_F。",
+        "计算B的位移，得到x_B约为1.02米。进而算出W_F为20.4焦耳。",
         zone_subtitle,
-        ["calc_panel_q3"],
+        ["calc_xB", "calc_WF"],
         step_01,
     )
 
     def step_02():
-        # Step 2: Calculate Heat Q
-        # Retrieve existing object
-        group = self.objects["calc_panel_q3"]
+        # Line 3: Q calculation
+        line3 = MathTex("Q = f_k l = 3.0 \\times 0.4 = 1.2 \\, \\text{J}", font_size=40, color=YELLOW)
         
-        # New content for step 3
-        text_3 = Text("3. 计算摩擦生热 Q：", font_size=32, color=WHITE)
-        math_3 = MathTex("Q = f_k \\cdot l = \\mu_k m g l", font_size=32, color=WHITE)
-        math_4 = MathTex("Q = 0.3 \\cdot 1 \\cdot 10 \\cdot 0.4 = 1.2 \\, \\text{J}", font_size=32, color=WHITE)
-
-        # Create a temporary group to calculate position
-        new_group = VGroup(text_3, math_3, math_4)
-        new_group.arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+        # Get previous group to append
+        prev_group = self.objects["calc_xB"].get_parent() or VGroup(self.objects["calc_xB"], self.objects["calc_WF"])
+        new_group = VGroup(prev_group, line3).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
         
-        # Position new group below existing content
-        new_group.next_to(group, DOWN, buff=0.5, aligned_edge=LEFT)
+        # Re-center the expanded group
+        place_in_zone(new_group, zone_main, offset=(0.0, 0.2))
         
-        # Add to the main group and register update
-        group.add(new_group)
-        register_obj(self, self.objects, "calc_panel_q3", group)
-        self.add(new_group)
+        # Register and add
+        register_obj(self, self.objects, "calc_Q", line3)
+        self.add(line3)
 
     run_step(
         self,
         self.objects,
-        "接着计算摩擦生热Q，利用相对位移可以直接得出结果。",
+        "最后算摩擦生热Q。f_k是3牛，相对位移l是0.4米，所以Q等于1.2焦耳。",
         zone_subtitle,
-        ["calc_panel_q3"],
+        ["calc_xB", "calc_WF", "calc_Q"],
         step_02,
     )
 
