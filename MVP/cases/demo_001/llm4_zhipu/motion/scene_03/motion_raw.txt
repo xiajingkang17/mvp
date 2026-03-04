@@ -1,32 +1,23 @@
 ```python
 def motion_scene_03(self, step_id):
-    if step_id == "step_01":
-        diagram_A = self.objects.get("diagram_A")
-        diagram_B = self.objects.get("diagram_B")
-        derivation_text = self.objects.get("derivation_text")
-        
-        if diagram_A is None or diagram_B is None or derivation_text is None:
-            return []
-            
-        return [
-            FadeIn(diagram_A, shift=LEFT*0.5),
-            FadeIn(diagram_B, shift=RIGHT*0.5),
-            Write(derivation_text)
-        ]
-        
     if step_id == "step_02":
-        diagram_A = self.objects.get("diagram_A")
-        diagram_B = self.objects.get("diagram_B")
-        derivation_text = self.objects.get("derivation_text")
-        
-        if diagram_A is None or diagram_B is None or derivation_text is None:
+        diagram_system = self.objects.get("diagram_system")
+        if diagram_system is None:
             return []
-            
-        return [
-            Transform(diagram_A, diagram_A),
-            Transform(diagram_B, diagram_B),
-            Transform(derivation_text, derivation_text)
-        ]
         
+        # Retrieve the specific force arrow object from the diagram group
+        # Assuming the diagram_system is a VGroup or similar container
+        force_f = diagram_system.force_f
+        
+        # Animate the label change from f_s to f_k
+        # Using a replacement animation to swap the text content
+        new_label = MathTex("f_k")
+        new_label.match_style(force_f.label)
+        new_label.move_to(force_f.label)
+        
+        return [
+            ReplacementTransform(force_f.label, new_label),
+            Indicate(force_f, scale_factor=1.2, color=YELLOW)
+        ]
     return []
 ```

@@ -1,7 +1,9 @@
 def motion_scene_10(self, step_id):
     if step_id == "step_01":
-        transfer_panel = self.objects.get("transfer_panel")
-        if transfer_panel is None:
+        method_map = self.objects.get("method_map")
+        if method_map is None:
             return []
-        return [FadeIn(transfer_panel)]
+        
+        # Fade in the mind map
+        return [FadeIn(method_map)]
     return []

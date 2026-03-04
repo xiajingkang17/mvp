@@ -5,7 +5,7 @@ from typing import Literal, TypedDict
 
 
 Role = Literal["system", "user", "assistant"]
-ProviderName = Literal["zhipu", "anthropic"]
+ProviderName = Literal["zhipu", "anthropic", "kimi"]
 
 
 @dataclass(frozen=True)

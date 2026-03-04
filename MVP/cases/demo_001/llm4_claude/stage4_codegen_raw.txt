@@ -1,0 +1,1224 @@
+from manim import *
+import numpy as np
+import unicodedata
+
+
+def reset_scene(scene, objects):
+    """Default scene boundary behavior: clear all prior mobjects and shared registries."""
+    scene.clear()
+    objects.clear()
+    if hasattr(scene, "scene_state"):
+        scene.scene_state.clear()
+    if hasattr(scene, "motion_cache"):
+        scene.motion_cache.clear()
+
+def prepare_scene_entry(scene, objects, keep_ids):
+    """Reconcile current on-screen objects to the exact scene entry set."""
+    keep = set(keep_ids)
+    for obj_id in list(objects.keys()):
+        if obj_id not in keep:
+            mob = objects.get(obj_id)
+            if mob is not None and mob in scene.mobjects:
+                scene.remove(mob)
+            objects.pop(obj_id, None)
+    if "current_subtitle" not in keep:
+        subtitle = objects.get("current_subtitle")
+        if subtitle is not None and subtitle in scene.mobjects:
+            scene.remove(subtitle)
+        objects.pop("current_subtitle", None)
+    if hasattr(scene, "scene_state"):
+        scene.scene_state.clear()
+    if hasattr(scene, "motion_cache"):
+        scene.motion_cache.clear()
+
+def _normalize_zone_rect(zone_rect):
+    """
+    Accept either normalized `(0..1)` zone rects or Manim world coordinates.
+    """
+    if len(zone_rect) != 4:
+        raise ValueError("zone_rect must be (x0, x1, y0, y1)")
+    x0, x1, y0, y1 = zone_rect
+    x0, x1, y0, y1 = float(x0), float(x1), float(y0), float(y1)
+    if 0.0 <= x0 <= 1.0 and 0.0 <= x1 <= 1.0 and 0.0 <= y0 <= 1.0 and 0.0 <= y1 <= 1.0:
+        frame_w = float(config.frame_width)
+        frame_h = float(config.frame_height)
+        x0 = x0 * frame_w - frame_w / 2.0
+        x1 = x1 * frame_w - frame_w / 2.0
+        y0 = y0 * frame_h - frame_h / 2.0
+        y1 = y1 * frame_h - frame_h / 2.0
+    return x0, x1, y0, y1
+
+def fit_in_zone(mobject, zone_rect, width_ratio=0.92, height_ratio=0.92):
+    """Scale object to fit inside the target zone."""
+    x0, x1, y0, y1 = _normalize_zone_rect(zone_rect)
+    max_w = (x1 - x0) * width_ratio
+    max_h = (y1 - y0) * height_ratio
+    if mobject.width > max_w:
+        mobject.scale_to_fit_width(max_w)
+    if mobject.height > max_h:
+        mobject.scale_to_fit_height(max_h)
+    return mobject
+
+def _normalize_offset(offset):
+    offset_arr = np.array(offset, dtype=float)
+    if offset_arr.shape == (2,):
+        return np.array([offset_arr[0], offset_arr[1], 0.0])
+    if offset_arr.shape == (3,):
+        return offset_arr
+    raise ValueError("offset must be a 2D or 3D vector")
+
+def place_in_zone(mobject, zone_rect, offset=ORIGIN):
+    """Place object at the zone center with optional offset."""
+    x0, x1, y0, y1 = _normalize_zone_rect(zone_rect)
+    center = np.array([(x0 + x1) / 2, (y0 + y1) / 2, 0])
+    offset_arr = _normalize_offset(offset)
+    mobject.move_to(center + offset_arr)
+    return mobject
+
+def place_in_zone_anchor(mobject, zone_rect, anchor="center", margin_ratio=0.04, offset=ORIGIN):
+    """Place object inside a zone using a semantic anchor such as top_left or bottom_right."""
+    x0, x1, y0, y1 = _normalize_zone_rect(zone_rect)
+    offset_arr = _normalize_offset(offset)
+    zone_w = x1 - x0
+    zone_h = y1 - y0
+    margin_x = zone_w * float(margin_ratio)
+    margin_y = zone_h * float(margin_ratio)
+
+    name = str(anchor or "center").strip().lower()
+
+    if "left" in name:
+        center_x = x0 + margin_x + mobject.width / 2.0
+    elif "right" in name:
+        center_x = x1 - margin_x - mobject.width / 2.0
+    else:
+        center_x = (x0 + x1) / 2.0
+
+    if "top" in name:
+        center_y = y1 - margin_y - mobject.height / 2.0
+    elif "bottom" in name:
+        center_y = y0 + margin_y + mobject.height / 2.0
+    else:
+        center_y = (y0 + y1) / 2.0
+
+    mobject.move_to(np.array([center_x, center_y, 0.0]) + offset_arr)
+    return mobject
+
+def layout_formula_group(formulas, zone_rect):
+    """Stack formulas vertically and place the group inside a formula zone rect."""
+    group = VGroup(*formulas).arrange(DOWN, aligned_edge=LEFT, buff=0.22)
+    fit_in_zone(group, zone_rect, width_ratio=0.92, height_ratio=0.92)
+    place_in_zone(group, zone_rect)
+    return group
+
+def register_obj(scene, objects, obj_id, mobject):
+    """Register a stable object id and retire any old object under the same id."""
+    old = objects.get(obj_id)
+    if old is not None and old is not mobject:
+        if old in scene.mobjects:
+            scene.remove(old)
+        try:
+            old.clear_updaters()
+        except Exception:
+            pass
+    objects[obj_id] = mobject
+    return mobject
+
+def _purge_registered_objects(scene, objects, obj_ids, animation_cls=FadeOut, run_time=0.25):
+    """Remove a batch of registered objects in a single scene transition."""
+    tracked_ids = []
+    batch = []
+    seen = set()
+
+    for obj_id in obj_ids:
+        mob = objects.get(obj_id)
+        if mob is None:
+            objects.pop(obj_id, None)
+            continue
+        tracked_ids.append(obj_id)
+        mob_key = id(mob)
+        if mob in scene.mobjects and mob_key not in seen:
+            batch.append(mob)
+            seen.add(mob_key)
+
+    if batch:
+        if animation_cls is None or run_time <= 0:
+            scene.remove(*batch)
+        else:
+            scene.play(
+                AnimationGroup(*(animation_cls(mob) for mob in batch), lag_ratio=0.0),
+                run_time=run_time,
+            )
+            scene.remove(*batch)
+
+    for obj_id in tracked_ids:
+        mob = objects.pop(obj_id, None)
+        if mob is not None:
+            try:
+                mob.clear_updaters()
+            except Exception:
+                pass
+
+def remove_registered_obj(scene, objects, obj_id, animation_cls=FadeOut):
+    """Remove and unregister a single object."""
+    _purge_registered_objects(scene, objects, [obj_id], animation_cls=animation_cls, run_time=0.25)
+
+def cleanup_step(scene, objects, keep_ids):
+    """Remove every registered object that is not listed in keep_ids."""
+    keep = set(keep_ids)
+    to_remove = [obj_id for obj_id in list(objects.keys()) if obj_id not in keep]
+    _purge_registered_objects(scene, objects, to_remove, animation_cls=FadeOut, run_time=0.2)
+
+def cleanup_scene(scene, objects, keep_ids):
+    """Keep only the exact scene exit set."""
+    keep = set(keep_ids)
+    to_remove = [obj_id for obj_id in list(objects.keys()) if obj_id not in keep]
+    _purge_registered_objects(scene, objects, to_remove, animation_cls=FadeOut, run_time=0.2)
+
+def _subtitle_visual_units(ch):
+    if ch.isspace():
+        return 0.35
+    return 1.0 if unicodedata.east_asian_width(ch) in {"W", "F"} else 0.6
+
+def _text_visual_units(ch):
+    if ch.isspace():
+        return 0.35
+    return 1.0 if unicodedata.east_asian_width(ch) in {"W", "F"} else 0.6
+
+def _is_text_break_char(ch):
+    return ch.isspace() or ch in "，。、；：！？,.!?;:)]】）}>"
+
+def _wrap_text_block_lines(text, *, max_units_per_line=18.0):
+    raw = str(text or "").strip()
+    if not raw:
+        return [""]
+
+    lines = []
+    current = []
+    current_units = 0.0
+    last_break_idx = -1
+
+    for ch in raw:
+        if ch == "\n":
+            line = "".join(current).strip()
+            if line:
+                lines.append(line)
+            current = []
+            current_units = 0.0
+            last_break_idx = -1
+            continue
+
+        current.append(ch)
+        current_units += _text_visual_units(ch)
+        if _is_text_break_char(ch):
+            last_break_idx = len(current)
+
+        if current_units <= max_units_per_line:
+            continue
+
+        if last_break_idx > 0:
+            left = "".join(current[:last_break_idx]).strip()
+            right_chars = current[last_break_idx:]
+        else:
+            left = "".join(current[:-1]).strip()
+            right_chars = current[-1:]
+
+        if left:
+            lines.append(left)
+        current = list("".join(right_chars).lstrip())
+        current_units = sum(_text_visual_units(c) for c in current)
+        last_break_idx = -1
+        for idx, c in enumerate(current, start=1):
+            if _is_text_break_char(c):
+                last_break_idx = idx
+
+    tail = "".join(current).strip()
+    if tail:
+        lines.append(tail)
+    return lines or [raw]
+
+def make_wrapped_text_block(
+    text,
+    zone_rect,
+    *,
+    font_size=30,
+    color=WHITE,
+    anchor="top_left",
+    width_ratio=0.96,
+    height_ratio=0.92,
+    line_buff=0.14,
+    margin_ratio=0.04,
+    min_font_size=20,
+):
+    """
+    Build a long-form text block that wraps and fits inside the given zone.
+    Intended for problem text, question lists, cards, and summaries.
+    """
+    x0, x1, y0, y1 = _normalize_zone_rect(zone_rect)
+    zone_w = max(0.1, x1 - x0)
+    zone_h = max(0.1, y1 - y0)
+    zone_frac = zone_w / float(config.frame_width)
+    max_w = zone_w * width_ratio
+    max_h = zone_h * height_ratio
+
+    current_font = int(font_size)
+    max_units_per_line = max(8.0, 33.0 * zone_frac * (28.0 / max(current_font, 1.0)))
+    group = None
+
+    for _ in range(8):
+        lines = _wrap_text_block_lines(text, max_units_per_line=max_units_per_line)
+        line_mobs = [Text(line, font_size=current_font, color=color) for line in lines if str(line).strip()]
+        if not line_mobs:
+            line_mobs = [Text("", font_size=current_font, color=color)]
+        group = VGroup(*line_mobs).arrange(DOWN, aligned_edge=LEFT, buff=line_buff)
+
+        too_wide = group.width > max_w
+        too_tall = group.height > max_h
+        if not too_wide and not too_tall:
+            break
+
+        if too_wide:
+            max_units_per_line = max(6.0, max_units_per_line * 0.88)
+        if too_tall:
+            current_font = max(int(min_font_size), current_font - 2)
+            max_units_per_line = max(6.0, max_units_per_line * 0.96)
+
+    if group is None:
+        group = VGroup(Text(str(text or ""), font_size=current_font, color=color))
+    fit_in_zone(group, zone_rect, width_ratio=width_ratio, height_ratio=height_ratio)
+    place_in_zone_anchor(group, zone_rect, anchor=anchor, margin_ratio=margin_ratio)
+    return group
+
+def _wrap_subtitle_text(text, *, max_units_per_line=30.0, max_lines=2):
+    lines = []
+    current = []
+    current_units = 0.0
+
+    for ch in str(text).strip():
+        if ch == "\n":
+            lines.append("".join(current).strip())
+            current = []
+            current_units = 0.0
+            continue
+
+        units = _subtitle_visual_units(ch)
+        if current and current_units + units > max_units_per_line:
+            lines.append("".join(current).strip())
+            current = [ch]
+            current_units = units
+        else:
+            current.append(ch)
+            current_units += units
+
+    if current:
+        lines.append("".join(current).strip())
+
+    lines = [line for line in lines if line]
+    if not lines:
+        return [""]
+    if len(lines) > max_lines:
+        raise ValueError("Subtitle text is too long for the reserved subtitle zone; split the step narration.")
+    return lines
+
+def _subtitle_scale_factor(text, subtitle_zone_rect):
+    lines = _wrap_subtitle_text(text)
+    subtitle = Text("\n".join(lines), font_size=28, color=WHITE)
+    x0, x1, y0, y1 = _normalize_zone_rect(subtitle_zone_rect)
+    max_w = (x1 - x0) * 0.96
+    max_h = (y1 - y0) * 0.88
+
+    scale_factor = 1.0
+    if subtitle.width > 0:
+        scale_factor = min(scale_factor, max_w / subtitle.width)
+    if subtitle.height > 0:
+        scale_factor = min(scale_factor, max_h / subtitle.height)
+    return scale_factor
+
+def _subtitle_can_render(text, subtitle_zone_rect):
+    try:
+        return _subtitle_scale_factor(text, subtitle_zone_rect) >= 0.94
+    except ValueError:
+        return False
+
+def _estimate_subtitle_read_seconds(text):
+    raw = str(text or "").strip()
+    if not raw:
+        return 0.0
+    visual_units = sum(_subtitle_visual_units(ch) for ch in raw)
+    return max(1.2, visual_units / 4.2 + 0.4)
+
+def _split_subtitle_by_punctuation(text):
+    punctuation = "，。；：？！,.!?;:"
+    clauses = []
+    current = []
+    for ch in str(text).strip():
+        current.append(ch)
+        if ch in punctuation:
+            clause = "".join(current).strip()
+            if clause:
+                clauses.append(clause)
+            current = []
+    tail = "".join(current).strip()
+    if tail:
+        clauses.append(tail)
+    return clauses or [str(text).strip()]
+
+def _split_subtitle_hard(text):
+    raw = str(text).strip()
+    if len(raw) <= 1:
+        return [raw] if raw else []
+
+    total_units = sum(_subtitle_visual_units(ch) for ch in raw)
+    target = total_units / 2.0
+    acc = 0.0
+    split_at = 0
+    for idx, ch in enumerate(raw, start=1):
+        acc += _subtitle_visual_units(ch)
+        if acc >= target:
+            split_at = idx
+            break
+
+    split_at = max(1, min(split_at or (len(raw) // 2), len(raw) - 1))
+    left = raw[:split_at].strip()
+    right = raw[split_at:].strip()
+    return [part for part in (left, right) if part]
+
+def _normalize_runtime_subtitle_segments(text, subtitle_zone_rect):
+    raw = str(text or "").strip()
+    if not raw:
+        return []
+    if _subtitle_can_render(raw, subtitle_zone_rect):
+        return [raw]
+
+    clauses = _split_subtitle_by_punctuation(raw)
+    if len(clauses) > 1:
+        packed = []
+        buffer = ""
+        for clause in clauses:
+            candidate = f"{buffer}{clause}".strip() if not buffer else f"{buffer}{clause}"
+            if buffer and not _subtitle_can_render(candidate, subtitle_zone_rect):
+                packed.extend(_normalize_runtime_subtitle_segments(buffer, subtitle_zone_rect))
+                buffer = clause.strip()
+            else:
+                buffer = candidate.strip()
+        if buffer:
+            packed.extend(_normalize_runtime_subtitle_segments(buffer, subtitle_zone_rect))
+        if packed:
+            return packed
+
+    parts = _split_subtitle_hard(raw)
+    if len(parts) <= 1:
+        return [raw]
+
+    segments = []
+    for part in parts:
+        segments.extend(_normalize_runtime_subtitle_segments(part, subtitle_zone_rect))
+    return segments
+
+def show_subtitle(scene, objects, text, subtitle_zone_rect):
+    """Render narration into a fixed reserved subtitle zone without shrinking it away."""
+    old = objects.get("current_subtitle")
+    if old is not None:
+        scene.remove(old)
+        objects.pop("current_subtitle", None)
+
+    lines = _wrap_subtitle_text(text)
+    subtitle = Text("\n".join(lines), font_size=28, color=WHITE)
+    scale_factor = _subtitle_scale_factor(text, subtitle_zone_rect)
+
+    if scale_factor < 0.94:
+        raise ValueError("Subtitle text does not fit the fixed subtitle zone; split the narration into shorter steps.")
+    if scale_factor < 1.0:
+        subtitle.scale(scale_factor)
+
+    place_in_zone(subtitle, subtitle_zone_rect)
+    scene.add(subtitle)
+    objects["current_subtitle"] = subtitle
+    return subtitle
+
+def run_step(scene, objects, subtitle_text, subtitle_zone_rect, keep_ids, step_fn):
+    """
+    Recommended execution order:
+    1. normalize subtitle_text into runtime-safe subtitle segments
+    2. show_subtitle(the first subtitle segment)
+    2. execute create/update/remove logic in step_fn
+    3. if there are remaining subtitle segments, show them sequentially
+    4. cleanup_step(... keep ...)
+    """
+    text = str(subtitle_text or "").strip()
+    raw_segments = [text] if text else []
+
+    segments = []
+    for raw in raw_segments:
+        segments.extend(_normalize_runtime_subtitle_segments(raw, subtitle_zone_rect))
+
+    if segments:
+        start_time = float(getattr(scene, "time", 0.0))
+        show_subtitle(scene, objects, segments[0], subtitle_zone_rect)
+    else:
+        start_time = float(getattr(scene, "time", 0.0))
+    step_fn()
+    if segments:
+        elapsed = max(0.0, float(getattr(scene, "time", 0.0)) - start_time)
+        remaining = _estimate_subtitle_read_seconds(segments[0]) - elapsed
+        if remaining > 0:
+            scene.wait(remaining)
+    for segment in segments[1:]:
+        show_subtitle(scene, objects, segment, subtitle_zone_rect)
+        scene.wait(_estimate_subtitle_read_seconds(segment))
+    cleanup_step(scene, objects, keep_ids)
+
+
+class MainScene(Scene):
+    def construct(self):
+        self.objects = {}
+        self.scene_state = {}
+        self.motion_cache = {}
+        self.scene_scene_01()
+        self.scene_scene_02()
+        self.scene_scene_03()
+        self.scene_scene_04()
+        self.scene_scene_05()
+        self.scene_scene_06()
+        self.scene_scene_07()
+        self.scene_scene_08()
+        self.scene_scene_09()
+        self.scene_scene_10()
+
+    def scene_scene_01(self):
+        reset_scene(self, self.objects)
+
+        zone_problem = (0.05, 0.95, 0.52, 0.92)
+        zone_preview = (0.15, 0.85, 0.16, 0.48)
+        zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+        problem_text = """题目:板块模型(3问)
+    已知:M=3.0kg, m=1.0kg, L=2.0m, l=0.40m
+    μₖ=0.30, μₛ=0.40, F=20N
+    问题:(1)判断滑动并求a; (2)求t,vₐ,vᵦ; (3)求Wᶠ,Q"""
+
+        def step_01():
+            problem_block = make_wrapped_text_block(
+                problem_text,
+                zone_problem,
+                font_size=28,
+                color=WHITE,
+                anchor="top_left"
+            )
+            register_obj(self, self.objects, "text_block_problem", problem_block)
+            self.play(Write(problem_block), run_time=1.5)
+
+        run_step(
+            self,
+            self.objects,
+            "首先,我们来看一下题目描述。木板B放在光滑水平面上,物块A静置在木板上,距离左端0.4米。",
+            zone_subtitle,
+            ["text_block_problem"],
+            step_01
+        )
+
+        def step_02():
+            floor = Line(
+                start=np.array([-3.0, -1.2, 0.0]),
+                end=np.array([3.0, -1.2, 0.0]),
+                color=WHITE,
+                stroke_width=3
+            )
+            register_obj(self, self.objects, "floor", floor)
+
+            block_B = Rectangle(
+                width=2.0,
+                height=0.3,
+                stroke_color=BLUE,
+                stroke_width=3,
+                fill_color=BLUE,
+                fill_opacity=0.3
+            ).shift(np.array([0.0, -1.05, 0.0]))
+            register_obj(self, self.objects, "block_B", block_B)
+
+            block_A = Rectangle(
+                width=0.5,
+                height=0.3,
+                stroke_color=YELLOW,
+                stroke_width=3,
+                fill_color=YELLOW,
+                fill_opacity=0.5
+            ).shift(np.array([-0.6, -0.75, 0.0]))
+            register_obj(self, self.objects, "block_A", block_A)
+
+            preview_group = VGroup(floor, block_B, block_A)
+            fit_in_zone(preview_group, zone_preview, width_ratio=0.9, height_ratio=0.8)
+
+            self.play(FadeIn(floor), FadeIn(block_B), FadeIn(block_A), run_time=1.0)
+
+            force_arrow = Arrow(
+                start=block_B.get_right() + np.array([0.0, 0.0, 0.0]),
+                end=block_B.get_right() + np.array([0.6, 0.0, 0.0]),
+                buff=0.0,
+                stroke_width=4,
+                color=RED
+            )
+            register_obj(self, self.objects, "force_arrow_F", force_arrow)
+            self.play(GrowArrow(force_arrow), run_time=0.8)
+
+            self.motion_scene_01("step_02")
+
+        run_step(
+            self,
+            self.objects,
+            "从t=0时刻起,对木板施加水平向右的恒力F。由于A和B之间存在摩擦力,它们都会向右加速,但加速度不同。",
+            zone_subtitle,
+            ["text_block_problem", "floor", "block_B", "block_A", "force_arrow_F"],
+            step_02
+        )
+
+        def step_03():
+            self.wait(1.5)
+
+        run_step(
+            self,
+            self.objects,
+            "最终,物块A会从木板的左端滑落。接下来,我们将分三问逐步求解。",
+            zone_subtitle,
+            ["text_block_problem", "floor", "block_B", "block_A", "force_arrow_F"],
+            step_03
+        )
+
+        cleanup_scene(self, self.objects, [])
+
+    def scene_scene_02(self):
+        reset_scene(self, self.objects)
+
+        zone_problem_left = (0.05, 0.48, 0.16, 0.92)
+        zone_goal_right = (0.52, 0.95, 0.16, 0.92)
+        zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+        def step_01():
+            problem_text = Text(
+                "第一问：判断并求加速度\n目标：判断是否滑动？求a_A, a_B",
+                font_size=26,
+                color=WHITE
+            )
+            problem_text = make_wrapped_text_block(
+                "第一问：判断并求加速度\n目标：判断是否滑动？求a_A, a_B",
+                zone_problem_left,
+                font_size=26,
+                color=WHITE,
+                anchor="top_left"
+            )
+            register_obj(self, self.objects, "text_q1", problem_text)
+            self.add(problem_text)
+
+            block_A = Rectangle(width=0.4, height=0.3, color=YELLOW, stroke_width=3, fill_opacity=0.3)
+            block_B = Rectangle(width=1.0, height=0.2, color=BLUE, stroke_width=3, fill_opacity=0.3)
+            blocks = VGroup(block_B, block_A.move_to(block_B.get_center() + UP * 0.25))
+            place_in_zone(blocks, zone_goal_right, offset=(0.0, 0.25))
+            register_obj(self, self.objects, "block_A_icon", block_A)
+            register_obj(self, self.objects, "block_B_icon", block_B)
+            self.add(blocks)
+
+            flow_items = VGroup(
+                Text("1. 假设整体加速", font_size=22, color=YELLOW),
+                Text("2. 计算所需f_s", font_size=22, color=WHITE),
+                Text("3. 比较f_s与f_max", font_size=22, color=WHITE),
+                Text("4. 判断滑动", font_size=22, color=WHITE),
+                Text("5. 隔离求a", font_size=22, color=WHITE)
+            ).arrange(DOWN, aligned_edge=LEFT, buff=0.15)
+            place_in_zone(flow_items, zone_goal_right, offset=(0.0, -0.15))
+            register_obj(self, self.objects, "logic_flow", flow_items)
+            self.add(flow_items)
+
+        run_step(
+            self,
+            self.objects,
+            "第一问的核心是判断静摩擦力是否被突破。我们需要先假设它们一起加速，看需要多大的静摩擦力。",
+            zone_subtitle,
+            ["text_q1", "block_A_icon", "block_B_icon", "logic_flow"],
+            step_01
+        )
+
+        def step_02():
+            logic_flow = self.objects["logic_flow"]
+            for i in range(1, 5):
+                logic_flow[i].set_color(YELLOW)
+                self.wait(0.3)
+
+        run_step(
+            self,
+            self.objects,
+            "如果所需的静摩擦力超过了最大静摩擦力，假设就不成立，物块就会滑动。确认滑动后，我们再用牛顿第二定律隔离求解各自的加速度。",
+            zone_subtitle,
+            ["text_q1", "block_A_icon", "block_B_icon", "logic_flow"],
+            step_02
+        )
+
+        cleanup_scene(self, self.objects, [])
+
+    def scene_scene_03(self):
+        reset_scene(self, self.objects)
+
+        zone_diagram_left = (0.05, 0.48, 0.16, 0.92)
+        zone_formula_right = (0.52, 0.95, 0.16, 0.92)
+        zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+        def step_01():
+            block_A = Rectangle(width=0.6, height=0.4, color=BLUE, stroke_width=3, fill_opacity=0.3)
+            block_B = Rectangle(width=1.2, height=0.3, color=GREEN, stroke_width=3, fill_opacity=0.3)
+            block_B.next_to(block_A, DOWN, buff=0)
+        
+            force_F = Arrow(start=block_B.get_right(), end=block_B.get_right() + RIGHT * 0.8, buff=0, color=RED, stroke_width=3)
+            label_F = Text("F", font_size=24, color=RED).next_to(force_F, UP, buff=0.1)
+        
+            force_fs = Arrow(start=block_A.get_left(), end=block_A.get_left() + RIGHT * 0.6, buff=0, color=YELLOW, stroke_width=3)
+            label_fs = MathTex("f_s", font_size=24, color=YELLOW).next_to(force_fs, UP, buff=0.1)
+        
+            label_A = Text("A", font_size=20, color=WHITE).move_to(block_A.get_center())
+            label_B = Text("B", font_size=20, color=WHITE).move_to(block_B.get_center())
+        
+            diagram_group = VGroup(block_A, block_B, force_F, label_F, force_fs, label_fs, label_A, label_B)
+            fit_in_zone(diagram_group, zone_diagram_left, width_ratio=0.8, height_ratio=0.6)
+            register_obj(self, self.objects, "diagram_system", diagram_group)
+            self.add(diagram_group)
+        
+            eq1 = MathTex("F = (M+m)a", font_size=32, color=WHITE)
+            eq2 = MathTex("a = \\frac{20}{4} = 5\\,\\text{m/s}^2", font_size=32, color=WHITE)
+            eq3 = MathTex("f_s = ma = 5\\,\\text{N}", font_size=32, color=WHITE)
+        
+            equations = VGroup(eq1, eq2, eq3).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+            fit_in_zone(equations, zone_formula_right, width_ratio=0.85, height_ratio=0.7)
+            register_obj(self, self.objects, "equation_1", eq1)
+            register_obj(self, self.objects, "equation_2", eq2)
+            self.add(eq1)
+            self.wait(0.3)
+            self.add(eq2)
+            self.wait(0.3)
+            self.add(eq3)
+
+        run_step(
+            self,
+            self.objects,
+            "假设A、B相对静止，整体加速度a为5米每二次方秒。此时A需要5牛的静摩擦力来维持这个加速度。",
+            zone_subtitle,
+            ["diagram_system", "equation_1", "equation_2"],
+            step_01
+        )
+
+        def step_02():
+            diagram_group = self.objects["diagram_system"]
+            force_fs_arrow = diagram_group[4]
+            label_fs = diagram_group[5]
+        
+            label_fk = MathTex("f_k", font_size=24, color=YELLOW).move_to(label_fs.get_center())
+            diagram_group.remove(label_fs)
+            diagram_group.add(label_fk)
+        
+            eq4 = MathTex("f_{\\text{max}} = \\mu_s mg = 4\\,\\text{N}", font_size=32, color=WHITE)
+            eq5 = MathTex("5\\,\\text{N} > 4\\,\\text{N}", font_size=32, color=ORANGE)
+            eq6 = MathTex("\\Rightarrow \\text{滑动}", font_size=32, color=ORANGE)
+        
+            new_eqs = VGroup(eq4, eq5, eq6).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+            fit_in_zone(new_eqs, zone_formula_right, width_ratio=0.85, height_ratio=0.7)
+            self.add(eq4)
+            self.wait(0.3)
+            self.add(eq5)
+            self.wait(0.3)
+            self.add(eq6)
+
+        run_step(
+            self,
+            self.objects,
+            "但是，A与B间的最大静摩擦力f_max只有4牛。因为需要的5牛大于最大的4牛，所以假设不成立，A会相对B滑动。摩擦力变为滑动摩擦力f_k。",
+            zone_subtitle,
+            ["diagram_system", "equation_1", "equation_2"],
+            step_02
+        )
+
+        cleanup_scene(self, self.objects, [])
+
+    def scene_scene_04(self):
+        reset_scene(self, self.objects)
+    
+        zone_formula_main = (0.1, 0.9, 0.16, 0.92)
+        zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+    
+        def step_01():
+            formula_A_1 = MathTex("f_k = \\mu_k m g = 0.3 \\times 1.0 \\times 10 = 3.0\\,\\text{N}", font_size=36, color=WHITE)
+            formula_A_2 = MathTex("a_A = \\frac{f_k}{m} = \\frac{3.0}{1.0} = 3.0\\,\\text{m/s}^2", font_size=36, color=YELLOW)
+        
+            formulas_A = VGroup(formula_A_1, formula_A_2).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+            fit_in_zone(formulas_A, zone_formula_main, width_ratio=0.85, height_ratio=0.8)
+        
+            register_obj(self, self.objects, "formula_A_1", formula_A_1)
+            register_obj(self, self.objects, "formula_A_2", formula_A_2)
+        
+            self.play(Write(formula_A_1), run_time=1.5)
+            self.wait(0.3)
+            self.play(Write(formula_A_2), run_time=1.5)
+            self.wait(0.5)
+    
+        run_step(
+            self,
+            self.objects,
+            "先求A的加速度。隔离A，受向右的滑动摩擦力f_k。计算得a_A为3米每二次方秒。",
+            zone_subtitle,
+            ["formula_A_1", "formula_A_2"],
+            step_01
+        )
+    
+        def step_02():
+            formula_B_1 = MathTex("F - f_k = M a_B", font_size=36, color=WHITE)
+            formula_B_2 = MathTex("a_B = \\frac{F - f_k}{M} = \\frac{20 - 3.0}{3.0} = \\frac{17}{3} \\approx 5.67\\,\\text{m/s}^2", font_size=36, color=YELLOW)
+        
+            formulas_B = VGroup(formula_B_1, formula_B_2).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+        
+            formula_A_1_obj = self.objects.get("formula_A_1")
+            formula_A_2_obj = self.objects.get("formula_A_2")
+            existing_group = VGroup(formula_A_1_obj, formula_A_2_obj)
+        
+            all_formulas = VGroup(existing_group, formulas_B).arrange(DOWN, aligned_edge=LEFT, buff=0.6)
+            fit_in_zone(all_formulas, zone_formula_main, width_ratio=0.85, height_ratio=0.85)
+        
+            register_obj(self, self.objects, "formula_B_1", formula_B_1)
+            register_obj(self, self.objects, "formula_B_2", formula_B_2)
+        
+            self.play(Write(formula_B_1), run_time=1.5)
+            self.wait(0.3)
+            self.play(Write(formula_B_2), run_time=1.5)
+            self.wait(0.5)
+    
+        run_step(
+            self,
+            self.objects,
+            "再求B的加速度。隔离B，受向右的拉力F和向左的滑动摩擦力f_k。合力等于F减f_k，除以M，算得a_B约为5.67米每二次方秒。",
+            zone_subtitle,
+            ["formula_A_1", "formula_A_2", "formula_B_1", "formula_B_2"],
+            step_02
+        )
+    
+        cleanup_scene(self, self.objects, [])
+
+    def scene_scene_05(self):
+        reset_scene(self, self.objects)
+
+        zone_diagram_left = (0.05, 0.48, 0.16, 0.92)
+        zone_goal_right = (0.52, 0.95, 0.16, 0.92)
+        zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+        def step_01():
+            block_B = Rectangle(width=2.0, height=0.4, stroke_color=WHITE, stroke_width=3, fill_color=BLACK, fill_opacity=1.0)
+            block_A = Rectangle(width=0.5, height=0.3, stroke_color=YELLOW, stroke_width=3, fill_color=BLACK, fill_opacity=1.0)
+            block_A.next_to(block_B.get_left(), RIGHT, buff=0.2)
+        
+            label_B = Text("B", font_size=24, color=WHITE).move_to(block_B.get_center())
+            label_A = Text("A", font_size=20, color=YELLOW).move_to(block_A.get_center())
+        
+            arrow_rel = Arrow(
+                start=block_A.get_left() + np.array([0, -0.5, 0]),
+                end=block_B.get_left() + np.array([0, -0.5, 0]),
+                buff=0.0,
+                stroke_width=3,
+                color=RED
+            )
+            label_l = MathTex("l = 0.40\\text{m}", font_size=28, color=RED).next_to(arrow_rel, DOWN, buff=0.1)
+        
+            diagram_rel = VGroup(block_B, block_A, label_B, label_A, arrow_rel, label_l)
+            fit_in_zone(diagram_rel, zone_diagram_left, width_ratio=0.8, height_ratio=0.6)
+        
+            register_obj(self, self.objects, "diagram_rel", diagram_rel)
+            self.add(diagram_rel)
+
+        run_step(
+            self,
+            self.objects,
+            "因为B的加速度大于A的加速度,A相对于B向左运动。当A相对于B移动了0.4米时,就会从左端滑落。",
+            zone_subtitle,
+            ["diagram_rel"],
+            step_01
+        )
+
+        def step_02():
+            text_q2 = Text("第二问:求滑落时间t与速度", font_size=26, color=WHITE)
+            formula_rel = MathTex(
+                "l = \\frac{1}{2}a_{rel}t^2",
+                font_size=32,
+                color=WHITE
+            )
+        
+            goal_formula_group = VGroup(text_q2, formula_rel).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+            place_in_zone(goal_formula_group, zone_goal_right, offset=(0.0, 0.2))
+        
+            register_obj(self, self.objects, "text_q2", text_q2)
+            register_obj(self, self.objects, "formula_rel", formula_rel)
+            self.play(Write(text_q2), run_time=1.0)
+            self.play(Write(formula_rel), run_time=1.5)
+
+        run_step(
+            self,
+            self.objects,
+            "利用相对运动的位移公式,l等于二分之一倍相对加速度乘以t的平方。我们可以先求出相对加速度,进而求出时间t。",
+            zone_subtitle,
+            ["diagram_rel", "text_q2", "formula_rel"],
+            step_02
+        )
+
+        cleanup_scene(self, self.objects, [])
+
+    def scene_scene_06(self):
+        reset_scene(self, self.objects)
+
+        zone_formula_main = (0.1, 0.9, 0.16, 0.92)
+        zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+        def step_01():
+            formula_1 = MathTex("a_{rel} = a_B - a_A \\approx 2.67 \\, \\text{m/s}^2", font_size=36)
+            formula_2 = MathTex("t = \\sqrt{\\frac{2l}{a_{rel}}} = \\sqrt{\\frac{0.8}{2.67}} \\approx 0.6 \\, \\text{s}", font_size=36)
+        
+            calc_t = VGroup(formula_1, formula_2).arrange(DOWN, aligned_edge=LEFT, buff=0.5)
+            place_in_zone(calc_t, zone_formula_main, offset=(0.0, 0.1))
+        
+            register_obj(self, self.objects, "calc_t", calc_t)
+            self.play(Write(formula_1), run_time=1.5)
+            self.wait(0.5)
+            self.play(Write(formula_2), run_time=1.5)
+
+        run_step(
+            self,
+            self.objects,
+            "相对加速度a_rel约为2.67。根据公式，t等于根号下2l除以a_rel，计算得出t等于0.6秒。",
+            zone_subtitle,
+            ["calc_t"],
+            step_01,
+        )
+
+        def step_02():
+            formula_3 = MathTex("v_A = a_A t = 3.0 \\times 0.6 = 1.8 \\, \\text{m/s}", font_size=36)
+            formula_4 = MathTex("v_B = a_B t \\approx 5.67 \\times 0.6 \\approx 3.4 \\, \\text{m/s}", font_size=36)
+        
+            calc_v = VGroup(formula_3, formula_4).arrange(DOWN, aligned_edge=LEFT, buff=0.5)
+        
+            calc_t_obj = self.objects["calc_t"]
+            calc_v.next_to(calc_t_obj, DOWN, buff=0.6)
+        
+            register_obj(self, self.objects, "calc_v", calc_v)
+            self.play(Write(formula_3), run_time=1.5)
+            self.wait(0.5)
+            self.play(Write(formula_4), run_time=1.5)
+
+        run_step(
+            self,
+            self.objects,
+            "求出时间后，我们就可以算出滑落瞬间的速度了。v_A等于a_A乘以t，等于1.8米每秒，方向向右。v_B等于a_B乘以t，约为3.4米每秒，方向也向右。",
+            zone_subtitle,
+            ["calc_t"],
+            step_02,
+        )
+
+        cleanup_scene(self, self.objects, [])
+
+    def scene_scene_07(self):
+        reset_scene(self, self.objects)
+
+        zone_goal_main = (0.1, 0.9, 0.16, 0.92)
+        zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+        def step_01():
+            title = Text("第三问：求W_F与Q", font_size=32, color=WHITE)
+            formula_W = MathTex("W_F = F \\cdot x_B", font_size=36, color=YELLOW)
+            formula_Q = MathTex("Q = f_k \\cdot l", font_size=36, color=YELLOW)
+        
+            energy_goal_group = VGroup(title, formula_W, formula_Q).arrange(DOWN, buff=0.5, aligned_edge=LEFT)
+            fit_in_zone(energy_goal_group, zone_goal_main, width_ratio=0.8, height_ratio=0.7)
+        
+            register_obj(self, self.objects, "text_q3", title)
+            register_obj(self, self.objects, "formula_W", formula_W)
+            register_obj(self, self.objects, "formula_Q", formula_Q)
+        
+            self.play(Write(title), run_time=0.8)
+            self.play(Write(formula_W), run_time=0.8)
+            self.play(Write(formula_Q), run_time=0.8)
+
+        run_step(
+            self,
+            self.objects,
+            "计算外力做功，我们需要先求出木板B在这0.6秒内发生的位移。摩擦生热有一个简便公式，直接用摩擦力乘以相对路程即可。",
+            zone_subtitle,
+            ["text_q3", "formula_W", "formula_Q"],
+            step_01,
+        )
+
+        cleanup_scene(self, self.objects, [])
+
+    def scene_scene_08(self):
+        reset_scene(self, self.objects)
+
+        zone_formula_main = (0.1, 0.9, 0.16, 0.92)
+        zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+        def step_01():
+            formula_xB = MathTex(
+                r"x_B = \frac{1}{2} a_B t^2 = \frac{1}{2} \times \frac{17}{3} \times 0.3 \approx 0.85 \text{ m}",
+                font_size=36,
+                color=WHITE
+            )
+            formula_WF = MathTex(
+                r"W_F = F \cdot x_B = 20 \times 0.85 = 17.0 \text{ J}",
+                font_size=36,
+                color=YELLOW
+            )
+        
+            formulas = VGroup(formula_xB, formula_WF).arrange(DOWN, aligned_edge=LEFT, buff=0.5)
+            place_in_zone(formulas, zone_formula_main, offset=(0.0, 0.1))
+        
+            register_obj(self, self.objects, "calc_xB", formula_xB)
+            register_obj(self, self.objects, "calc_WF", formula_WF)
+        
+            self.play(Write(formula_xB), run_time=1.5)
+            self.wait(0.5)
+            self.play(Write(formula_WF), run_time=1.5)
+
+        run_step(
+            self,
+            self.objects,
+            "计算B的位移，得到x_B约为0.85米。进而算出W_F为17.0焦耳。",
+            zone_subtitle,
+            ["calc_xB", "calc_WF"],
+            step_01
+        )
+
+        def step_02():
+            formula_Q = MathTex(
+                r"Q = f_k \cdot l = 3.0 \times 0.4 = 1.2 \text{ J}",
+                font_size=36,
+                color=GREEN
+            )
+        
+            existing_formulas = VGroup(
+                self.objects["calc_xB"],
+                self.objects["calc_WF"]
+            )
+            all_formulas = VGroup(existing_formulas, formula_Q).arrange(DOWN, aligned_edge=LEFT, buff=0.5)
+            place_in_zone(all_formulas, zone_formula_main, offset=(0.0, 0.1))
+        
+            register_obj(self, self.objects, "calc_Q", formula_Q)
+            self.play(Write(formula_Q), run_time=1.5)
+
+        run_step(
+            self,
+            self.objects,
+            "最后算摩擦生热Q。f_k是3牛，相对位移l是0.4米，所以Q等于1.2焦耳。",
+            zone_subtitle,
+            ["calc_xB", "calc_WF", "calc_Q"],
+            step_02
+        )
+
+        cleanup_scene(self, self.objects, [])
+
+    def scene_scene_09(self):
+        reset_scene(self, self.objects)
+
+        zone_check_left = (0.05, 0.48, 0.16, 0.92)
+        zone_summary_right = (0.52, 0.95, 0.16, 0.92)
+        zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+        def step_01():
+            eq1 = MathTex(r"W_F = \Delta E_k + Q", font_size=36, color=WHITE)
+            eq2 = MathTex(r"\Delta E_k = \frac{1}{2}m v_A^2 + \frac{1}{2}M v_B^2 \approx 19.2\,\text{J}", font_size=32, color=YELLOW)
+            eq3 = MathTex(r"Q = 1.2\,\text{J}", font_size=32, color=YELLOW)
+            eq4 = MathTex(r"W_F = 19.2 + 1.2 = 20.4\,\text{J}", font_size=32, color=GREEN)
+        
+            check_group = VGroup(eq1, eq2, eq3, eq4).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+            fit_in_zone(check_group, zone_check_left, width_ratio=0.9, height_ratio=0.85)
+        
+            register_obj(self, self.objects, "check_eq1", eq1)
+            register_obj(self, self.objects, "check_eq2", eq2)
+            register_obj(self, self.objects, "check_eq3", eq3)
+            register_obj(self, self.objects, "check_eq4", eq4)
+        
+            self.play(Write(eq1))
+            self.wait(0.5)
+            self.play(Write(eq2))
+            self.wait(0.5)
+            self.play(Write(eq3))
+            self.wait(0.5)
+            self.play(Write(eq4))
+
+        run_step(
+            self,
+            self.objects,
+            "根据能量守恒,外力做功转化为系统动能和内能。我们计算动能增量,加上热量,确实等于外力做功。",
+            zone_subtitle,
+            ["check_eq1", "check_eq2", "check_eq3", "check_eq4"],
+            step_01
+        )
+
+        def step_02():
+            summary_lines = [
+                "答案汇总:",
+                "(1) 一开始就滑动",
+                "    a_A = 3.0 m/s²",
+                "    a_B ≈ 5.67 m/s²",
+                "(2) t ≈ 0.55 s",
+                "    v_A ≈ 1.64 m/s",
+                "    v_B ≈ 3.10 m/s",
+                "(3) W_F = 20.4 J",
+                "    Q = 1.2 J"
+            ]
+            summary_text = "\n".join(summary_lines)
+            summary_block = make_wrapped_text_block(
+                summary_text,
+                zone_summary_right,
+                font_size=28,
+                color=WHITE,
+                anchor="top_left"
+            )
+        
+            register_obj(self, self.objects, "summary_table", summary_block)
+            self.play(FadeIn(summary_block))
+
+        run_step(
+            self,
+            self.objects,
+            "最后,我们汇总一下本题的所有答案。",
+            zone_subtitle,
+            ["check_eq1", "check_eq2", "check_eq3", "check_eq4", "summary_table"],
+            step_02
+        )
+
+        cleanup_scene(self, self.objects, [])
+
+    def scene_scene_10(self):
+        reset_scene(self, self.objects)
+
+        zone_summary_main = (0.1, 0.9, 0.16, 0.92)
+        zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+        def step_01():
+            title = Text("方法总结", font_size=36, color=YELLOW)
+        
+            method_items = VGroup(
+                Text("1. 隔离受力，判断运动状态", font_size=28, color=WHITE),
+                Text("2. 相对运动，求几何量", font_size=28, color=WHITE),
+                Text("3. 能量观点，求功或热", font_size=28, color=WHITE),
+            ).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+        
+            error_title = Text("易错点", font_size=32, color=RED)
+            error_items = VGroup(
+                Text("• 相对位移方向", font_size=26, color=WHITE),
+                Text("• Q = f × l", font_size=26, color=WHITE),
+            ).arrange(DOWN, aligned_edge=LEFT, buff=0.2)
+        
+            error_group = VGroup(error_title, error_items).arrange(DOWN, buff=0.25, aligned_edge=LEFT)
+        
+            method_summary_group = VGroup(title, method_items, error_group).arrange(DOWN, buff=0.5)
+        
+            place_in_zone(method_summary_group, zone_summary_main)
+            register_obj(self, self.objects, "method_map", method_summary_group)
+            self.add(method_summary_group)
+
+        run_step(
+            self,
+            self.objects,
+            "掌握这套方法，以后遇到类似的板块问题，就可以按部就班地解决了。",
+            zone_subtitle,
+            ["method_map"],
+            step_01,
+        )
+
+        cleanup_scene(self, self.objects, [])
+
+    def motion_scene_01(self, step_id):
+        if step_id == "step_02":
+            block_B = self.objects.get("block_B")
+            block_A = self.objects.get("block_A")
+        
+            if block_B is None or block_A is None:
+                return []
+        
+            p0_B = np.array([0, 0, 0])
+            p1_B = np.array([4, 0, 0])
+        
+            p0_A = np.array([0.4, 0.2, 0])
+            p1_A = np.array([1.0, 0.2, 0])
+        
+            def update_B(mob, alpha):
+                pos = p0_B + alpha * (p1_B - p0_B)
+                mob.move_to(pos)
+        
+            def update_A(mob, alpha):
+                pos = p0_A + alpha * (p1_A - p0_A)
+                mob.move_to(pos)
+        
+            return [
+                UpdateFromAlphaFunc(block_B, update_B, run_time=6),
+                UpdateFromAlphaFunc(block_A, update_A, run_time=6)
+            ]
+    
+        return []
+
+    def motion_scene_02(self, step_id):
+        if step_id == "step_01":
+            text_q1 = self.objects.get("text_q1")
+            block_A_icon = self.objects.get("block_A_icon")
+            block_B_icon = self.objects.get("block_B_icon")
+            logic_flow = self.objects.get("logic_flow")
+        
+            anims = []
+            if text_q1:
+                anims.append(FadeIn(text_q1, shift=DOWN*0.3))
+            if block_A_icon:
+                anims.append(FadeIn(block_A_icon, shift=UP*0.2))
+            if block_B_icon:
+                anims.append(FadeIn(block_B_icon, shift=UP*0.2))
+            if logic_flow:
+                anims.append(FadeIn(logic_flow, shift=RIGHT*0.3))
+        
+            return anims
+    
+        if step_id == "step_02":
+            logic_flow = self.objects.get("logic_flow")
+            if logic_flow is None:
+                return []
+        
+            return [Indicate(logic_flow, scale_factor=1.05)]
+    
+        return []
+
+    def motion_scene_03(self, step_id):
+        return []
+
+    def motion_scene_04(self, step_id):
+        return []
+
+    def motion_scene_05(self, step_id):
+        return []
+
+    def motion_scene_06(self, step_id):
+        return []
+
+    def motion_scene_07(self, step_id):
+        return []
+
+    def motion_scene_08(self, step_id):
+        return []
+
+    def motion_scene_09(self, step_id):
+        if step_id == "step_01":
+            check_eq = self.objects.get("check_eq")
+            if check_eq is None:
+                return []
+            return [FadeIn(check_eq, shift=DOWN*0.3)]
+    
+        if step_id == "step_02":
+            summary_table = self.objects.get("summary_table")
+            if summary_table is None:
+                return []
+            return [FadeIn(summary_table, shift=LEFT*0.3)]
+    
+        return []
+
+    def motion_scene_10(self, step_id):
+        if step_id == "step_01":
+            method_map = self.objects.get("method_map")
+            if method_map is None:
+                return []
+            return [FadeIn(method_map, shift=UP*0.3)]
+        return []

@@ -1,83 +1,66 @@
 def scene_scene_06(self):
     reset_scene(self, self.objects)
 
-    zone_main = (0.15, 0.85, 0.2, 0.85)
     zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+    zone_main = (0.15, 0.85, 0.2, 0.9)
 
     def step_01():
-        # Step 1: Show relative acceleration and time derivation
-        # Text content: "1. 计算相对加速度：\na_rel = a_B - a_A = 17/3 - 3 = 8/3 m/s²"
-        # Text content: "2. 计算时间 t：\nl = 1/2 * a_rel * t²\n0.4 = 1/2 * (8/3) * t²\nt² = 0.3\nt = √0.3 ≈ 0.55 s"
+        # Line 1: Relative Acceleration
+        line1 = MathTex("a_{rel} = a_B - a_A = \\frac{17}{3} - 3.0 \\approx 2.67 \\, \\text{m/s}^2", font_size=36)
+        # Line 2: Time Formula
+        line2 = MathTex("l = \\frac{1}{2} a_{rel} t^2", font_size=36)
+        # Line 3: Time Calculation
+        line3 = MathTex("t = \\sqrt{\\frac{2l}{a_{rel}}} = \\sqrt{\\frac{0.8}{2.67}} \\approx 0.6 \\, \\text{s}", font_size=36)
         
-        text_part1 = Text("1. 计算相对加速度：", font_size=32, color=WHITE)
-        math_part1 = MathTex("a_{rel} = a_B - a_A = \\frac{17}{3} - 3 = \\frac{8}{3} \\, m/s^2", font_size=36, color=YELLOW)
+        # Group and arrange
+        calc_t_group = VGroup(line1, line2, line3).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
         
-        text_part2 = Text("2. 计算时间 t：", font_size=32, color=WHITE)
-        math_part2 = MathTex("l = \\frac{1}{2} a_{rel} t^2", font_size=36, color=WHITE)
-        math_part3 = MathTex("0.4 = \\frac{1}{2} \\cdot \\frac{8}{3} \\cdot t^2", font_size=36, color=WHITE)
-        math_part4 = MathTex("t^2 = 0.3", font_size=36, color=WHITE)
-        math_part5 = MathTex("t = \\sqrt{0.3} \\approx 0.55 \\, s", font_size=36, color=GREEN)
-
-        # Group and arrange vertically
-        group = VGroup(
-            text_part1, math_part1,
-            text_part2, math_part2, math_part3, math_part4, math_part5
-        ).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+        # Position in zone
+        place_in_zone(calc_t_group, zone_main, offset=(0.0, 0.2))
         
-        place_in_zone(group, zone_main, offset=(0.0, 0.1))
-        register_obj(self, self.objects, "derive_panel_q2", group)
-        self.add(group)
+        # Register and add
+        register_obj(self, self.objects, "calc_t", calc_t_group)
+        
+        # Animate line by line
+        self.play(Write(line1))
+        self.play(Write(line2))
+        self.play(Write(line3))
 
     run_step(
         self,
         self.objects,
-        "首先计算相对加速度，然后求出滑落时间t。",
+        "相对加速度a_rel约为2.67。根据公式，t等于根号下2l除以a_rel，计算得出t等于0.6秒。",
         zone_subtitle,
-        ["derive_panel_q2"],
+        ["calc_t"],
         step_01,
     )
 
     def step_02():
-        # Step 2: Update panel to show velocity calculations
-        # Remove old content and create new full content including velocities
-        old_group = self.objects.get("derive_panel_q2")
-        if old_group:
-            self.remove(old_group)
-
-        # Text content: "1. 计算相对加速度：\na_rel = a_B - a_A = 17/3 - 3 = 8/3 m/s²"
-        # Text content: "2. 计算时间 t：\nl = 1/2 * a_rel * t²\n0.4 = 1/2 * (8/3) * t²\nt² = 0.3\nt = √0.3 ≈ 0.55 s"
-        # Text content: "3. 计算速度：\nv_A = a_A * t = 3 * √0.3 ≈ 1.65 m/s\nv_B = a_B * t = (17/3) * √0.3 ≈ 3.11 m/s"
-
-        text_part1 = Text("1. 计算相对加速度：", font_size=28, color=WHITE)
-        math_part1 = MathTex("a_{rel} = a_B - a_A = \\frac{17}{3} - 3 = \\frac{8}{3} \\, m/s^2", font_size=32, color=YELLOW)
+        # Line 1: Velocity A
+        line1 = MathTex("v_A = a_A t = 3.0 \\times 0.6 = 1.8 \\, \\text{m/s}", font_size=36)
+        # Line 2: Velocity B
+        line2 = MathTex("v_B = a_B t = \\frac{17}{3} \\times 0.6 \\approx 3.4 \\, \\text{m/s}", font_size=36)
         
-        text_part2 = Text("2. 计算时间 t：", font_size=28, color=WHITE)
-        math_part2 = MathTex("l = \\frac{1}{2} a_{rel} t^2", font_size=32, color=WHITE)
-        math_part3 = MathTex("0.4 = \\frac{1}{2} \\cdot \\frac{8}{3} \\cdot t^2", font_size=32, color=WHITE)
-        math_part4 = MathTex("t^2 = 0.3", font_size=32, color=WHITE)
-        math_part5 = MathTex("t = \\sqrt{0.3} \\approx 0.55 \\, s", font_size=32, color=GREEN)
-
-        text_part3 = Text("3. 计算速度：", font_size=28, color=WHITE)
-        math_part6 = MathTex("v_A = a_A t = 3 \\sqrt{0.3} \\approx 1.65 \\, m/s", font_size=32, color=BLUE)
-        math_part7 = MathTex("v_B = a_B t = \\frac{17}{3} \\sqrt{0.3} \\approx 3.11 \\, m/s", font_size=32, color=BLUE)
-
-        # Group and arrange vertically
-        group = VGroup(
-            text_part1, math_part1,
-            text_part2, math_part2, math_part3, math_part4, math_part5,
-            text_part3, math_part6, math_part7
-        ).arrange(DOWN, aligned_edge=LEFT, buff=0.25)
+        # Group and arrange
+        calc_v_group = VGroup(line1, line2).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
         
-        place_in_zone(group, zone_main, offset=(0.0, 0.15))
-        register_obj(self, self.objects, "derive_panel_q2", group)
-        self.add(group)
+        # Position below previous content
+        calc_t = self.objects["calc_t"]
+        calc_v_group.next_to(calc_t, DOWN, buff=0.6)
+        
+        # Register and add
+        register_obj(self, self.objects, "calc_v", calc_v_group)
+        
+        # Animate line by line
+        self.play(Write(line1))
+        self.play(Write(line2))
 
     run_step(
         self,
         self.objects,
-        "最后，利用时间t计算滑落瞬间的速度v_A和v_B。",
+        "求出时间后，我们就可以算出滑落瞬间的速度了。v_A等于a_A乘以t，等于1.8米每秒，方向向右。v_B等于a_B乘以t，约为3.4米每秒，方向也向右。",
         zone_subtitle,
-        ["derive_panel_q2"],
+        ["calc_t", "calc_v"],
         step_02,
     )
 

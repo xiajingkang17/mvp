@@ -346,64 +346,98 @@ class MainScene(Scene):
     def scene_scene_01(self):
         reset_scene(self, self.objects)
 
-        zone_top = (0.05, 0.95, 0.88, 0.98)
-        zone_problem = (0.05, 0.95, 0.55, 0.86)
-        zone_main = (0.05, 0.95, 0.16, 0.53)
         zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+        zone_problem = (0.05, 0.95, 0.70, 0.96)
+        zone_preview = (0.05, 0.95, 0.16, 0.66)
 
         def step_01():
-            title = Text("高三力学大题：板块模型", font_size=36, color=WHITE)
-            place_in_zone(title, zone_top, offset=(0.0, 0.0))
-            register_obj(self, self.objects, "title", title)
-            self.add(title)
-
-            problem_str = (
-                "如图，一质量为 M=3.0kg 的长木板 B 放在光滑水平面上，木板长度 L=2.0m。\n"
-                "一小物块 A（可视为质点）质量 m=1.0kg，静置在木板上，且物块到木板左端的距离为 l=0.40m。\n"
-                "物块与木板间的动摩擦因数 μ_k=0.30，静摩擦因数 μ_s=0.40。取 g=10m/s²。\n"
-                "从 t=0 起，对木板施加水平向右的恒力 F=20N。\n\n"
-                "(1) 判断物块A是否从一开始就相对木板滑动；并求滑动阶段物块A与木板B相对于地面的加速度。\n"
-                "(2) 求物块从开始受力到滑落所用时间t；物块滑落瞬间的速度v_A与v_B。\n"
-                "(3) 求外力F对木板所做的功W_F；物块与木板间摩擦产生的内能Q。"
+            problem_text = Text(
+                "题目：质量为 M=3.0kg 的长木板 B 放在光滑水平面上，长度 L=2.0m。"
+                "质量为 m=1.0kg 的物块 A 静置在木板上，距左端 l=0.40m。"
+                "物块与木板间动摩擦因数 μ_k=0.30，静摩擦因数 μ_s=0.40。取 g=10m/s^2。"
+                "从 t=0 起，对木板施加水平向右的恒力 F=20N。忽略空气阻力。",
+                font_size=24,
+                color=WHITE
             )
-            problem_text = Text(problem_str, font_size=20, color=WHITE)
-            fit_in_zone(problem_text, zone_problem, width_ratio=0.95, height_ratio=0.95)
-            register_obj(self, self.objects, "problem_text", problem_text)
+            place_in_zone(problem_text, zone_problem, offset=(0.0, 0.2))
+            register_obj(self, self.objects, "text_block_problem", problem_text)
             self.add(problem_text)
 
-            board_B = Rectangle(width=3.0, height=0.4, color=BLUE, fill_opacity=0.2, stroke_width=4)
-            board_B.shift(LEFT * 0.5)
-            register_obj(self, self.objects, "board_B", board_B)
-            self.add(board_B)
+            floor = Line(
+                start=np.array([-4.0, -1.0, 0.0]),
+                end=np.array([4.0, -1.0, 0.0]),
+                color=GRAY,
+                stroke_width=2
+            )
+            register_obj(self, self.objects, "floor", floor)
+            self.add(floor)
 
-            block_A = Rectangle(width=0.6, height=0.4, color=YELLOW, fill_opacity=0.5, stroke_width=4)
-            block_A.next_to(board_B.get_left(), RIGHT, buff=0.4)
-            block_A.align_to(board_B, DOWN)
+            block_B = Rectangle(
+                width=4.0,
+                height=0.4,
+                color=BLUE,
+                stroke_width=4,
+                fill_color=BLACK,
+                fill_opacity=1.0
+            ).shift(UP * 0.2)
+            register_obj(self, self.objects, "block_B", block_B)
+            self.add(block_B)
+
+            block_A = Rectangle(
+                width=0.8,
+                height=0.4,
+                color=YELLOW,
+                stroke_width=4,
+                fill_color=BLACK,
+                fill_opacity=1.0
+            ).shift(LEFT * 1.2 + UP * 0.6)
             register_obj(self, self.objects, "block_A", block_A)
             self.add(block_A)
-
-            preview_diagram = VGroup(board_B, block_A)
-            register_obj(self, self.objects, "preview_diagram", preview_diagram)
 
         run_step(
             self,
             self.objects,
-            "首先，我们来看一下题目描述。木板B放在光滑水平面上，物块A静止在木板上，距离左端0.4米。",
+            "首先，我们来看一下题目描述。木板B放在光滑水平面上，物块A静置在木板上，距离左端0.4米。",
             zone_subtitle,
-            ["title", "problem_text", "preview_diagram", "block_A", "board_B"],
+            ["text_block_problem", "floor", "block_B", "block_A"],
             step_01,
         )
 
         def step_02():
+            force_arrow = Arrow(
+                start=np.array([2.0, 0.4, 0.0]),
+                end=np.array([3.5, 0.4, 0.0]),
+                buff=0.0,
+                color=RED,
+                stroke_width=5,
+                max_tip_length_to_length_ratio=0.2
+            )
+            label_f = Text("F", font_size=24, color=RED).next_to(force_arrow, UP, buff=0.05)
+            force_group = VGroup(force_arrow, label_f)
+            register_obj(self, self.objects, "force_arrow_F", force_group)
+            self.add(force_group)
+
             self.motion_scene_01("step_02")
 
         run_step(
             self,
             self.objects,
-            "从t=0时刻起，对木板施加水平向右的恒力F。物块A和木板B都会向右加速，但由于加速度不同，物块会相对于木板向左滑动，最终从左端滑落。",
+            "从t=0时刻起，对木板施加水平向右的恒力F。由于A和B之间存在摩擦力，它们都会向右加速，但加速度不同。",
             zone_subtitle,
-            ["title", "problem_text", "preview_diagram", "block_A", "board_B"],
+            ["text_block_problem", "floor", "block_B", "block_A", "force_arrow_F"],
             step_02,
+        )
+
+        def step_03():
+            self.motion_scene_01("step_03")
+
+        run_step(
+            self,
+            self.objects,
+            "最终，物块A会从木板的左端滑落。接下来，我们将分三问逐步求解。",
+            zone_subtitle,
+            ["text_block_problem", "floor", "block_B", "block_A", "force_arrow_F"],
+            step_03,
         )
 
         cleanup_scene(self, self.objects, [])
@@ -411,60 +445,71 @@ class MainScene(Scene):
     def scene_scene_02(self):
         reset_scene(self, self.objects)
 
-        zone_left = (0.05, 0.45, 0.2, 0.9)
-        zone_right = (0.55, 0.95, 0.2, 0.9)
         zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+        zone_problem = (0.05, 0.45, 0.2, 0.9)
+        zone_goal = (0.55, 0.95, 0.2, 0.9)
 
         def step_01():
-            problem_content = (
-                "质量为 M=3.0kg 的长木板 B 放在光滑水平面上，长度 L=2.0m。\n"
-                "质量为 m=1.0kg 的物块 A 静置在木板上，距左端 l=0.40m。\n"
-                "物块与木板间动摩擦因数 μ_k=0.30，静摩擦因数 μ_s=0.40。\n"
-                "取 g=10m/s^2。从 t=0 起，对木板施加水平向右的恒力 F=20N。\n"
-                "忽略空气阻力。若物块运动到木板左端则立即滑落。"
+            # Problem Text
+            q1_text = Text(
+                "第一问：判断物块A是否一开始相对木板滑动，并求加速度。",
+                font_size=24,
+                color=WHITE
             )
-            problem_text = Text(problem_content, font_size=24, color=WHITE)
-            fit_in_zone(problem_text, zone_left)
-            register_obj(self, self.objects, "problem_text", problem_text)
-            self.add(problem_text)
+            place_in_zone(q1_text, zone_problem, offset=(0.0, 0.35))
+            register_obj(self, self.objects, "text_q1", q1_text)
+            self.add(q1_text)
 
-            goal_text = Text(
-                "(1) 判断物块A是否从一开始就相对木板滑动；\n并求滑动阶段物块A与木板B相对于地面的加速度。",
-                font_size=28,
-                color=YELLOW
-            )
-            fit_in_zone(goal_text, zone_right)
-            register_obj(self, self.objects, "goal_panel", goal_text)
-            self.add(goal_text)
+            # Icons (Simplified representation)
+            block_B_icon = Rectangle(width=2.0, height=0.4, color=BLUE, fill_opacity=0.3)
+            block_A_icon = Rectangle(width=0.6, height=0.4, color=RED, fill_opacity=0.3)
+        
+            # Position icons below text
+            icon_group = VGroup(block_B_icon, block_A_icon)
+            icon_group.arrange(RIGHT, buff=0.1)
+            place_in_zone(icon_group, zone_problem, offset=(0.0, -0.2))
+        
+            register_obj(self, self.objects, "block_B_icon", block_B_icon)
+            register_obj(self, self.objects, "block_A_icon", block_A_icon)
+            self.add(icon_group)
+
+            # Logic Flowchart
+            step1 = Text("1. 假设整体加速", font_size=22, color=YELLOW)
+            step2 = Text("2. 计算所需静摩擦力 f_s", font_size=22, color=GRAY)
+            step3 = Text("3. 比较 f_s 与 f_max", font_size=22, color=GRAY)
+            step4 = Text("4. 判断是否滑动", font_size=22, color=GRAY)
+            step5 = Text("5. 隔离求加速度 a_A, a_B", font_size=22, color=GRAY)
+
+            flow_group = VGroup(step1, step2, step3, step4, step5)
+            flow_group.arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+            place_in_zone(flow_group, zone_goal, offset=(0.0, 0.3))
+        
+            register_obj(self, self.objects, "logic_flow", flow_group)
+            self.add(flow_group)
 
         run_step(
             self,
             self.objects,
-            "第一问的核心在于判断静摩擦力是否被突破。我们先锁定这一问的目标。",
+            "第一问的核心是判断静摩擦力是否被突破。我们需要先假设它们一起加速，看需要多大的静摩擦力。",
             zone_subtitle,
-            ["problem_text", "goal_panel"],
+            ["text_q1", "block_A_icon", "block_B_icon", "logic_flow"],
             step_01,
         )
 
         def step_02():
-            logic_content = (
-                "1. 假设A、B相对静止，求共同加速度 a。\n"
-                "2. 求A所需的静摩擦力 f_req。\n"
-                "3. 比较 f_req 与 f_max (μ_s mg)。\n"
-                "4. 若 f_req > f_max，则发生相对滑动，隔离求解 a_A, a_B。"
-            )
-            logic_text = Text(logic_content, font_size=26, color=WHITE)
-            fit_in_zone(logic_text, zone_right)
-        
-            register_obj(self, self.objects, "goal_panel", logic_text)
-            self.add(logic_text)
+            # Update Logic Flow colors to simulate highlighting
+            flow_group = self.objects["logic_flow"]
+            flow_group[1].set_color(YELLOW) # Step 2
+            flow_group[2].set_color(YELLOW) # Step 3
+            flow_group[3].set_color(YELLOW) # Step 4
+            flow_group[4].set_color(YELLOW) # Step 5
 
         run_step(
             self,
             self.objects,
-            "判断的逻辑是：先假设它们一起加速，算出A需要的静摩擦力，再和最大静摩擦力比较。如果超过了，就会发生相对滑动，这时就要隔离物体分别求加速度。",
+            "如果所需的静摩擦力超过了最大静摩擦力，假设就不成立，物块就会滑动。确认滑动后，我们再用牛顿第二定律隔离求解各自的加速度。",
             zone_subtitle,
-            ["problem_text", "goal_panel"],
+            ["text_q1", "block_A_icon", "block_B_icon", "logic_flow"],
             step_02,
         )
 
@@ -473,140 +518,102 @@ class MainScene(Scene):
     def scene_scene_03(self):
         reset_scene(self, self.objects)
 
-        zone_main = (0.05, 0.6, 0.2, 0.9)
-        zone_formula = (0.65, 0.95, 0.2, 0.9)
         zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+        zone_diagram = (0.05, 0.5, 0.2, 0.9)
+        zone_formula = (0.55, 0.95, 0.2, 0.9)
 
         def step_01():
-            # Diagram A (Block)
-            block_A = Rectangle(width=1.2, height=0.8, color=BLUE, stroke_width=4)
-            block_A.shift(LEFT * 1.5)
-            label_A = Text("A", font_size=24, color=BLUE).move_to(block_A)
+            # Diagram: System (A+B) and Isolated A
+            # System representation (A+B box)
+            sys_box = Rectangle(width=2.5, height=1.0, color=WHITE, stroke_width=2)
+            sys_box.move_to(ORIGIN + UP * 0.5)
         
-            # Force f_req on A (Right)
-            f_req_arrow = Arrow(start=block_A.get_right(), end=block_A.get_right() + RIGHT * 1.2, buff=0, color=YELLOW, stroke_width=4)
-            f_req_label = Text("f_req", font_size=20, color=YELLOW).next_to(f_req_arrow, UP, buff=0.1)
+            # Force F on system
+            arrow_F_sys = Arrow(start=sys_box.get_right(), end=sys_box.get_right() + RIGHT * 1.2, buff=0, color=YELLOW, stroke_width=4)
+            label_F_sys = MathTex("F", font_size=24, color=YELLOW).next_to(arrow_F_sys, UP)
         
-            # Acceleration a (Right)
-            a_arrow_A = Arrow(start=block_A.get_bottom(), end=block_A.get_bottom() + RIGHT * 1.0, buff=0, color=WHITE, stroke_width=3)
-            a_label_A = Text("a", font_size=20, color=WHITE).next_to(a_arrow_A, DOWN, buff=0.1)
-
-            diagram_A = VGroup(block_A, label_A, f_req_arrow, f_req_label, a_arrow_A, a_label_A)
-            place_in_zone(diagram_A, zone_main, offset=(-0.2, 0.2))
-            register_obj(self, self.objects, "diagram_A", diagram_A)
-            self.add(diagram_A)
-
-            # Diagram B (Board)
-            block_B = Rectangle(width=2.0, height=0.4, color=GREEN, stroke_width=4)
-            block_B.shift(RIGHT * 1.5)
-            label_B = Text("B", font_size=24, color=GREEN).move_to(block_B)
+            # Label for system
+            label_sys = Text("系统(A+B)", font_size=20).next_to(sys_box, DOWN)
         
-            # Force F on B (Right)
-            F_arrow = Arrow(start=block_B.get_right(), end=block_B.get_right() + RIGHT * 1.5, buff=0, color=RED, stroke_width=4)
-            F_label = Text("F", font_size=20, color=RED).next_to(F_arrow, UP, buff=0.1)
+            # Isolated A (smaller box)
+            box_A = Rectangle(width=1.0, height=0.6, color=BLUE, stroke_width=2)
+            box_A.move_to(ORIGIN + DOWN * 1.5)
         
-            # Force f_req' on B (Left)
-            f_req_prime_arrow = Arrow(start=block_B.get_left(), end=block_B.get_left() + LEFT * 1.2, buff=0, color=YELLOW, stroke_width=4)
-            f_req_prime_label = Text("f_req'", font_size=20, color=YELLOW).next_to(f_req_prime_arrow, UP, buff=0.1)
-
-            # Acceleration a (Right)
-            a_arrow_B = Arrow(start=block_B.get_bottom(), end=block_B.get_bottom() + RIGHT * 1.0, buff=0, color=WHITE, stroke_width=3)
-            a_label_B = Text("a", font_size=20, color=WHITE).next_to(a_arrow_B, DOWN, buff=0.1)
-
-            diagram_B = VGroup(block_B, label_B, F_arrow, F_label, f_req_prime_arrow, f_req_prime_label, a_arrow_B, a_label_B)
-            place_in_zone(diagram_B, zone_main, offset=(0.2, -0.2))
-            register_obj(self, self.objects, "diagram_B", diagram_B)
-            self.add(diagram_B)
-
-            # Derivation Text
-            line1 = Text("假设整体加速：", font_size=24, color=WHITE)
-            line2 = MathTex("a = \\frac{F}{M+m} = \\frac{20}{4} = 5 \\, m/s^2", font_size=24, color=WHITE)
-            line3 = Text("所需静摩擦力：", font_size=24, color=WHITE)
-            line4 = MathTex("f_{req} = ma = 1 \\times 5 = 5 \\, N", font_size=24, color=WHITE)
+            # Friction force on A (initially static f_s)
+            arrow_f_A = Arrow(start=box_A.get_left(), end=box_A.get_left() + LEFT * 0.8, buff=0, color=RED, stroke_width=4)
+            label_f_A = MathTex("f_s", font_size=24, color=RED).next_to(arrow_f_A, UP)
         
-            derivation_text = VGroup(line1, line2, line3, line4).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
-            place_in_zone(derivation_text, zone_formula, offset=(0.0, 0.3))
-            register_obj(self, self.objects, "derivation_text", derivation_text)
-            self.add(derivation_text)
+            # Label for A
+            label_A = Text("物块A", font_size=20).next_to(box_A, DOWN)
+        
+            # Group diagrams
+            diagram_group = VGroup(sys_box, arrow_F_sys, label_F_sys, label_sys, box_A, arrow_f_A, label_f_A, label_A)
+            fit_in_zone(diagram_group, zone_diagram, width_ratio=0.9)
+            register_obj(self, self.objects, "diagram_system", diagram_group)
+            self.add(diagram_group)
+
+            # Equations
+            eq1_text = MathTex("F = (M+m)a", font_size=32, color=WHITE)
+            eq2_text = MathTex("a = \\frac{F}{M+m} = 5.0 \\, \\text{m/s}^2", font_size=32, color=WHITE)
+            eq3_text = MathTex("f_s = ma = 5.0 \\, \\text{N}", font_size=32, color=WHITE)
+        
+            eq_group = VGroup(eq1_text, eq2_text, eq3_text)
+            eq_group.arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+            place_in_zone(eq_group, zone_formula, offset=(0.0, 0.2))
+        
+            register_obj(self, self.objects, "equation_1", eq1_text)
+            register_obj(self, self.objects, "equation_2", eq2_text)
+            register_obj(self, self.objects, "equation_3", eq3_text)
+        
+            # Animate equations line by line
+            self.play(Write(eq1_text))
+            self.play(Write(eq2_text))
+            self.play(Write(eq3_text))
 
         run_step(
             self,
             self.objects,
-            "先假设A和B相对静止，计算整体加速度和A所需的静摩擦力。",
+            "假设A、B相对静止，整体加速度a为5米每二次方秒。此时A需要5牛的静摩擦力来维持这个加速度。",
             zone_subtitle,
-            ["diagram_A", "diagram_B", "derivation_text"],
+            ["diagram_system", "equation_1", "equation_2", "equation_3"],
             step_01,
         )
 
         def step_02():
-            # Update Diagram A: Change f_req to f_k
-            old_diagram_A = self.objects["diagram_A"]
-            self.remove(old_diagram_A)
+            # Update friction label from f_s to f_k
+            diagram_group = self.objects["diagram_system"]
         
-            block_A = Rectangle(width=1.2, height=0.8, color=BLUE, stroke_width=4)
-            block_A.shift(LEFT * 1.5)
-            label_A = Text("A", font_size=24, color=BLUE).move_to(block_A)
+            # Find the label mobject (assuming structure from step_01)
+            # We need to identify the specific MathTex object for the label
+            # Since we can't easily query by content in generated code without helpers,
+            # we rely on the structure: label_f_A is the 6th submobject (index 5) if added in order
+            # Or better, we just recreate the label to ensure correctness
         
-            # Force f_k on A (Right)
-            f_k_arrow = Arrow(start=block_A.get_right(), end=block_A.get_right() + RIGHT * 1.2, buff=0, color=YELLOW, stroke_width=4)
-            f_k_label = Text("f_k", font_size=20, color=YELLOW).next_to(f_k_arrow, UP, buff=0.1)
+            # Locate the arrow to position the new label
+            # arrow_f_A is index 4 in the group created in step_01
+            arrow_f_A = diagram_group[4]
         
-            # Acceleration a_A (Right)
-            a_A_arrow = Arrow(start=block_A.get_bottom(), end=block_A.get_bottom() + RIGHT * 1.0, buff=0, color=WHITE, stroke_width=3)
-            a_A_label = Text("a_A", font_size=20, color=WHITE).next_to(a_A_arrow, DOWN, buff=0.1)
-
-            diagram_A = VGroup(block_A, label_A, f_k_arrow, f_k_label, a_A_arrow, a_A_label)
-            place_in_zone(diagram_A, zone_main, offset=(-0.2, 0.2))
-            register_obj(self, self.objects, "diagram_A", diagram_A)
-            self.add(diagram_A)
-
-            # Update Diagram B: Change f_req' to f_k'
-            old_diagram_B = self.objects["diagram_B"]
-            self.remove(old_diagram_B)
+            # Create new label
+            new_label = MathTex("f_k", font_size=24, color=RED).next_to(arrow_f_A, UP)
         
-            block_B = Rectangle(width=2.0, height=0.4, color=GREEN, stroke_width=4)
-            block_B.shift(RIGHT * 1.5)
-            label_B = Text("B", font_size=24, color=GREEN).move_to(block_B)
+            # Replace old label (index 5) with new label
+            diagram_group[5].become(new_label)
         
-            # Force F on B (Right)
-            F_arrow = Arrow(start=block_B.get_right(), end=block_B.get_right() + RIGHT * 1.5, buff=0, color=RED, stroke_width=4)
-            F_label = Text("F", font_size=20, color=RED).next_to(F_arrow, UP, buff=0.1)
+            # Add comparison text (5N > 4N) temporarily or as part of the scene flow
+            # The prompt asks to show comparison. Let's add it to the formula zone or near the diagram.
+            # Adding to formula zone for cleanliness.
+            comp_text = MathTex("5.0 \\, \\text{N} > 4.0 \\, \\text{N}", font_size=32, color=YELLOW)
+            comp_text.next_to(self.objects["equation_3"], DOWN, buff=0.5)
         
-            # Force f_k' on B (Left)
-            f_k_prime_arrow = Arrow(start=block_B.get_left(), end=block_B.get_left() + LEFT * 1.2, buff=0, color=YELLOW, stroke_width=4)
-            f_k_prime_label = Text("f_k'", font_size=20, color=YELLOW).next_to(f_k_prime_arrow, UP, buff=0.1)
-
-            # Acceleration a_B (Right)
-            a_B_arrow = Arrow(start=block_B.get_bottom(), end=block_B.get_bottom() + RIGHT * 1.0, buff=0, color=WHITE, stroke_width=3)
-            a_B_label = Text("a_B", font_size=20, color=WHITE).next_to(a_B_arrow, DOWN, buff=0.1)
-
-            diagram_B = VGroup(block_B, label_B, F_arrow, F_label, f_k_prime_arrow, f_k_prime_label, a_B_arrow, a_B_label)
-            place_in_zone(diagram_B, zone_main, offset=(0.2, -0.2))
-            register_obj(self, self.objects, "diagram_B", diagram_B)
-            self.add(diagram_B)
-
-            # Update Derivation Text
-            old_derivation = self.objects["derivation_text"]
-            self.remove(old_derivation)
-
-            line1 = Text("最大静摩擦力：", font_size=24, color=WHITE)
-            line2 = MathTex("f_{max} = \\mu_s mg = 0.4 \\times 1 \\times 10 = 4 \\, N", font_size=24, color=WHITE)
-            line3 = Text("因为 f_req > f_max，发生相对滑动。", font_size=24, color=YELLOW)
-            line4 = Text("滑动时受力分析：", font_size=24, color=WHITE)
-            line5 = MathTex("A: f_k = \\mu_k mg \\quad (向右)", font_size=24, color=BLUE)
-            line6 = MathTex("B: F \\quad (向右), \\quad f_k' \\quad (向左)", font_size=24, color=GREEN)
-        
-            derivation_text = VGroup(line1, line2, line3, line4, line5, line6).arrange(DOWN, aligned_edge=LEFT, buff=0.2)
-            place_in_zone(derivation_text, zone_formula, offset=(0.0, 0.2))
-            register_obj(self, self.objects, "derivation_text", derivation_text)
-            self.add(derivation_text)
+            register_obj(self, self.objects, "comparison_text", comp_text)
+            self.play(FadeIn(comp_text))
 
         run_step(
             self,
             self.objects,
-            "比较发现所需静摩擦力大于最大静摩擦力，所以假设不成立，物块会滑动。此时A受到向右的滑动摩擦力，B受到向右的拉力和向左的滑动摩擦力。",
+            "但是，A与B间的最大静摩擦力f_max只有4牛。因为需要的5牛大于最大的4牛，所以假设不成立，A会相对B滑动。摩擦力变为滑动摩擦力f_k。",
             zone_subtitle,
-            ["diagram_A", "diagram_B", "derivation_text"],
+            ["diagram_system", "equation_1", "equation_2", "equation_3", "comparison_text"],
             step_02,
         )
 
@@ -615,59 +622,100 @@ class MainScene(Scene):
     def scene_scene_04(self):
         reset_scene(self, self.objects)
 
-        zone_main = (0.15, 0.85, 0.25, 0.85)
         zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+        zone_main = (0.15, 0.85, 0.2, 0.9)
 
         def step_01():
-            title = Text("计算加速度", font_size=36, color=WHITE)
-            place_in_zone(title, zone_main, offset=(0.0, 0.35))
-            register_obj(self, self.objects, "title", title)
-            self.add(title)
+            # A的受力分析图
+            diagram_A = VGroup()
+            block_A = Rectangle(width=1.2, height=0.8, color=BLUE, stroke_width=4, fill_opacity=0.2)
+            center_A = block_A.get_center()
+        
+            # 重力 mg
+            g_arrow = Arrow(start=center_A, end=center_A + DOWN * 1.0, buff=0.1, color=WHITE)
+            g_label = MathTex("mg", font_size=24).next_to(g_arrow, RIGHT, buff=0.05)
+        
+            # 支持力 N
+            n_arrow = Arrow(start=center_A, end=center_A + UP * 1.0, buff=0.1, color=WHITE)
+            n_label = MathTex("N", font_size=24).next_to(n_arrow, RIGHT, buff=0.05)
+        
+            # 摩擦力 f_k (向右)
+            f_arrow = Arrow(start=center_A, end=center_A + RIGHT * 1.2, buff=0.1, color=YELLOW)
+            f_label = MathTex("f_k", font_size=24).next_to(f_arrow, UP, buff=0.05)
+        
+            diagram_A.add(block_A, g_arrow, g_label, n_arrow, n_label, f_arrow, f_label)
+            diagram_A.scale(0.8)
+            place_in_zone(diagram_A, zone_main, offset=(-0.2, 0.3))
+            register_obj(self, self.objects, "diagram_A", diagram_A)
+            self.add(diagram_A)
 
-            eq_A_text = "对A: f_k = ma_A"
-            eq_A_sub = "\\mu_k mg = ma_A"
-            eq_A_res = "a_A = \\mu_k g = 0.3 \\times 10 = 3.0 \\, m/s^2 \\, (向右)"
+            # 计算公式
+            f_eq = MathTex("f_k = \\mu_k mg = 0.3 \\times 1.0 \\times 10 = 3.0 \\, \\text{N}", font_size=32, color=WHITE)
+            a_eq = MathTex("a_A = \\frac{f_k}{m} = \\frac{3.0}{1.0} = 3.0 \\, \\text{m/s}^2", font_size=32, color=YELLOW)
         
-            eq_A = VGroup(
-                MathTex(eq_A_text, font_size=32, color=WHITE),
-                MathTex(eq_A_sub, font_size=32, color=WHITE),
-                MathTex(eq_A_res, font_size=32, color=YELLOW)
-            ).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+            formulas = VGroup(f_eq, a_eq).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+            place_in_zone(formulas, zone_main, offset=(0.1, 0.0))
         
-            place_in_zone(eq_A, zone_main, offset=(0.0, 0.05))
-            register_obj(self, self.objects, "calc_panel", eq_A)
-            self.add(eq_A)
+            register_obj(self, self.objects, "calc_a_A", formulas)
+            self.add(f_eq)
+            self.play(Write(f_eq), run_time=1.0)
+            self.play(Write(a_eq), run_time=1.0)
 
         run_step(
             self,
             self.objects,
-            "首先计算物块A的加速度。",
+            "先求A的加速度。隔离A，受向右的滑动摩擦力f_k。计算得a_A为3米每二次方秒。",
             zone_subtitle,
-            ["title", "calc_panel"],
+            ["diagram_A", "calc_a_A"],
             step_01,
         )
 
         def step_02():
-            eq_B_text = "对B: F - f_k = Ma_B"
-            eq_B_sub = "20 - 0.3 \\times 1 \\times 10 = 3 \\times a_B"
-            eq_B_res = "a_B = 17/3 \\approx 5.67 \\, m/s^2 \\, (向右)"
+            # B的受力分析图
+            diagram_B = VGroup()
+            block_B = Rectangle(width=1.2, height=0.8, color=GREEN, stroke_width=4, fill_opacity=0.2)
+            center_B = block_B.get_center()
         
-            eq_B = VGroup(
-                MathTex(eq_B_text, font_size=32, color=WHITE),
-                MathTex(eq_B_sub, font_size=32, color=WHITE),
-                MathTex(eq_B_res, font_size=32, color=YELLOW)
-            ).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+            # 重力 Mg
+            g_arrow_B = Arrow(start=center_B, end=center_B + DOWN * 1.0, buff=0.1, color=WHITE)
+            g_label_B = MathTex("Mg", font_size=24).next_to(g_arrow_B, RIGHT, buff=0.05)
         
-            place_in_zone(eq_B, zone_main, offset=(0.0, -0.35))
-            register_obj(self, self.objects, "calc_panel", eq_B)
-            self.add(eq_B)
+            # 支持力 N'
+            n_arrow_B = Arrow(start=center_B, end=center_B + UP * 1.0, buff=0.1, color=WHITE)
+            n_label_B = MathTex("N'", font_size=24).next_to(n_arrow_B, RIGHT, buff=0.05)
+        
+            # 拉力 F (向右)
+            F_arrow = Arrow(start=center_B, end=center_B + RIGHT * 1.5, buff=0.1, color=RED)
+            F_label = MathTex("F", font_size=24).next_to(F_arrow, UP, buff=0.05)
+        
+            # 摩擦力 f_k' (向左)
+            f_arrow_B = Arrow(start=center_B, end=center_B + LEFT * 1.2, buff=0.1, color=YELLOW)
+            f_label_B = MathTex("f_k'", font_size=24).next_to(f_arrow_B, UP, buff=0.05)
+        
+            diagram_B.add(block_B, g_arrow_B, g_label_B, n_arrow_B, n_label_B, F_arrow, F_label, f_arrow_B, f_label_B)
+            diagram_B.scale(0.8)
+            place_in_zone(diagram_B, zone_main, offset=(-0.2, -0.3))
+            register_obj(self, self.objects, "diagram_B", diagram_B)
+            self.add(diagram_B)
+
+            # 计算公式
+            net_force_eq = MathTex("F_{\\text{net}} = F - f_k = 20.0 - 3.0 = 17.0 \\, \\text{N}", font_size=32, color=WHITE)
+            a_eq_B = MathTex("a_B = \\frac{F_{\\text{net}}}{M} = \\frac{17.0}{3.0} \\approx 5.67 \\, \\text{m/s}^2", font_size=32, color=YELLOW)
+        
+            formulas_B = VGroup(net_force_eq, a_eq_B).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+            place_in_zone(formulas_B, zone_main, offset=(0.1, -0.6))
+        
+            register_obj(self, self.objects, "calc_a_B", formulas_B)
+            self.add(net_force_eq)
+            self.play(Write(net_force_eq), run_time=1.0)
+            self.play(Write(a_eq_B), run_time=1.0)
 
         run_step(
             self,
             self.objects,
-            "接着计算木板B的加速度。",
+            "再求B的加速度。隔离B，受向右的拉力F和向左的滑动摩擦力f_k。合力等于F减f_k，除以M，算得a_B约为5.67米每二次方秒。",
             zone_subtitle,
-            ["title", "calc_panel"],
+            ["diagram_A", "calc_a_A", "diagram_B", "calc_a_B"],
             step_02,
         )
 
@@ -676,164 +724,139 @@ class MainScene(Scene):
     def scene_scene_05(self):
         reset_scene(self, self.objects)
 
-        zone_main = (0.05, 0.45, 0.2, 0.9)
-        zone_formula = (0.55, 0.95, 0.2, 0.9)
         zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+        zone_diagram = (0.05, 0.5, 0.2, 0.9)
+        zone_goal = (0.55, 0.95, 0.2, 0.9)
 
         def step_01():
-            # Diagram: Board B and Block A
-            board = Rectangle(width=4.0, height=0.6, color=BLUE, stroke_width=4)
-            board.shift(LEFT * 0.5)
+            # Title for Question 2
+            text_q2 = Text("第二问：求滑落时间t与速度", font_size=32, color=WHITE)
+            place_in_zone(text_q2, zone_goal, offset=(0.0, 0.35))
+            register_obj(self, self.objects, "text_q2", text_q2)
+            self.add(text_q2)
+
+            # Diagram: Block A on Board B
+            # Board B (Longer rectangle)
+            board_B = Rectangle(width=4.0, height=0.6, color=BLUE, stroke_width=4, fill_opacity=0.1)
+            board_B_label = Text("B", font_size=24, color=BLUE).next_to(board_B, DOWN, buff=0.1)
         
-            block = Rectangle(width=1.0, height=0.6, color=YELLOW, stroke_width=4)
-            block.next_to(board, LEFT, buff=0.0)
-        
-            # Labels
-            label_b = Text("B", font_size=24, color=BLUE).next_to(board, DOWN)
-            label_a = Text("A", font_size=24, color=YELLOW).next_to(block, UP)
-        
-            # Relative displacement arrow
-            arrow_start = block.get_center()
-            arrow_end = board.get_left() + LEFT * 0.5
-            rel_arrow = Arrow(arrow_start, arrow_end, buff=0.0, color=RED, stroke_width=4)
-        
-            label_l = MathTex("l", font_size=28, color=RED).next_to(rel_arrow, UP)
-        
-            diagram = VGroup(board, block, label_b, label_a, rel_arrow, label_l)
-            fit_in_zone(diagram, zone_main, width_ratio=0.9, height_ratio=0.8)
-            place_in_zone(diagram, zone_main, offset=(0.0, 0.0))
-        
-            register_obj(self, self.objects, "diagram_rel", diagram)
-            self.add(diagram)
+            # Block A (Smaller rectangle on top)
+            # Position A such that its right edge is at x=0.6 (representing l from left edge of B)
+            # B center is at 0. B width is 4.0, so left edge is -2.0.
+            # If l=0.4, A's right edge is at -2.0 + 0.4 = -1.6.
+            # Let's place A at x = -1.6 - (width_A/2).
+            width_A = 1.0
+            pos_A_x = -1.6 - (width_A / 2.0)
+            block_A = Rectangle(width=width_A, height=0.5, color=YELLOW, stroke_width=4, fill_opacity=0.2)
+            block_A.move_to([pos_A_x, 0.55, 0]) # On top of B (B height 0.6, center 0)
+            block_A_label = Text("A", font_size=24, color=YELLOW).move_to(block_A.get_center())
+
+            # Relative displacement arrow l
+            # Arrow from A's right edge to B's left edge
+            arrow_l_start = block_A.get_right()
+            arrow_l_end = board_B.get_left()
+            arrow_l = Arrow(arrow_l_start, arrow_l_end, buff=0.05, color=RED, stroke_width=4)
+            label_l = MathTex("l", font_size=28, color=RED).next_to(arrow_l, UP, buff=0.1)
+
+            diagram_group = VGroup(board_B, board_B_label, block_A, block_A_label, arrow_l, label_l)
+            fit_in_zone(diagram_group, zone_diagram, width_ratio=0.9)
+            register_obj(self, self.objects, "diagram_rel", diagram_group)
+            self.add(diagram_group)
 
         run_step(
             self,
             self.objects,
-            "首先明确几何条件。物块相对于木板向左移动了l的距离，这就是相对位移。",
+            "因为B的加速度大于A的加速度，A相对于B向左运动。当A相对于B移动了0.4米时，就会从左端滑落。",
             zone_subtitle,
-            ["diagram_rel"],
+            ["text_q2", "diagram_rel"],
             step_01,
         )
-        cleanup_step(self, self.objects, ["diagram_rel"])
 
         def step_02():
-            # Goal Panel
-            title = Text("(2) 求滑落时间t及瞬时速度", font_size=32, color=WHITE)
-            title.to_edge(UP, buff=0.2)
+            # Formula for relative motion
+            # l = 1/2 * a_rel * t^2
+            formula_rel = MathTex("l", "=", "\\frac{1}{2}", "a_{rel}", "t^2", font_size=36, color=WHITE)
+            layout_formula_group(formula_rel, zone_goal)
+            # Shift down to avoid overlapping title
+            formula_rel.shift(UP * 0.5)
         
-            line1 = Text("几何条件：相对位移 x_rel = l = 0.40 m", font_size=24, color=WHITE)
-            line1.next_to(title, DOWN, buff=0.4)
-        
-            line2 = Text("运动学公式：", font_size=24, color=WHITE)
-            line2.next_to(line1, DOWN, buff=0.4)
-        
-            eq1 = MathTex("a_{rel} = a_B - a_A", font_size=24, color=YELLOW)
-            eq1.next_to(line2, DOWN, buff=0.2, aligned_edge=LEFT)
-            eq1.shift(LEFT * 0.5)
-        
-            eq2 = MathTex("l = \\frac{1}{2} a_{rel} t^2", font_size=24, color=YELLOW)
-            eq2.next_to(eq1, DOWN, buff=0.2, aligned_edge=LEFT)
-        
-            eq3 = MathTex("v_A = a_A t, \\quad v_B = a_B t", font_size=24, color=YELLOW)
-            eq3.next_to(eq2, DOWN, buff=0.2, aligned_edge=LEFT)
-        
-            panel = VGroup(title, line1, line2, eq1, eq2, eq3)
-            fit_in_zone(panel, zone_formula, width_ratio=0.9, height_ratio=0.9)
-            place_in_zone(panel, zone_formula, offset=(0.0, 0.0))
-        
-            register_obj(self, self.objects, "goal_panel_q2", panel)
-            self.add(panel)
+            register_obj(self, self.objects, "formula_rel", formula_rel)
+            self.add(formula_rel)
 
         run_step(
             self,
             self.objects,
-            "利用相对加速度和位移公式求出时间t，再分别用速度公式求出v_A和v_B。",
+            "利用相对运动的位移公式，l等于二分之一倍相对加速度乘以t的平方。我们可以先求出相对加速度，进而求出时间t。",
             zone_subtitle,
-            ["diagram_rel", "goal_panel_q2"],
+            ["text_q2", "diagram_rel", "formula_rel"],
             step_02,
         )
+
         cleanup_scene(self, self.objects, [])
 
     def scene_scene_06(self):
         reset_scene(self, self.objects)
 
-        zone_main = (0.15, 0.85, 0.2, 0.85)
         zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+        zone_main = (0.15, 0.85, 0.2, 0.9)
 
         def step_01():
-            # Step 1: Show relative acceleration and time derivation
-            # Text content: "1. 计算相对加速度：\na_rel = a_B - a_A = 17/3 - 3 = 8/3 m/s²"
-            # Text content: "2. 计算时间 t：\nl = 1/2 * a_rel * t²\n0.4 = 1/2 * (8/3) * t²\nt² = 0.3\nt = √0.3 ≈ 0.55 s"
+            # Line 1: Relative Acceleration
+            line1 = MathTex("a_{rel} = a_B - a_A = \\frac{17}{3} - 3.0 \\approx 2.67 \\, \\text{m/s}^2", font_size=36)
+            # Line 2: Time Formula
+            line2 = MathTex("l = \\frac{1}{2} a_{rel} t^2", font_size=36)
+            # Line 3: Time Calculation
+            line3 = MathTex("t = \\sqrt{\\frac{2l}{a_{rel}}} = \\sqrt{\\frac{0.8}{2.67}} \\approx 0.6 \\, \\text{s}", font_size=36)
         
-            text_part1 = Text("1. 计算相对加速度：", font_size=32, color=WHITE)
-            math_part1 = MathTex("a_{rel} = a_B - a_A = \\frac{17}{3} - 3 = \\frac{8}{3} \\, m/s^2", font_size=36, color=YELLOW)
+            # Group and arrange
+            calc_t_group = VGroup(line1, line2, line3).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
         
-            text_part2 = Text("2. 计算时间 t：", font_size=32, color=WHITE)
-            math_part2 = MathTex("l = \\frac{1}{2} a_{rel} t^2", font_size=36, color=WHITE)
-            math_part3 = MathTex("0.4 = \\frac{1}{2} \\cdot \\frac{8}{3} \\cdot t^2", font_size=36, color=WHITE)
-            math_part4 = MathTex("t^2 = 0.3", font_size=36, color=WHITE)
-            math_part5 = MathTex("t = \\sqrt{0.3} \\approx 0.55 \\, s", font_size=36, color=GREEN)
-
-            # Group and arrange vertically
-            group = VGroup(
-                text_part1, math_part1,
-                text_part2, math_part2, math_part3, math_part4, math_part5
-            ).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+            # Position in zone
+            place_in_zone(calc_t_group, zone_main, offset=(0.0, 0.2))
         
-            place_in_zone(group, zone_main, offset=(0.0, 0.1))
-            register_obj(self, self.objects, "derive_panel_q2", group)
-            self.add(group)
+            # Register and add
+            register_obj(self, self.objects, "calc_t", calc_t_group)
+        
+            # Animate line by line
+            self.play(Write(line1))
+            self.play(Write(line2))
+            self.play(Write(line3))
 
         run_step(
             self,
             self.objects,
-            "首先计算相对加速度，然后求出滑落时间t。",
+            "相对加速度a_rel约为2.67。根据公式，t等于根号下2l除以a_rel，计算得出t等于0.6秒。",
             zone_subtitle,
-            ["derive_panel_q2"],
+            ["calc_t"],
             step_01,
         )
 
         def step_02():
-            # Step 2: Update panel to show velocity calculations
-            # Remove old content and create new full content including velocities
-            old_group = self.objects.get("derive_panel_q2")
-            if old_group:
-                self.remove(old_group)
-
-            # Text content: "1. 计算相对加速度：\na_rel = a_B - a_A = 17/3 - 3 = 8/3 m/s²"
-            # Text content: "2. 计算时间 t：\nl = 1/2 * a_rel * t²\n0.4 = 1/2 * (8/3) * t²\nt² = 0.3\nt = √0.3 ≈ 0.55 s"
-            # Text content: "3. 计算速度：\nv_A = a_A * t = 3 * √0.3 ≈ 1.65 m/s\nv_B = a_B * t = (17/3) * √0.3 ≈ 3.11 m/s"
-
-            text_part1 = Text("1. 计算相对加速度：", font_size=28, color=WHITE)
-            math_part1 = MathTex("a_{rel} = a_B - a_A = \\frac{17}{3} - 3 = \\frac{8}{3} \\, m/s^2", font_size=32, color=YELLOW)
+            # Line 1: Velocity A
+            line1 = MathTex("v_A = a_A t = 3.0 \\times 0.6 = 1.8 \\, \\text{m/s}", font_size=36)
+            # Line 2: Velocity B
+            line2 = MathTex("v_B = a_B t = \\frac{17}{3} \\times 0.6 \\approx 3.4 \\, \\text{m/s}", font_size=36)
         
-            text_part2 = Text("2. 计算时间 t：", font_size=28, color=WHITE)
-            math_part2 = MathTex("l = \\frac{1}{2} a_{rel} t^2", font_size=32, color=WHITE)
-            math_part3 = MathTex("0.4 = \\frac{1}{2} \\cdot \\frac{8}{3} \\cdot t^2", font_size=32, color=WHITE)
-            math_part4 = MathTex("t^2 = 0.3", font_size=32, color=WHITE)
-            math_part5 = MathTex("t = \\sqrt{0.3} \\approx 0.55 \\, s", font_size=32, color=GREEN)
-
-            text_part3 = Text("3. 计算速度：", font_size=28, color=WHITE)
-            math_part6 = MathTex("v_A = a_A t = 3 \\sqrt{0.3} \\approx 1.65 \\, m/s", font_size=32, color=BLUE)
-            math_part7 = MathTex("v_B = a_B t = \\frac{17}{3} \\sqrt{0.3} \\approx 3.11 \\, m/s", font_size=32, color=BLUE)
-
-            # Group and arrange vertically
-            group = VGroup(
-                text_part1, math_part1,
-                text_part2, math_part2, math_part3, math_part4, math_part5,
-                text_part3, math_part6, math_part7
-            ).arrange(DOWN, aligned_edge=LEFT, buff=0.25)
+            # Group and arrange
+            calc_v_group = VGroup(line1, line2).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
         
-            place_in_zone(group, zone_main, offset=(0.0, 0.15))
-            register_obj(self, self.objects, "derive_panel_q2", group)
-            self.add(group)
+            # Position below previous content
+            calc_t = self.objects["calc_t"]
+            calc_v_group.next_to(calc_t, DOWN, buff=0.6)
+        
+            # Register and add
+            register_obj(self, self.objects, "calc_v", calc_v_group)
+        
+            # Animate line by line
+            self.play(Write(line1))
+            self.play(Write(line2))
 
         run_step(
             self,
             self.objects,
-            "最后，利用时间t计算滑落瞬间的速度v_A和v_B。",
+            "求出时间后，我们就可以算出滑落瞬间的速度了。v_A等于a_A乘以t，等于1.8米每秒，方向向右。v_B等于a_B乘以t，约为3.4米每秒，方向也向右。",
             zone_subtitle,
-            ["derive_panel_q2"],
+            ["calc_t", "calc_v"],
             step_02,
         )
 
@@ -842,31 +865,32 @@ class MainScene(Scene):
     def scene_scene_07(self):
         reset_scene(self, self.objects)
 
-        zone_main = (0.15, 0.85, 0.25, 0.85)
         zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+        zone_main = (0.15, 0.85, 0.2, 0.9)
 
         def step_01():
-            title = Text("(3) 求外力做功 W_F 与摩擦生热 Q", font_size=36, color=WHITE)
-            place_in_zone(title, zone_main, offset=(0.0, 0.35))
-            register_obj(self, self.objects, "goal_panel_q3_title", title)
-            self.add(title)
+            text_q3 = Text("第三问：求W_F与Q", font_size=36, color=WHITE)
+            place_in_zone(text_q3, zone_main, offset=(0.0, 0.35))
+            register_obj(self, self.objects, "text_q3", text_q3)
+            self.add(text_q3)
 
-            plan_text = Text(
-                "1. 求 W_F：需要先求木板对地位移 x_B\n   W_F = F * x_B\n\n2. 求 Q：利用相对位移\n   Q = f_k * x_rel = f_k * l",
-                font_size=28,
-                color=WHITE,
-                line_spacing=0.5
-            )
-            place_in_zone(plan_text, zone_main, offset=(0.0, -0.15))
-            register_obj(self, self.objects, "goal_panel_q3", plan_text)
-            self.add(plan_text)
+            formula_W = MathTex("W_F = F \\cdot x_B", font_size=40, color=YELLOW)
+            formula_Q = MathTex("Q = f_k \\cdot l", font_size=40, color=YELLOW)
+        
+            formulas = VGroup(formula_W, formula_Q)
+            formulas.arrange(DOWN, buff=0.4, aligned_edge=LEFT)
+            place_in_zone(formulas, zone_main, offset=(0.0, -0.1))
+        
+            register_obj(self, self.objects, "formula_W", formula_W)
+            register_obj(self, self.objects, "formula_Q", formula_Q)
+            self.add(formulas)
 
         run_step(
             self,
             self.objects,
-            "最后是第三问，求外力做功W_F和摩擦生热Q。外力做功等于力乘以木板的位移，所以我们需要先求出木板B的位移。而摩擦生热Q有一个简便算法，它等于滑动摩擦力乘以相对位移。",
+            "计算外力做功，我们需要先求出木板B在这0.6秒内发生的位移。摩擦生热有一个简便公式，直接用摩擦力乘以相对路程即可。",
             zone_subtitle,
-            ["goal_panel_q3", "goal_panel_q3_title"],
+            ["text_q3", "formula_W", "formula_Q"],
             step_01,
         )
         cleanup_scene(self, self.objects, [])
@@ -874,65 +898,54 @@ class MainScene(Scene):
     def scene_scene_08(self):
         reset_scene(self, self.objects)
 
-        zone_main = (0.15, 0.85, 0.2, 0.85)
         zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+        zone_main = (0.15, 0.85, 0.2, 0.9)
 
         def step_01():
-            # Step 1: Calculate displacement and Work
-            # Text content for step 1
-            text_1 = Text("1. 计算木板位移 x_B：", font_size=32, color=WHITE)
-            math_1 = MathTex("x_B = \\frac{1}{2} a_B t^2 = 0.5 \\cdot \\frac{17}{3} \\cdot 0.3 \\approx 0.85 \\, \\text{m}", font_size=32, color=WHITE)
+            # Line 1: x_B calculation
+            line1 = MathTex("x_B = \\frac{1}{2} a_B t^2 \\approx 1.02 \\, \\text{m}", font_size=40, color=WHITE)
+            # Line 2: W_F calculation
+            line2 = MathTex("W_F = F x_B = 20 \\times 1.02 = 20.4 \\, \\text{J}", font_size=40, color=WHITE)
         
-            text_2 = Text("2. 计算外力做功 W_F：", font_size=32, color=WHITE)
-            math_2 = MathTex("W_F = F \\cdot x_B = 20 \\cdot 0.85 = 17.0 \\, \\text{J}", font_size=32, color=WHITE)
-
-            # Group and arrange
-            group = VGroup(text_1, math_1, text_2, math_2)
-            group.arrange(DOWN, aligned_edge=LEFT, buff=0.4)
-        
-            # Place in zone
+            # Group and layout
+            group = VGroup(line1, line2).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
             place_in_zone(group, zone_main, offset=(0.0, 0.2))
         
-            register_obj(self, self.objects, "calc_panel_q3", group)
+            # Register and add
+            register_obj(self, self.objects, "calc_xB", line1)
+            register_obj(self, self.objects, "calc_WF", line2)
             self.add(group)
 
         run_step(
             self,
             self.objects,
-            "首先计算木板B的位移，然后求出外力做功W_F。",
+            "计算B的位移，得到x_B约为1.02米。进而算出W_F为20.4焦耳。",
             zone_subtitle,
-            ["calc_panel_q3"],
+            ["calc_xB", "calc_WF"],
             step_01,
         )
 
         def step_02():
-            # Step 2: Calculate Heat Q
-            # Retrieve existing object
-            group = self.objects["calc_panel_q3"]
+            # Line 3: Q calculation
+            line3 = MathTex("Q = f_k l = 3.0 \\times 0.4 = 1.2 \\, \\text{J}", font_size=40, color=YELLOW)
         
-            # New content for step 3
-            text_3 = Text("3. 计算摩擦生热 Q：", font_size=32, color=WHITE)
-            math_3 = MathTex("Q = f_k \\cdot l = \\mu_k m g l", font_size=32, color=WHITE)
-            math_4 = MathTex("Q = 0.3 \\cdot 1 \\cdot 10 \\cdot 0.4 = 1.2 \\, \\text{J}", font_size=32, color=WHITE)
-
-            # Create a temporary group to calculate position
-            new_group = VGroup(text_3, math_3, math_4)
-            new_group.arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+            # Get previous group to append
+            prev_group = self.objects["calc_xB"].get_parent() or VGroup(self.objects["calc_xB"], self.objects["calc_WF"])
+            new_group = VGroup(prev_group, line3).arrange(DOWN, aligned_edge=LEFT, buff=0.4)
         
-            # Position new group below existing content
-            new_group.next_to(group, DOWN, buff=0.5, aligned_edge=LEFT)
+            # Re-center the expanded group
+            place_in_zone(new_group, zone_main, offset=(0.0, 0.2))
         
-            # Add to the main group and register update
-            group.add(new_group)
-            register_obj(self, self.objects, "calc_panel_q3", group)
-            self.add(new_group)
+            # Register and add
+            register_obj(self, self.objects, "calc_Q", line3)
+            self.add(line3)
 
         run_step(
             self,
             self.objects,
-            "接着计算摩擦生热Q，利用相对位移可以直接得出结果。",
+            "最后算摩擦生热Q。f_k是3牛，相对位移l是0.4米，所以Q等于1.2焦耳。",
             zone_subtitle,
-            ["calc_panel_q3"],
+            ["calc_xB", "calc_WF", "calc_Q"],
             step_02,
         )
 
@@ -941,49 +954,82 @@ class MainScene(Scene):
     def scene_scene_09(self):
         reset_scene(self, self.objects)
 
-        zone_left = (0.05, 0.45, 0.2, 0.9)
-        zone_right = (0.55, 0.95, 0.2, 0.9)
         zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+        zone_check = (0.05, 0.5, 0.2, 0.9)
+        zone_summary = (0.55, 0.95, 0.2, 0.9)
 
         def step_01():
-            check_text = Text(
-                "能量验证：\nW_F = ΔE_k + Q\nΔE_k = 1/2 m v_A² + 1/2 M v_B² ≈ 15.8 J\nQ = 1.2 J\nW_F ≈ 17.0 J (验证通过)",
-                font_size=24,
-                color=WHITE,
-                line_spacing=0.4
-            )
-            fit_in_zone(check_text, zone_left, width_ratio=0.95, height_ratio=0.95)
-            place_in_zone(check_text, zone_left, offset=(0.0, 0.0))
-            register_obj(self, self.objects, "check_panel", check_text)
-            self.add(check_text)
+            # Energy verification formulas
+            title_check = Text("能量守恒验证", font_size=32, color=WHITE)
+            place_in_zone(title_check, zone_check, offset=(0.0, 0.35))
+            register_obj(self, self.objects, "check_title", title_check)
+            self.add(title_check)
+
+            eq1 = MathTex("W_F = \\Delta E_k + Q", font_size=36, color=YELLOW)
+            place_in_zone(eq1, zone_check, offset=(0.0, 0.15))
+            register_obj(self, self.objects, "check_eq_1", eq1)
+            self.add(eq1)
+
+            eq2 = MathTex("\\Delta E_k = \\frac{1}{2}mv_A^2 + \\frac{1}{2}Mv_B^2", font_size=32)
+            place_in_zone(eq2, zone_check, offset=(0.0, -0.05))
+            register_obj(self, self.objects, "check_eq_2", eq2)
+            self.add(eq2)
+
+            eq3 = MathTex("\\Delta E_k \\approx 19.2 \\text{ J}", font_size=32)
+            place_in_zone(eq3, zone_check, offset=(0.0, -0.20))
+            register_obj(self, self.objects, "check_eq_3", eq3)
+            self.add(eq3)
+
+            eq4 = MathTex("Q = 1.2 \\text{ J}", font_size=32)
+            place_in_zone(eq4, zone_check, offset=(0.0, -0.35))
+            register_obj(self, self.objects, "check_eq_4", eq4)
+            self.add(eq4)
+
+            eq5 = MathTex("W_F = 19.2 + 1.2 = 20.4 \\text{ J} \\quad (\\text{一致})", font_size=32, color=GREEN)
+            place_in_zone(eq5, zone_check, offset=(0.0, -0.50))
+            register_obj(self, self.objects, "check_eq_5", eq5)
+            self.add(eq5)
+
+            # Group for cleanup reference
+            check_group = VGroup(title_check, eq1, eq2, eq3, eq4, eq5)
+            register_obj(self, self.objects, "check_eq", check_group)
 
         run_step(
             self,
             self.objects,
-            "我们利用能量守恒定律来验证计算结果是否正确。",
+            "根据能量守恒，外力做功转化为系统动能和内能。我们计算动能增量，加上热量，确实等于外力做功。",
             zone_subtitle,
-            ["check_panel"],
+            ["check_eq"],
             step_01,
         )
 
         def step_02():
-            summary_text = Text(
-                "答案汇总：\n(1) a_A = 3.0 m/s², a_B ≈ 5.67 m/s²\n(2) t ≈ 0.55 s, v_A ≈ 1.65 m/s, v_B ≈ 3.11 m/s\n(3) W_F ≈ 17.0 J, Q = 1.2 J",
-                font_size=24,
-                color=WHITE,
-                line_spacing=0.4
-            )
-            fit_in_zone(summary_text, zone_right, width_ratio=0.95, height_ratio=0.95)
-            place_in_zone(summary_text, zone_right, offset=(0.0, 0.0))
-            register_obj(self, self.objects, "summary_panel", summary_text)
-            self.add(summary_text)
+            # Summary table
+            title_summary = Text("答案汇总", font_size=32, color=WHITE)
+            place_in_zone(title_summary, zone_summary, offset=(0.0, 0.35))
+            register_obj(self, self.objects, "summary_title", title_summary)
+            self.add(title_summary)
+
+            # Table content
+            row1 = MathTex("(1) \\text{滑动状态: } a_A = 3.0 \\text{ m/s}^2, \\ a_B = \\frac{17}{3} \\text{ m/s}^2", font_size=28)
+            row2 = MathTex("(2) \\text{滑落时间: } t = \\sqrt{0.3} \\text{ s} \\approx 0.55 \\text{ s}", font_size=28)
+            row3 = MathTex("\\quad \\text{滑落速度: } v_A = 3\\sqrt{0.3} \\text{ m/s}, \\ v_B = \\frac{17}{3}\\sqrt{0.3} \\text{ m/s}", font_size=28)
+            row4 = MathTex("(3) \\text{外力做功: } W_F = 20.4 \\text{ J}", font_size=28)
+            row5 = MathTex("\\quad \\text{摩擦生热: } Q = 1.2 \\text{ J}", font_size=28)
+
+            table_group = VGroup(row1, row2, row3, row4, row5)
+            table_group.arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+            place_in_zone(table_group, zone_summary, offset=(0.0, -0.1))
+        
+            register_obj(self, self.objects, "summary_table", table_group)
+            self.add(table_group)
 
         run_step(
             self,
             self.objects,
-            "验证通过后，我们汇总本题的所有答案。",
+            "最后，我们汇总一下本题的所有答案。",
             zone_subtitle,
-            ["check_panel", "summary_panel"],
+            ["check_eq", "summary_table"],
             step_02,
         )
 
@@ -992,170 +1038,156 @@ class MainScene(Scene):
     def scene_scene_10(self):
         reset_scene(self, self.objects)
 
-        zone_main = (0.1, 0.9, 0.2, 0.85)
         zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+        zone_main = (0.1, 0.9, 0.2, 0.9)
 
         def step_01():
-            title = Text("方法总结：板块模型", font_size=36, color=WHITE)
-            place_in_zone(title, zone_main, offset=(0.0, 0.35))
+            title = Text("方法总结", font_size=40, color=WHITE)
+            title.to_edge(UP, buff=0.2)
             register_obj(self, self.objects, "title", title)
             self.add(title)
 
-            points_text = (
-                "1. 受力分析：隔离A、B，判断静摩擦力是否突破。\n"
-                "2. 运动学：利用相对加速度 a_rel = a_B - a_A 求解时间。\n"
-                "3. 能量：摩擦生热 Q = f_k * x_rel (相对路程)。\n\n"
-                "易错点：\n"
-                "- 相对位移的方向不要搞反。\n"
-                "- 求生热时要用相对路程，而不是对地位移。"
-            )
-            content = Text(points_text, font_size=28, color=WHITE)
-            place_in_zone(content, zone_main, offset=(0.0, -0.1))
-            register_obj(self, self.objects, "content", content)
-            self.add(content)
+            item1_text = Text("1. 隔离受力，判断运动状态", font_size=32, color=WHITE)
+            item2_text = Text("2. 相对运动，求几何量", font_size=32, color=WHITE)
+            item3_text = Text("3. 能量观点，求功或热", font_size=32, color=WHITE)
+        
+            caution_text = Text("易错点：相对位移方向、Q=f*l", font_size=32, color=YELLOW)
 
-            transfer_panel = VGroup(title, content)
-            register_obj(self, self.objects, "transfer_panel", transfer_panel)
+            items = VGroup(item1_text, item2_text, item3_text, caution_text)
+            items.arrange(DOWN, aligned_edge=LEFT, buff=0.4)
+            items.next_to(title, DOWN, buff=0.5)
+
+            register_obj(self, self.objects, "method_map", items)
+            self.add(items)
 
         run_step(
             self,
             self.objects,
-            "最后，我们总结一下板块模型的通用解法和易错点。",
+            "掌握这套方法，以后遇到类似的板块问题，就可以按部就班地解决了。",
             zone_subtitle,
-            ["transfer_panel"],
+            ["method_map"],
             step_01,
         )
+
         cleanup_scene(self, self.objects, [])
 
     def motion_scene_01(self, step_id):
         if step_id == "step_02":
-            board_B = self.objects.get("board_B")
+            block_B = self.objects.get("block_B")
             block_A = self.objects.get("block_A")
+            force_arrow_F = self.objects.get("force_arrow_F")
         
-            if board_B is None or block_A is None:
+            if block_B is None or block_A is None or force_arrow_F is None:
                 return []
 
-            # Step 02: 板块模型运动演示
-            # 运动参数：木板B向右加速，物块A向右加速但较慢
-            # 模拟时间 t = 0.55s (sqrt(0.3))
-            # a_A = 3.0, a_B = 17/3 ≈ 5.67
-            # x_B = 0.5 * a_B * t^2 ≈ 0.85
-            # x_A = 0.4 + 0.5 * a_A * t^2 ≈ 0.45
+            # Motion parameters based on physics solution
+            # a_A = 3.0, a_B = 17/3, t_fall = sqrt(0.3)
+            # x_B_final = 0.5 * (17/3) * 0.3 = 0.85
+            # x_A_final = 0.4 + 0.5 * 3.0 * 0.3 = 0.85 (Wait, relative motion logic check)
+            # Relative displacement: x_B - x_A = 0.4 (A moves left relative to B)
+            # x_A_final = 0.4 + 0.5 * 3.0 * 0.3 = 0.85
+            # x_B_final = 0.5 * (17/3) * 0.3 = 0.85
+            # Wait, if x_A_final = x_B_final, A is at the right edge of B?
+            # Initial: A at 0.4 (relative to B's left edge at 0).
+            # Final: A at 0.0 (relative to B's left edge).
+            # So x_A_world = x_B_world + 0.0.
+            # x_A_world = 0.4 + 0.5 * 3 * t^2
+            # x_B_world = 0.5 * (17/3) * t^2
+            # x_B - x_A = 0.5 * (8/3) * t^2 = 0.4 -> t^2 = 0.3.
+            # x_B_final = 0.5 * (17/3) * 0.3 = 0.85.
+            # x_A_final = 0.4 + 0.5 * 3 * 0.3 = 0.85.
+            # Yes, they meet at world coordinate 0.85.
         
-            # 视觉缩放比例 (将物理位移映射到屏幕坐标)
-            # 假设屏幕上 1 unit 对应 1 meter
-            scale = 1.0
+            run_time = 3.0
         
-            # 计算终点位置 (相对于初始位置)
-            # 初始位置由 scene 方法设定，这里计算位移量
-            t_final = 0.55
-            a_B = 17.0 / 3.0
-            a_A = 3.0
+            # Block B motion: 0 -> 0.85
+            anim_B = block_B.animate.shift(RIGHT * 0.85).set(run_time=run_time)
         
-            disp_B = 0.5 * a_B * t_final**2
-            disp_A = 0.5 * a_A * t_final**2
+            # Block A motion: 0.4 -> 0.85
+            anim_A = block_A.animate.shift(RIGHT * 0.45).set(run_time=run_time)
         
-            # 获取初始位置 (假设初始时刻已由 scene 设置好)
-            # 这里我们通过获取当前对象的中心点作为起点
-            start_pos_B = board_B.get_center()
-            start_pos_A = block_A.get_center()
-        
-            # 计算终点坐标
-            # 运动方向向右 (x轴正方向)
-            end_pos_B = start_pos_B + np.array([disp_B * scale, 0, 0])
-            end_pos_A = start_pos_A + np.array([disp_A * scale, 0, 0])
-        
-            # 动画时长
-            run_time = 8.0
-        
-            # 创建动画
-            # 使用 MoveAlongPath 或直接使用 target 参数的动画
-            # 这里使用 MoveToPoint (通过 animate 语法或 MoveTo)
-            # 为了平滑，使用 UpdateFromAlpha 或者简单的 MoveTo
-        
-            anim_board = board_B.animate.move_to(end_pos_B).set(run_time=run_time)
-            anim_block = block_A.animate.move_to(end_pos_A).set(run_time=run_time)
-        
-            return [anim_board, anim_block]
-        
+            # Force arrow moves with Block B
+            anim_F = force_arrow_F.animate.shift(RIGHT * 0.85).set(run_time=run_time)
+
+            return [anim_B, anim_A, anim_F]
+    
         return []
 
     def motion_scene_02(self, step_id):
         if step_id == "step_01":
-            problem_text = self.objects.get("problem_text")
-            goal_panel = self.objects.get("goal_panel")
-            if problem_text is None or goal_panel is None:
+            text_q1 = self.objects.get("text_q1")
+            block_A_icon = self.objects.get("block_A_icon")
+            block_B_icon = self.objects.get("block_B_icon")
+            logic_flow = self.objects.get("logic_flow")
+        
+            if text_q1 is None or block_A_icon is None or block_B_icon is None or logic_flow is None:
                 return []
+
             return [
-                FadeIn(problem_text, run_time=1.0),
-                FadeIn(goal_panel, run_time=1.0)
+                FadeIn(text_q1, shift=UP * 0.5),
+                FadeIn(block_A_icon, shift=LEFT * 0.5),
+                FadeIn(block_B_icon, shift=LEFT * 0.5),
+                FadeIn(logic_flow, shift=RIGHT * 0.5)
             ]
     
         if step_id == "step_02":
-            goal_panel = self.objects.get("goal_panel")
-            if goal_panel is None:
+            logic_flow = self.objects.get("logic_flow")
+            if logic_flow is None:
                 return []
         
-            logic_text = (
-                "1. 假设A、B相对静止，求共同加速度 a。\n"
-                "2. 求A所需的静摩擦力 f_req。\n"
-                "3. 比较 f_req 与 f_max (μ_s mg)。\n"
-                "4. 若 f_req > f_max，则发生相对滑动，隔离求解 a_A, a_B。"
-            )
-        
-            new_content = Text(logic_text, font_size=24, color=WHITE)
-            new_content.move_to(goal_panel.get_center())
-        
             return [
-                ReplacementTransform(goal_panel, new_content, run_time=1.5)
+                Indicate(logic_flow, scale_factor=1.1, color=YELLOW)
             ]
     
         return []
 
     def motion_scene_03(self, step_id):
-        if step_id == "step_01":
-            diagram_A = self.objects.get("diagram_A")
-            diagram_B = self.objects.get("diagram_B")
-            derivation_text = self.objects.get("derivation_text")
-        
-            if diagram_A is None or diagram_B is None or derivation_text is None:
-                return []
-            
-            return [
-                FadeIn(diagram_A, shift=LEFT*0.5),
-                FadeIn(diagram_B, shift=RIGHT*0.5),
-                Write(derivation_text)
-            ]
-        
         if step_id == "step_02":
-            diagram_A = self.objects.get("diagram_A")
-            diagram_B = self.objects.get("diagram_B")
-            derivation_text = self.objects.get("derivation_text")
-        
-            if diagram_A is None or diagram_B is None or derivation_text is None:
+            diagram_system = self.objects.get("diagram_system")
+            if diagram_system is None:
                 return []
-            
-            return [
-                Transform(diagram_A, diagram_A),
-                Transform(diagram_B, diagram_B),
-                Transform(derivation_text, derivation_text)
-            ]
         
+            # Retrieve the specific force arrow object from the diagram group
+            # Assuming the diagram_system is a VGroup or similar container
+            force_f = diagram_system.force_f
+        
+            # Animate the label change from f_s to f_k
+            # Using a replacement animation to swap the text content
+            new_label = MathTex("f_k")
+            new_label.match_style(force_f.label)
+            new_label.move_to(force_f.label)
+        
+            return [
+                ReplacementTransform(force_f.label, new_label),
+                Indicate(force_f, scale_factor=1.2, color=YELLOW)
+            ]
         return []
 
     def motion_scene_04(self, step_id):
         if step_id == "step_01":
-            calc_panel = self.objects.get("calc_panel")
-            if calc_panel is None:
+            diagram_A = self.objects.get("diagram_A")
+            calc_a_A = self.objects.get("calc_a_A")
+        
+            if diagram_A is None or calc_a_A is None:
                 return []
-            return []
-    
-        if step_id == "step_02":
-            calc_panel = self.objects.get("calc_panel")
-            if calc_panel is None:
+            
+            return [
+                FadeIn(diagram_A, shift=LEFT*0.5),
+                Write(calc_a_A)
+            ]
+        
+        elif step_id == "step_02":
+            diagram_B = self.objects.get("diagram_B")
+            calc_a_B = self.objects.get("calc_a_B")
+        
+            if diagram_B is None or calc_a_B is None:
                 return []
-            return []
-    
+            
+            return [
+                FadeIn(diagram_B, shift=RIGHT*0.5),
+                Write(calc_a_B)
+            ]
+        
         return []
 
     def motion_scene_05(self, step_id):
@@ -1163,96 +1195,93 @@ class MainScene(Scene):
             diagram = self.objects.get("diagram_rel")
             if diagram is None:
                 return []
+        
+            # Fade in the relative motion diagram
             return [FadeIn(diagram)]
     
         if step_id == "step_02":
-            goal_panel = self.objects.get("goal_panel_q2")
-            if goal_panel is None:
+            formula = self.objects.get("formula_rel")
+            if formula is None:
                 return []
-            return [FadeIn(goal_panel)]
+        
+            # Fade in the relative motion formula
+            return [FadeIn(formula)]
     
         return []
 
     def motion_scene_06(self, step_id):
         if step_id == "step_01":
-            panel = self.objects.get("derive_panel_q2")
-            if panel is None:
+            calc_t = self.objects.get("calc_t")
+            if calc_t is None:
                 return []
-        
-            # Step 1: Show relative acceleration and time derivation
-            # Text: "1. 计算相对加速度：\na_rel = a_B - a_A = 17/3 - 3 = 8/3 m/s²"
-            # Text: "2. 计算时间 t：\nl = 1/2 * a_rel * t²\n0.4 = 1/2 * (8/3) * t²\nt² = 0.3\nt = √0.3 ≈ 0.55 s"
-        
-            # Assuming panel is a VGroup or similar container that supports Write
-            # We animate the writing of the first two blocks of text
-            return [
-                Write(panel, run_time=2.0)
-            ]
+            return [Write(calc_t, run_time=1.5)]
     
         if step_id == "step_02":
-            panel = self.objects.get("derive_panel_q2")
-            if panel is None:
+            calc_v = self.objects.get("calc_v")
+            if calc_v is None:
                 return []
-        
-            # Step 2: Show velocity calculation
-            # Text: "3. 计算速度：\nv_A = a_A * t = 3 * √0.3 ≈ 1.65 m/s\nv_B = a_B * t = (17/3) * √0.3 ≈ 3.11 m/s"
-        
-            # Assuming the panel object has been updated in scene method to include the new text
-            # or we are appending to it. Here we assume the scene method handles the structure
-            # and we just animate the appearance of the new content.
-            # Since the object_ops says "update", we might be replacing or adding to the mobject.
-            # If the scene method replaced the object in self.objects, we fetch it again.
-            # If the scene method added submobjects, we animate the new ones.
-            # Given the constraints, we assume the scene method prepared the object and we just animate it.
-        
-            return [
-                Write(panel, run_time=2.0)
-            ]
+            return [Write(calc_v, run_time=1.5)]
     
         return []
 
     def motion_scene_07(self, step_id):
         if step_id == "step_01":
-            goal_panel = self.objects.get("goal_panel_q3")
-            if goal_panel is None:
+            text_q3 = self.objects.get("text_q3")
+            formula_W = self.objects.get("formula_W")
+            formula_Q = self.objects.get("formula_Q")
+        
+            if text_q3 is None or formula_W is None or formula_Q is None:
                 return []
-            return [FadeIn(goal_panel, run_time=1.0)]
+
+            return [
+                FadeIn(text_q3, shift=UP * 0.5),
+                FadeIn(formula_W, shift=UP * 0.5),
+                FadeIn(formula_Q, shift=UP * 0.5)
+            ]
         return []
 
     def motion_scene_08(self, step_id):
         if step_id == "step_01":
-            calc_panel = self.objects.get("calc_panel_q3")
-            if calc_panel is None:
+            calc_xB = self.objects.get("calc_xB")
+            calc_WF = self.objects.get("calc_WF")
+            if calc_xB is None or calc_WF is None:
                 return []
-            return [Write(calc_panel, run_time=2.0)]
+            return [
+                FadeIn(calc_xB, shift=UP * 0.5),
+                FadeIn(calc_WF, shift=UP * 0.5)
+            ]
     
         if step_id == "step_02":
-            calc_panel = self.objects.get("calc_panel_q3")
-            if calc_panel is None:
+            calc_Q = self.objects.get("calc_Q")
+            if calc_Q is None:
                 return []
-            return [Write(calc_panel, run_time=2.0)]
+            return [
+                FadeIn(calc_Q, shift=UP * 0.5)
+            ]
     
         return []
 
     def motion_scene_09(self, step_id):
         if step_id == "step_01":
-            check_panel = self.objects.get("check_panel")
-            if check_panel is None:
+            check_eq = self.objects.get("check_eq")
+            if check_eq is None:
                 return []
-            return [FadeIn(check_panel)]
+            return [FadeIn(check_eq, shift=UP * 0.5)]
     
         if step_id == "step_02":
-            summary_panel = self.objects.get("summary_panel")
-            if summary_panel is None:
+            summary_table = self.objects.get("summary_table")
+            if summary_table is None:
                 return []
-            return [FadeIn(summary_panel)]
+            return [FadeIn(summary_table, shift=UP * 0.5)]
     
         return []
 
     def motion_scene_10(self, step_id):
         if step_id == "step_01":
-            transfer_panel = self.objects.get("transfer_panel")
-            if transfer_panel is None:
+            method_map = self.objects.get("method_map")
+            if method_map is None:
                 return []
-            return [FadeIn(transfer_panel)]
+        
+            # Fade in the mind map
+            return [FadeIn(method_map)]
         return []

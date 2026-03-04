@@ -1,0 +1,39 @@
+def scene_scene_10(self):
+    reset_scene(self, self.objects)
+
+    zone_summary_main = (0.1, 0.9, 0.16, 0.92)
+    zone_subtitle = (0.05, 0.95, 0.02, 0.12)
+
+    def step_01():
+        title = Text("方法总结", font_size=36, color=YELLOW)
+        
+        method_items = VGroup(
+            Text("1. 隔离受力，判断运动状态", font_size=28, color=WHITE),
+            Text("2. 相对运动，求几何量", font_size=28, color=WHITE),
+            Text("3. 能量观点，求功或热", font_size=28, color=WHITE),
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.3)
+        
+        error_title = Text("易错点", font_size=32, color=RED)
+        error_items = VGroup(
+            Text("• 相对位移方向", font_size=26, color=WHITE),
+            Text("• Q = f × l", font_size=26, color=WHITE),
+        ).arrange(DOWN, aligned_edge=LEFT, buff=0.2)
+        
+        error_group = VGroup(error_title, error_items).arrange(DOWN, buff=0.25, aligned_edge=LEFT)
+        
+        method_summary_group = VGroup(title, method_items, error_group).arrange(DOWN, buff=0.5)
+        
+        place_in_zone(method_summary_group, zone_summary_main)
+        register_obj(self, self.objects, "method_map", method_summary_group)
+        self.add(method_summary_group)
+
+    run_step(
+        self,
+        self.objects,
+        "掌握这套方法，以后遇到类似的板块问题，就可以按部就班地解决了。",
+        zone_subtitle,
+        ["method_map"],
+        step_01,
+    )
+
+    cleanup_scene(self, self.objects, [])

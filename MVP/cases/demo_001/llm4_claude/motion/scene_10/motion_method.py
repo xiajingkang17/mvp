@@ -1,0 +1,7 @@
+def motion_scene_10(self, step_id):
+    if step_id == "step_01":
+        method_map = self.objects.get("method_map")
+        if method_map is None:
+            return []
+        return [FadeIn(method_map, shift=UP*0.3)]
+    return []
