@@ -1,0 +1,2 @@
+"""Manim4Teach pipeline."""
+
