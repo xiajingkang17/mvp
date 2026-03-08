@@ -1,0 +1,197 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Manim4Teach LLM1 Analysis Packet",
+  "type": "object",
+  "oneOf": [
+    {
+      "title": "ProblemPacket",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "problem_solving"
+      ],
+      "properties": {
+        "mode": {
+          "const": "problem"
+        },
+        "problem_solving": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "is_problem_video",
+            "problem_statement",
+            "known_conditions",
+            "target_question",
+            "full_solution_steps",
+            "final_answer",
+            "answer_check"
+          ],
+          "properties": {
+            "is_problem_video": {
+              "const": true
+            },
+            "problem_statement": {
+              "type": "string",
+              "minLength": 1
+            },
+            "known_conditions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "target_question": {
+              "type": "string",
+              "minLength": 1
+            },
+            "full_solution_steps": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "step",
+                  "goal",
+                  "reasoning",
+                  "equations",
+                  "result"
+                ],
+                "properties": {
+                  "step": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "goal": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "reasoning": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "equations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "result": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "final_answer": {
+              "type": "string",
+              "minLength": 1
+            },
+            "answer_check": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "ConceptPacket",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "knowledge_tree"
+      ],
+      "properties": {
+        "mode": {
+          "const": "concept"
+        },
+        "knowledge_tree": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "target_concept",
+            "nodes",
+            "edges"
+          ],
+          "properties": {
+            "target_concept": {
+              "type": "string",
+              "minLength": 1
+            },
+            "nodes": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "node_id",
+                  "concept",
+                  "type"
+                ],
+                "properties": {
+                  "node_id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "concept": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "target",
+                      "prerequisite",
+                      "bridge"
+                    ]
+                  }
+                }
+              }
+            },
+            "edges": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "from",
+                  "to",
+                  "relation"
+                ],
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "to": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "relation": {
+                    "type": "string",
+                    "enum": [
+                      "prerequisite"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

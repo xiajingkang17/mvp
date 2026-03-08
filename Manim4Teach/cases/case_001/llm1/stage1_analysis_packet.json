@@ -1,0 +1,82 @@
+{
+  "mode": "problem",
+  "problem_solving": {
+    "is_problem_video": true,
+    "problem_statement": "如图，F为双曲线C: x²/a² - y²/b² = 1(a>0,b>0)的右焦点。P为双曲线C在第一象限内的一点。M为左准线上一点，O为坐标原点。MP = OF，|PF| = λ|OF|",
+    "known_conditions": [
+      "双曲线方程: x²/a² - y²/b² = 1",
+      "F为右焦点",
+      "P在第一象限",
+      "M在左准线上",
+      "MP = OF",
+      "|PF| = λ|OF|"
+    ],
+    "target_question": "(I)推导双曲线C的离心率e与λ的关系式；(II)当λ=1时，经过点(1,0)且斜率为-a的直线交双曲线于A,B两点，交y轴于点D，且DA = (√3-2)DB，求双曲线的方程",
+    "full_solution_steps": [
+      {
+        "step": 1,
+        "goal": "建立坐标系统和基本关系",
+        "reasoning": "由MP=OF可知OFPM为平行四边形，设右准线与PM交于N点，|OF|=c",
+        "equations": [
+          "|PF| = e|PN|",
+          "|PF| = λ|OF| = λc",
+          "|OF| = |PM|"
+        ],
+        "result": "得到|PF|=λc的关系"
+      },
+      {
+        "step": 2,
+        "goal": "利用双曲线第二定义",
+        "reasoning": "P到右焦点距离与到右准线距离之比等于离心率",
+        "equations": [
+          "|PF|/|PN| = e",
+          "λc = e|PN|",
+          "|PM| = c",
+          "|PN| = |PM| - c/e = c - c/e"
+        ],
+        "result": "建立了PN与c、e的关系"
+      },
+      {
+        "step": 3,
+        "goal": "推导e与λ的关系",
+        "reasoning": "将|PN|代入|PF|=e|PN|",
+        "equations": [
+          "λc = e(c - c/e)",
+          "λc = ec - c",
+          "λ = e - 1",
+          "e = λ + 1"
+        ],
+        "result": "得到离心率e = λ + 1"
+      },
+      {
+        "step": 4,
+        "goal": "求解第二问的双曲线方程",
+        "reasoning": "当λ=1时，e=2，利用直线与双曲线交点关系",
+        "equations": [
+          "e = 2，故c = 2a，b² = 3a²",
+          "直线方程: y = -a(x-1)",
+          "代入双曲线: x²/a² - a²(x-1)²/(3a²) = 1",
+          "化简: 3x² - a²(x-1)² = 3a²"
+        ],
+        "result": "建立了关于a的方程"
+      },
+      {
+        "step": 5,
+        "goal": "利用向量关系求a",
+        "reasoning": "由DA=(√3-2)DB和D在y轴上的条件",
+        "equations": [
+          "D点坐标(0,a)",
+          "设A(x₁,y₁)，B(x₂,y₂)",
+          "由DA=(√3-2)DB得x₁=(√3-2)x₂",
+          "结合韦达定理求解"
+        ],
+        "result": "解得a²=3"
+      }
+    ],
+    "final_answer": "(I) e = λ + 1；(II) 双曲线方程为 x²/3 - y²/9 = 1",
+    "answer_check": [
+      "当λ=1时，e=2满足双曲线离心率大于1的条件",
+      "代入验证：c²=a²+b²，即12=3+9成立"
+    ]
+  }
+}

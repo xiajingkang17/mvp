@@ -1,0 +1,59 @@
+anthropic:
+  model: claude-sonnet-4-6
+  temperature: 0.18
+  top_p: 0.90
+  max_tokens: 3600
+  timeout_s: 240
+  retries: 2
+  retry_backoff_s: 1.5
+  base_url: https://ai.jiexi6.cn/
+  anthropic_version: "2023-06-01"
+
+  stages:
+    analyst:
+      generate:
+        max_tokens: 3600
+        temperature: 0.18
+        top_p: 0.90
+      continue:
+        max_tokens: 1800
+        temperature: 0.08
+        top_p: 0.85
+      repair:
+        max_tokens: 1000
+        temperature: 0.03
+        top_p: 0.80
+
+    director_draft:
+      generate:
+        max_tokens: 9000
+        temperature: 0.22
+        top_p: 0.90
+      continue:
+        max_tokens: 3600
+        temperature: 0.10
+        top_p: 0.86
+      repair:
+        max_tokens: 1600
+        temperature: 0.04
+        top_p: 0.80
+
+    director_revise:
+      generate:
+        max_tokens: 9000
+        temperature: 0.16
+        top_p: 0.88
+      continue:
+        max_tokens: 3600
+        temperature: 0.08
+        top_p: 0.84
+      repair:
+        max_tokens: 1600
+        temperature: 0.03
+        top_p: 0.80
+
+    vlm_review:
+      generate:
+        max_tokens: 1400
+        temperature: 0.05
+        top_p: 0.80

@@ -59,3 +59,7 @@ htmlcov/
 # Environment
 .env
 .env.local
+
+# Local modules not for push
+Code2Video/
+Math-To-Manim/
