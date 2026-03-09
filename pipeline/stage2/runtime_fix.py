@@ -9,7 +9,6 @@ from ..core.llm_client import LLMClient
 from .io_utils import ensure_dir, write_json, write_text
 from .llm_scene import DEFAULT_SCENE_CLASS, normalize_scene_code
 from .preview_render import run_preview_render
-from .static_checks import run_static_checks
 
 
 def _clip_text(text: str, *, limit: int) -> str:
@@ -53,22 +52,13 @@ def _extract_runtime_snippet(preview_report: dict[str, Any] | None, *, max_lines
     return summary, snippet
 
 
-def summarize_runtime_error(
-    *,
-    static_report: dict[str, Any] | None,
-    preview_report: dict[str, Any] | None,
-) -> dict[str, Any]:
-    static_report = static_report or {}
+def summarize_runtime_error(*, preview_report: dict[str, Any] | None) -> dict[str, Any]:
     preview_report = preview_report or {}
-    compile_error = _clip_text(str(static_report.get("compile_error") or "").strip(), limit=1200)
     runtime_summary, runtime_snippet = _extract_runtime_snippet(preview_report)
 
     error_type = ""
     error_message = ""
-    if compile_error:
-        error_type = "compile_error"
-        error_message = compile_error
-    elif runtime_summary:
+    if runtime_summary:
         m = re.match(r"([A-Za-z_][A-Za-z0-9_]*):\s*(.*)", runtime_summary)
         if m:
             error_type = m.group(1)
@@ -81,11 +71,9 @@ def summarize_runtime_error(
         error_message = "Manim preview render failed without a concise error summary."
 
     return {
-        "compile_ok": bool(static_report.get("compile_ok", False)),
         "preview_ok": bool(preview_report.get("ok", False)),
         "error_type": error_type,
         "error_message": _clip_text(error_message, limit=400),
-        "compile_error": compile_error,
         "runtime_summary": _clip_text(runtime_summary, limit=400),
         "runtime_snippet": _clip_text(runtime_snippet, limit=2400),
     }
@@ -100,7 +88,7 @@ def build_runtime_fix_user_prompt(
     scene_class: str = DEFAULT_SCENE_CLASS,
 ) -> str:
     return (
-        "请只修复当前 Manim 代码的运行时/编译错误，目标是尽快恢复可渲染状态。\n\n"
+        "请只修复当前 Manim 代码的运行时/预览错误，目标是尽快恢复可渲染状态。\n\n"
         f"[场景类名]\n{scene_class}\n\n"
         f"[用户需求]\n{requirement.strip()}\n\n"
         "[一级分析包 analysis_packet]\n"
@@ -112,7 +100,7 @@ def build_runtime_fix_user_prompt(
         "[要求]\n"
         "1. 只输出完整 Python 代码。\n"
         "2. 类名保持不变。\n"
-        "3. 只修复导致编译失败、预览失败的根因，不要重写整题结构。\n"
+        "3. 只修复导致预览失败的根因，不要重写整题结构。\n"
         "4. 不要做画面美化、节奏重排、教学内容扩写。\n"
         "5. 优先修：未定义变量、错误 API 调用、对象生命周期、资源路径、语法/缩进错误。\n"
     )
@@ -158,30 +146,26 @@ def run_runtime_fix_loop(
     analysis_packet: dict[str, Any],
     scene_path: Path,
     class_name: str,
-    static_report: dict[str, Any],
     preview_report: dict[str, Any] | None,
     out_dir: Path,
     round_index: int,
     max_attempts: int = 2,
     scene_class: str = DEFAULT_SCENE_CLASS,
-    static_check_fn: Callable[[Path], dict[str, Any]] = run_static_checks,
     render_fn: Callable[..., dict[str, Any]] = run_preview_render,
     write_report_path: Path | None = None,
 ) -> dict[str, Any]:
     current_scene_path = scene_path
     current_class_name = class_name
-    current_static_report = static_report
     current_preview_report = preview_report
     attempts: list[dict[str, Any]] = []
 
-    if bool(current_static_report.get("compile_ok", False)) and bool((current_preview_report or {}).get("ok", False)):
+    if bool((current_preview_report or {}).get("ok", False)):
         report = {
             "status": "not_needed",
             "fixed": True,
             "attempt_count": 0,
             "class_name": current_class_name,
             "scene_path": str(current_scene_path),
-            "static_report": current_static_report,
             "preview_report": current_preview_report,
             "attempts": attempts,
         }
@@ -191,10 +175,7 @@ def run_runtime_fix_loop(
 
     for attempt_index in range(1, max(1, int(max_attempts)) + 1):
         attempt_dir = ensure_dir(out_dir / f"attempt_{attempt_index:02d}")
-        runtime_summary = summarize_runtime_error(
-            static_report=current_static_report,
-            preview_report=current_preview_report,
-        )
+        runtime_summary = summarize_runtime_error(preview_report=current_preview_report)
         fixed_class_name, fixed_scene_path = revise_runtime_code(
             client=client,
             requirement=requirement,
@@ -204,7 +185,6 @@ def run_runtime_fix_loop(
             out_dir=attempt_dir,
             scene_class=scene_class or current_class_name,
         )
-        new_static_report = static_check_fn(fixed_scene_path)
         new_preview_report = render_fn(
             scene_path=fixed_scene_path,
             class_name=fixed_class_name,
@@ -218,23 +198,20 @@ def run_runtime_fix_loop(
             "runtime_summary": runtime_summary,
             "scene_path": str(fixed_scene_path),
             "class_name": fixed_class_name,
-            "static_report": new_static_report,
             "preview_report": new_preview_report,
         }
         attempts.append(attempt_record)
 
         current_scene_path = fixed_scene_path
         current_class_name = fixed_class_name
-        current_static_report = new_static_report
         current_preview_report = new_preview_report
-        if bool(new_static_report.get("compile_ok", False)) and bool(new_preview_report.get("ok", False)):
+        if bool(new_preview_report.get("ok", False)):
             report = {
                 "status": "fixed",
                 "fixed": True,
                 "attempt_count": attempt_index,
                 "class_name": current_class_name,
                 "scene_path": str(current_scene_path),
-                "static_report": current_static_report,
                 "preview_report": current_preview_report,
                 "attempts": attempts,
             }
@@ -248,7 +225,6 @@ def run_runtime_fix_loop(
         "attempt_count": len(attempts),
         "class_name": current_class_name,
         "scene_path": str(current_scene_path),
-        "static_report": current_static_report,
         "preview_report": current_preview_report,
         "attempts": attempts,
     }

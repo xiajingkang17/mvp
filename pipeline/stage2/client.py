@@ -17,11 +17,11 @@ def build_stage2_client(*, provider: Provider = "anthropic") -> LLMClient:
             profile_stage="director_draft",
             prompt_bundle="llm2_director_draft",
         ),
-        "director_revise": LLMStage(
-            name="director_revise",
+        "visual_fix": LLMStage(
+            name="visual_fix",
             provider=provider,
-            profile_stage="director_revise",
-            prompt_bundle="llm2_director_revise",
+            profile_stage="visual_fix",
+            prompt_bundle="llm2_visual_fix",
         ),
         "runtime_fix": LLMStage(
             name="runtime_fix",

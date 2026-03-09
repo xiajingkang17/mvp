@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
@@ -41,41 +41,11 @@ def _extract_runtime_snippet(preview_report: dict[str, Any] | None, *, max_lines
 
 def run_rule_review(
     *,
-    static_report: dict[str, Any],
     preview_report: dict[str, Any] | None,
     preview_required: bool = True,
     out_path: Path | None = None,
 ) -> dict[str, Any]:
     issues: list[dict[str, str]] = []
-    flags = dict(static_report.get("heuristic_flags") or {})
-
-    if not static_report.get("compile_ok", False):
-        issues.append(
-            _issue(
-                "blocker",
-                "compile_error",
-                f"代码无法通过编译检查：{static_report.get('compile_error', '')[:240]}",
-            )
-        )
-
-    if static_report.get("undefined_name_candidates"):
-        names = ", ".join(static_report["undefined_name_candidates"][:8])
-        issues.append(_issue("high", "undefined_names", f"疑似未定义变量：{names}"))
-
-    if flags.get("possible_animation_sparse"):
-        issues.append(_issue("high", "animation_sparse", "有效动画可能过少，建议补充至少 1-2 段解释性动画。"))
-    if flags.get("possible_text_overload"):
-        issues.append(_issue("medium", "text_overload", "文本占比偏高，建议拆分为图示+少量文字。"))
-    if flags.get("possible_subtitle_driven"):
-        issues.append(_issue("low", "subtitle_driven", "疑似主要靠字幕推进，建议用画面动作承载解释。"))
-    if flags.get("possible_center_stack"):
-        issues.append(_issue("high", "center_stack", "对象可能集中在画面中心，建议改为分区布局（主图+侧栏）。"))
-    if flags.get("possible_fit_without_place"):
-        issues.append(_issue("low", "fit_without_place", "存在 fit 与 place 不平衡，可能导致对象落位异常。"))
-    if flags.get("possible_rebuild_frequent"):
-        issues.append(_issue("low", "rebuild_frequent", "主图对象疑似频繁重建，建议复用并更新。"))
-    if flags.get("possible_out_of_bounds_literals"):
-        issues.append(_issue("medium", "out_of_bounds", "存在疑似越界坐标常量。"))
 
     if preview_required:
         if preview_report is None:

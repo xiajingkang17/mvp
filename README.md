@@ -1,14 +1,14 @@
 ﻿# Manim4Teach
 
-`Manim4Teach` 是新的两级 Agent 管线实验目录。
+`Manim4Teach` 是当前使用中的两级 Agent 管线目录。
 当前实现为**自包含命名空间**，不依赖 `MVP.pipeline.*` 导入。
 
 ## 目标
 
-- 只保留两个 LLM：
+- 只保留两个主阶段：
 
 1. LLM1：`analysis_packet` 生产器（双模式分流）
-2. LLM2：统一的教学视频创作与代码生成器（后续接入）
+2. LLM2：围绕 `scene.py` 的生成、渲染修复、视觉修稿闭环
 
 ## LLM1 设计原则
 
@@ -26,13 +26,42 @@
 ## 目录说明
 
 - `prompts/llm1_analysis_packet/`：一级提示词（中文）
-- `prompts/llm2_director_draft/`：二级首稿提示词
-- `prompts/llm2_director_revise/`：二级修稿提示词
+- `prompts/llm2_director_draft/`：二级首稿生成提示词
+- `prompts/llm2_runtime_fix/`：二级运行修复提示词，只负责“让它能渲染”
+- `prompts/llm2_visual_fix/`：二级视觉修稿提示词，只负责“让图和动画表达变对、变清楚”
+- `prompts/review_rubrics/`：教学图评审规则，`common + math/physics`
 - `schema/analysis_packet.schema.json`：一级输出 JSON Schema（定死）
 - `pipeline/core/`：公共能力（env/config/llm/json）
 - `pipeline/stage1/`：一级分析与 schema 归一化
-- `pipeline/stage2/`：二级导演循环模块
+- `pipeline/stage2/`：二级生成、渲染、评审、修稿循环
 - `pipeline/runners/`：可执行入口脚本
+
+## LLM2 当前模式
+
+LLM2 当前不是单次“导演修稿”，而是拆成 3 个子能力：
+
+1. `director_draft`
+   基于 `analysis_packet` 先生成第一版可看的 `scene.py`
+2. `runtime_fix`
+   只处理预览失败、语法/API/对象生命周期等运行问题，目标是恢复可渲染
+3. `visual_fix`
+   只处理教学图、空间关系、过程动画、主体突出等视觉表达问题
+
+配套还有两层评审：
+
+1. `review_rules`
+   本地规则检查，优先卡住 `preview_failed`
+2. `review_vlm`
+   基于关键帧做视觉评审，决定是否进入 `visual_fix`
+
+默认回路是：
+
+1. `director_draft`
+2. `preview render`
+3. 若渲染失败，进入 `runtime_fix`
+4. `review_rules` + `review_vlm`
+5. 若视觉不过关，进入 `visual_fix`
+6. 继续下一轮，直到通过或达到 `max_rounds`
 
 ## 环境变量
 
@@ -69,11 +98,13 @@ python Manim4Teach/pipeline/runners/run_llm2_loop.py `
 - `final/runtime_fix.json`
 - `final/vlm_review.json`
 - `final/preview.mp4`（若未 `--skip-preview`）
-- `final/meta.json`（轮次、停止原因、规则/VLM 关键摘要）
+- `final/meta.json`（轮次、停止原因、runtime/rule/VLM 关键摘要）
 
 说明：
 
-- 当低清预览失败时，LLM2 会先进入专门的 runtime-fix 小循环，优先修复编译/运行错误，再回到规则评审与 VLM 评审。
+- 当低清预览失败时，LLM2 会先进入专门的 `runtime_fix` 小循环，优先修复编译/运行错误。
+- 当预览可用后，才进入规则评审与 VLM 视觉评审。
+- `visual_fix` 会使用 `review_rubrics/` 中的 `common` 规则和按学科选择的 `math` / `physics` 规则。
 
 ## Case 测试（推荐）
 

@@ -1,0 +1,10 @@
+.env
+runs/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+media/
+partial_movie_files/
+cases/*/llm1/
+cases/*/llm2/

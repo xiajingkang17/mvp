@@ -8,6 +8,7 @@ from typing import Any
 from ..core.json_utils import load_json_from_llm
 from ..core.llm_anthropic import chat_completion_raw_messages, load_anthropic_stage_config
 from .io_utils import write_json
+from .rubric_loader import build_review_rubric_block
 
 
 _SEVERITY_ORDER = {"blocker": 3, "high": 2, "medium": 1, "low": 0}
@@ -77,11 +78,14 @@ def _max_severity(issues: list[dict[str, str]]) -> str:
     return max(issues, key=lambda x: _SEVERITY_ORDER.get(x.get("severity", "low"), 0)).get("severity", "low")
 
 
-def _build_system_prompt() -> str:
+def _build_system_prompt(*, rubric_block: str, domain: str) -> str:
     return (
         "你是教学视频视觉评审器（VLM reviewer）。\n"
-        "你会看到 Manim 预览关键帧，请只做观感评审，不做数学正确性裁判。\n"
-        "请聚焦：视觉中心、布局拥挤、文本堆叠、动画有效性、场景切换流畅性。\n"
+        "你会看到 Manim 预览关键帧，请只做教学图与观感评审，不做数学或物理结论正确性裁判。\n"
+        "请严格按照给定的教学图规则做评审：所有题都必须满足 common 规则，并同时满足当前学科规则。\n"
+        "优先关注：图形/轨迹空间关系是否正确、主体是否明确、过程是否可读、约束或关键关系是否清楚、标签是否附着正确。\n"
+        f"当前学科：{domain}\n\n"
+        f"{rubric_block}\n"
         "输出必须是 JSON 对象，且只输出 JSON。\n"
         "JSON 结构：\n"
         "{\n"
@@ -94,7 +98,8 @@ def _build_system_prompt() -> str:
         "要求：\n"
         "1) 至多给 5 条 issues。\n"
         "2) message 必须具体可执行，禁止空泛评价。\n"
-        "3) 如画面整体可接受，可以 issues 为空数组。"
+        "3) 优先直接使用规则 code 作为 issue code，例如 spatial_relation_correct、motion_process_readable、constraint_relation_visible。\n"
+        "4) 如画面整体可接受，可以 issues 为空数组。"
     )
 
 
@@ -122,14 +127,22 @@ def _analysis_hint(analysis_packet: dict[str, Any] | None) -> str:
     return ""
 
 
-def _build_user_text(*, requirement: str, analysis_packet: dict[str, Any] | None, image_count: int) -> str:
+def _build_user_text(
+    *,
+    requirement: str,
+    analysis_packet: dict[str, Any] | None,
+    image_count: int,
+    domain: str,
+) -> str:
     hint = _analysis_hint(analysis_packet)
     requirement_text = _clip_text(requirement, limit=300)
     return (
         "请根据以下预览关键帧做视觉评审。\n"
+        f"学科：{domain}\n"
         f"需求：{requirement_text}\n"
         f"分析包摘要：{hint or '无'}\n"
         f"关键帧数量：{image_count}\n"
+        "请优先判断：空间关系是否画对、过程是否可读、主体与约束关系是否清楚。\n"
         "只输出 JSON，不要输出 Markdown。"
     )
 
@@ -141,10 +154,15 @@ def run_vlm_review(
     analysis_packet: dict[str, Any] | None = None,
     out_path: Path | None = None,
 ) -> dict[str, Any]:
+    domain, rubric_block = build_review_rubric_block(
+        requirement=requirement,
+        analysis_packet=analysis_packet,
+    )
     enabled = str(os.environ.get("M4T_ENABLE_VLM", "0")).strip() == "1"
     if not enabled:
         report = {
             "enabled": False,
+            "domain": domain,
             "status": "skipped",
             "issues": [],
             "issue_count": 0,
@@ -159,6 +177,7 @@ def run_vlm_review(
     if preview_report is None or not preview_report.get("ok"):
         report = {
             "enabled": True,
+            "domain": domain,
             "status": "no_preview",
             "issues": [],
             "issue_count": 0,
@@ -178,6 +197,7 @@ def run_vlm_review(
     if not keyframes:
         report = {
             "enabled": True,
+            "domain": domain,
             "status": "no_keyframes",
             "issues": [],
             "issue_count": 0,
@@ -203,6 +223,7 @@ def run_vlm_review(
                 requirement=requirement,
                 analysis_packet=analysis_packet,
                 image_count=len(selected),
+                domain=domain,
             ),
         }
     ]
@@ -212,7 +233,7 @@ def run_vlm_review(
     try:
         cfg = load_anthropic_stage_config(stage="vlm_review", mode="generate")
         raw = chat_completion_raw_messages(
-            system_prompt=_build_system_prompt(),
+            system_prompt=_build_system_prompt(rubric_block=rubric_block, domain=domain),
             messages=[{"role": "user", "content": user_blocks}],
             cfg=cfg,
         )
@@ -225,6 +246,7 @@ def run_vlm_review(
         should_revise = any(i.get("severity") in {"blocker", "high"} for i in issues)
         report = {
             "enabled": True,
+            "domain": domain,
             "status": "ok",
             "model": cfg.model,
             "used_keyframes": [str(p) for p in selected],
@@ -240,6 +262,7 @@ def run_vlm_review(
     except Exception as exc:  # noqa: BLE001
         report = {
             "enabled": True,
+            "domain": domain,
             "status": "error",
             "issues": [],
             "top_issues": [],

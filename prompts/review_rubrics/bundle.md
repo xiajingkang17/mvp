@@ -1,0 +1,4 @@
+usage_notes.md
+common_teaching_visual_rules.md
+math_teaching_visual_rules.md
+physics_teaching_visual_rules.md
