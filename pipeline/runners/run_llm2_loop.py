@@ -20,6 +20,7 @@ from Manim4Teach.pipeline.stage2.llm_scene import DEFAULT_SCENE_CLASS, generate_
 from Manim4Teach.pipeline.stage2.preview_render import run_preview_render  # noqa: E402
 from Manim4Teach.pipeline.stage2.review_rules import run_rule_review  # noqa: E402
 from Manim4Teach.pipeline.stage2.review_vlm import run_vlm_review  # noqa: E402
+from Manim4Teach.pipeline.stage2.runtime_fix import run_runtime_fix_loop  # noqa: E402
 from Manim4Teach.pipeline.stage2.static_checks import run_static_checks  # noqa: E402
 
 
@@ -75,7 +76,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def _cleanup_minimal_outputs(out_dir: Path, final_dir: Path) -> None:
-    keep_final_names = {"scene.py", "vlm_review.json", "preview.mp4", "meta.json"}
+    keep_final_names = {"scene.py", "vlm_review.json", "runtime_fix.json", "preview.mp4", "meta.json"}
 
     # 清理 final 目录中非最小产物文件
     for child in list(final_dir.iterdir()):
@@ -125,6 +126,7 @@ def main() -> int:
     final_preview_video_path: Path | None = None
     final_rule_report: dict[str, Any] | None = None
     final_static_report: dict[str, Any] | None = None
+    final_runtime_fix_report: dict[str, Any] | None = None
     final_preview_ok = False
     final_class_name = scene_class
 
@@ -172,6 +174,37 @@ def main() -> int:
                     final_preview_video_path = maybe_video
             final_preview_ok = bool(preview_report.get("ok"))
 
+            if (not static_report.get("compile_ok", False)) or (preview_report is not None and not preview_report.get("ok")):
+                runtime_fix_report = run_runtime_fix_loop(
+                    client=client,
+                    requirement=requirement,
+                    analysis_packet=analysis_packet,
+                    scene_path=scene_path,
+                    class_name=class_name,
+                    static_report=static_report,
+                    preview_report=preview_report,
+                    out_dir=round_dir / "runtime_fix",
+                    round_index=round_index,
+                    max_attempts=2,
+                    scene_class=scene_class,
+                    write_report_path=round_dir / "runtime_fix_report.json",
+                )
+                final_runtime_fix_report = runtime_fix_report
+                runtime_scene_path = Path(str(runtime_fix_report.get("scene_path") or scene_path))
+                if runtime_scene_path.exists():
+                    scene_path = runtime_scene_path
+                    class_name = str(runtime_fix_report.get("class_name") or class_name)
+                    current_code = scene_path.read_text(encoding="utf-8")
+                static_report = dict(runtime_fix_report.get("static_report") or static_report)
+                preview_report = dict(runtime_fix_report.get("preview_report") or preview_report or {})
+                final_static_report = static_report
+                video_text = str((preview_report.get("artifacts") or {}).get("video") or "")
+                if video_text:
+                    maybe_video = Path(video_text)
+                    if maybe_video.exists():
+                        final_preview_video_path = maybe_video
+                final_preview_ok = bool(preview_report.get("ok"))
+
         rule_report = run_rule_review(
             static_report=static_report,
             preview_report=preview_report,
@@ -204,6 +237,8 @@ def main() -> int:
         shutil.copy2(final_scene_path, final_dir / "scene.py")
     if final_vlm_report is not None:
         write_json(final_dir / "vlm_review.json", final_vlm_report)
+    if final_runtime_fix_report is not None:
+        write_json(final_dir / "runtime_fix.json", final_runtime_fix_report)
     if final_preview_video_path is not None and final_preview_video_path.exists():
         shutil.copy2(final_preview_video_path, final_dir / "preview.mp4")
 
@@ -236,6 +271,11 @@ def main() -> int:
             "compile_ok": bool((final_static_report or {}).get("compile_ok", False)),
             "undefined_name_candidates": list((final_static_report or {}).get("undefined_name_candidates") or []),
             "heuristic_flags": dict((final_static_report or {}).get("heuristic_flags") or {}),
+        },
+        "runtime_fix": {
+            "status": str((final_runtime_fix_report or {}).get("status", "not_needed")),
+            "fixed": bool((final_runtime_fix_report or {}).get("fixed", False)),
+            "attempt_count": int((final_runtime_fix_report or {}).get("attempt_count", 0)),
         },
         "env_path": str(env_path),
     }

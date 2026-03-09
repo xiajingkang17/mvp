@@ -52,6 +52,20 @@ anthropic:
         temperature: 0.03
         top_p: 0.80
 
+    runtime_fix:
+      generate:
+        max_tokens: 7000
+        temperature: 0.08
+        top_p: 0.82
+      continue:
+        max_tokens: 2800
+        temperature: 0.04
+        top_p: 0.80
+      repair:
+        max_tokens: 1400
+        temperature: 0.02
+        top_p: 0.75
+
     vlm_review:
       generate:
         max_tokens: 1400

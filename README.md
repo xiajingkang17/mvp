@@ -66,9 +66,14 @@ python Manim4Teach/pipeline/runners/run_llm2_loop.py `
 二级最终产物（默认极简）：
 
 - `final/scene.py`
+- `final/runtime_fix.json`
 - `final/vlm_review.json`
 - `final/preview.mp4`（若未 `--skip-preview`）
 - `final/meta.json`（轮次、停止原因、规则/VLM 关键摘要）
+
+说明：
+
+- 当低清预览失败时，LLM2 会先进入专门的 runtime-fix 小循环，优先修复编译/运行错误，再回到规则评审与 VLM 评审。
 
 ## Case 测试（推荐）
 
