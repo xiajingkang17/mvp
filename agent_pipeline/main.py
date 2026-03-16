@@ -3,12 +3,13 @@ Multi-agent Manim generation-evaluation loop.
 
 Flow:
   1. CodeGen agent produces Manim code from a student request.
-  2. Renderer invokes Manim.  On failure the CodeGen agent fixes the code
-     and the renderer retries once.
+  2. Renderer invokes Manim. On failure the CodeGen agent keeps repairing the
+     code until it reaches the configured retry limit.
   3. The eval pipeline scores the rendered video (CV + VLM).
-  4. If the video fails QA, the CodeGen agent revises the code using the
-     evaluation feedback AND keyframe screenshots, and steps 2-3 repeat once.
-  5. The best round (highest score) is selected as the final output.
+  4. If the video fails QA, or Round 1 never produces a completed video, the
+     CodeGen agent revises the code and Round 2 runs as a rescue pass.
+  5. The best scored round is selected, with a rendered-video fallback if QA
+     reports are missing.
 """
 
 from __future__ import annotations
@@ -25,9 +26,10 @@ from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 
+from .asset_resolver import resolve_local_assets
 from .code_gen import CodeGenAgent
+from .evaluator import collect_keyframes, evaluate
 from .renderer import RenderResult, render_scene
-from .evaluator import evaluate, collect_keyframes
 from .teaching_planner import TeachingPlannerAgent
 from .tts import generate_narration, has_audio_stream, merge_audio_video
 
@@ -41,12 +43,31 @@ load_dotenv(ROOT_DIR / ".env")
 API_KEY = os.environ.get("OPENAI_API_KEY", "")
 BASE_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
-MANIM_QUALITY = "-qm --fps 60"
+MANIM_QUALITY = os.environ.get("MANIM_QUALITY", "-qh --fps 60")
 RUNS_DIR = ROOT_DIR / "runs"
+USE_LOCAL_ICONS = os.environ.get("A4L_USE_LOCAL_ICONS", "1").lower() not in {
+    "0",
+    "false",
+    "no",
+}
+
+
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError:
+        return default
+
+
+LOCAL_ICON_MAX_ASSETS = max(0, _int_env("A4L_LOCAL_ICON_MAX_ASSETS", 3))
+SYNTAX_FIX_MAX_ATTEMPTS = max(1, _int_env("A4L_SYNTAX_FIX_MAX_ATTEMPTS", 4))
+RENDER_FIX_MAX_ATTEMPTS = max(1, _int_env("A4L_RENDER_FIX_MAX_ATTEMPTS", 4))
+MANIM_TIMEOUT_SEC = max(300, _int_env("MANIM_TIMEOUT_SEC", 1200))
 
 # =====================================================================
 # Helpers
 # =====================================================================
+
 
 def _log(msg: str) -> None:
     ts = datetime.now().strftime("%H:%M:%S")
@@ -56,21 +77,25 @@ def _log(msg: str) -> None:
 def _detect_chinese_in_mathtex(code: str) -> str:
     """Scan code for Chinese chars inside MathTex/Tex and return a warning."""
     import re
+
     issues = []
-    for m in re.finditer(r'(MathTex|Tex)\s*\(', code):
-        start = m.end()
+    for match in re.finditer(r"(MathTex|Tex)\s*\(", code):
+        start = match.end()
         depth = 1
         i = start
         while i < len(code) and depth > 0:
-            if code[i] == '(':
+            if code[i] == "(":
                 depth += 1
-            elif code[i] == ')':
+            elif code[i] == ")":
                 depth -= 1
             i += 1
         fragment = code[start:i]
-        chinese = re.findall(r'[\u4e00-\u9fff]+', fragment)
+        chinese = re.findall(r"[\u4e00-\u9fff]+", fragment)
         if chinese:
-            issues.append(f"  Found Chinese '{','.join(chinese)}' inside {m.group(1)}() near: ...{fragment[:80]}...")
+            issues.append(
+                f"  Found Chinese '{','.join(chinese)}' inside "
+                f"{match.group(1)}() near: ...{fragment[:80]}..."
+            )
     if issues:
         return "\n\nAUTO-DETECTED ISSUES (fix these first!):\n" + "\n".join(issues)
     return ""
@@ -83,8 +108,9 @@ def _check_python_syntax(code: str) -> Optional[str]:
         return None
     except SyntaxError as exc:
         line = ""
-        if exc.lineno and 1 <= exc.lineno <= len(code.splitlines()):
-            line = code.splitlines()[exc.lineno - 1]
+        lines = code.splitlines()
+        if exc.lineno and 1 <= exc.lineno <= len(lines):
+            line = lines[exc.lineno - 1]
         pointer = ""
         if exc.offset and line:
             pointer = " " * max(exc.offset - 1, 0) + "^"
@@ -100,14 +126,14 @@ def _repair_syntax_before_render(
     code: str,
     round_dir: Path,
     label: str,
-    max_attempts: int = 2,
+    max_attempts: int = SYNTAX_FIX_MAX_ATTEMPTS,
 ) -> tuple[str, Optional[str]]:
     """Fix Python syntax errors before calling Manim."""
     syntax_error = _check_python_syntax(code)
     attempt = 0
     while syntax_error and attempt < max_attempts:
         attempt += 1
-        _log(f"{label}: Python syntax invalid before render — asking LLM to fix (attempt {attempt}) ...")
+        _log(f"{label}: Python syntax invalid before render - asking LLM to fix (attempt {attempt}) ...")
         extra_hint = (
             "\n\nThis is a Python syntax failure, not a Manim layout issue.\n"
             "Fix the code so it parses first. Pay special attention to:\n"
@@ -129,32 +155,43 @@ def _try_render(
     round_dir: Path,
     label: str,
 ) -> tuple[str, RenderResult]:
-    """Render *code*; on failure ask the agent to fix once and retry."""
-    code, syntax_error = _repair_syntax_before_render(agent, code, round_dir, label)
-    if syntax_error:
-        _log(f"{label}: syntax fix failed before render")
-        return code, RenderResult(success=False, error_log=syntax_error, scene_name="")
+    """Render *code*; on failure keep repairing until retry budget is exhausted."""
+    result = RenderResult(success=False, error_log="", scene_name="")
 
-    _log(f"{label}: rendering ...")
-    result = render_scene(code, round_dir, quality_flags=MANIM_QUALITY)
-
-    if not result.success:
-        _log(f"{label}: render FAILED — asking LLM to fix ...")
-        extra_hint = _detect_chinese_in_mathtex(code)
-        error_info = result.error_log + extra_hint
-        code = agent.fix(code, error_info)
-        (round_dir / "scene_fixed.py").write_text(code, encoding="utf-8")
+    for attempt in range(RENDER_FIX_MAX_ATTEMPTS + 1):
         code, syntax_error = _repair_syntax_before_render(agent, code, round_dir, label)
         if syntax_error:
-            _log(f"{label}: post-fix syntax still invalid")
-            return code, RenderResult(success=False, error_log=syntax_error, scene_name="")
-        result = render_scene(code, round_dir, quality_flags=MANIM_QUALITY)
-        if result.success:
-            _log(f"{label}: fix succeeded, render OK")
+            _log(f"{label}: syntax fix failed before render")
+            result = RenderResult(success=False, error_log=syntax_error, scene_name="")
         else:
-            _log(f"{label}: fix also failed")
-    else:
-        _log(f"{label}: render OK")
+            render_msg = f"{label}: rendering"
+            if attempt:
+                render_msg += f" after fix {attempt}"
+            _log(render_msg + " ...")
+            result = render_scene(
+                code,
+                round_dir,
+                quality_flags=MANIM_QUALITY,
+                timeout_sec=MANIM_TIMEOUT_SEC,
+            )
+            if result.success:
+                if attempt:
+                    _log(f"{label}: fix {attempt} succeeded, render OK")
+                else:
+                    _log(f"{label}: render OK")
+                return code, result
+
+        if attempt >= RENDER_FIX_MAX_ATTEMPTS:
+            _log(f"{label}: render still failed after {attempt} fix attempt(s)")
+            break
+
+        _log(
+            f"{label}: render FAILED - asking LLM to fix "
+            f"(attempt {attempt + 1}/{RENDER_FIX_MAX_ATTEMPTS}) ..."
+        )
+        error_info = result.error_log + _detect_chinese_in_mathtex(code)
+        code = agent.fix(code, error_info)
+        (round_dir / f"scene_fixed_{attempt + 1}.py").write_text(code, encoding="utf-8")
 
     return code, result
 
@@ -164,7 +201,7 @@ def _try_eval(
     eval_dir: Path,
     label: str,
 ) -> Optional[Dict]:
-    """Run the eval pipeline.  Returns the report dict or None on error."""
+    """Run the eval pipeline. Returns the report dict or None on error."""
     _log(f"{label}: evaluating video ...")
     try:
         report = evaluate(
@@ -180,33 +217,37 @@ def _try_eval(
         _log(f"{label}: score={score:.2f} [{status}]")
         return report
     except Exception as exc:
-        _log(f"{label}: evaluation error — {exc}")
+        _log(f"{label}: evaluation error - {exc}")
         return None
 
 
 def _round_info(n: int, render: RenderResult, report: Optional[Dict]) -> Dict:
-    return {
+    info = {
         "round": n,
         "render_success": render.success,
         "video": str(render.video_path) if render.video_path else None,
         "eval_score": report.get("overall_score") if report else None,
         "eval_passed": report.get("overall_passed") if report else None,
     }
+    if render.error_log:
+        info["render_warning" if render.success else "render_error"] = render.error_log[-1500:]
+    return info
 
 
 def _find_keyframes(eval_dir: Path) -> List[Path]:
     """Collect keyframe images from an eval output dir."""
-    kf = collect_keyframes(eval_dir)
-    if kf:
-        return kf
+    keyframes = collect_keyframes(eval_dir)
+    if keyframes:
+        return keyframes
     for sub in eval_dir.rglob("*.jpg"):
-        kf.append(sub)
-    return sorted(kf)
+        keyframes.append(sub)
+    return sorted(keyframes)
 
 
 # =====================================================================
 # Main pipeline
 # =====================================================================
+
 
 def run_pipeline(
     request_text: str,
@@ -214,7 +255,6 @@ def run_pipeline(
     run_dir: Optional[Path] = None,
 ) -> Dict:
     """Execute the full generate-render-evaluate-improve loop."""
-
     if run_dir is None:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         run_dir = RUNS_DIR / ts
@@ -230,24 +270,58 @@ def run_pipeline(
     teaching_plan: Dict[str, Any] = planner.plan(request_text, image_path)
     _log(f"Teaching planner: {len(teaching_plan.get('sections', []))} section(s) ready")
 
+    assets_info: Dict[str, Any] = {
+        "enabled": USE_LOCAL_ICONS,
+        "icon_dir": str((ROOT_DIR / "icon").resolve()),
+        "available_icon_count": 0,
+        "selected_assets": [],
+    }
+    if USE_LOCAL_ICONS and LOCAL_ICON_MAX_ASSETS > 0:
+        _log("Asset resolver: selecting local icons ...")
+        try:
+            assets_info = resolve_local_assets(
+                request_text,
+                teaching_plan,
+                api_key=API_KEY,
+                base_url=BASE_URL,
+                model=MODEL,
+                max_assets=LOCAL_ICON_MAX_ASSETS,
+            )
+            selected_assets = assets_info.get("selected_assets", [])
+            teaching_plan["selected_assets"] = selected_assets
+            _log(f"Asset resolver: selected {len(selected_assets)} icon(s)")
+        except Exception as exc:
+            teaching_plan["selected_assets"] = []
+            _log(f"Asset resolver: skipped due to error - {exc}")
+    else:
+        teaching_plan["selected_assets"] = []
+
+    selected_assets_path = run_dir / "selected_assets.json"
+    selected_assets_path.write_text(
+        json.dumps(assets_info, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
     teaching_plan_path = run_dir / "teaching_plan.json"
     teaching_plan_path.write_text(
         json.dumps(teaching_plan, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
-    summary: Dict = {
+    summary: Dict[str, Any] = {
         "request": request_text,
         "image": str(image_path) if image_path else None,
         "teaching_plan_file": str(teaching_plan_path),
+        "selected_assets_file": str(selected_assets_path),
+        "selected_assets_count": len(teaching_plan.get("selected_assets", [])),
         "rounds": [],
         "final_video": None,
         "final_score": None,
         "final_passed": None,
     }
 
-    # Keep track of (score, video_path, round_number) for best-of selection
-    candidates: list[tuple[float, Optional[str], int]] = []
+    candidates: list[tuple[float, str, int]] = []
+    rendered_candidates: list[tuple[int, str]] = []
 
     # ==================================================================
     # Round 1
@@ -261,19 +335,15 @@ def run_pipeline(
     r1_report: Optional[Dict] = None
     r1_eval_dir = r1_dir / "eval"
     if r1_render.success and r1_render.video_path:
+        rendered_candidates.append((1, str(r1_render.video_path)))
         r1_report = _try_eval(r1_render.video_path, r1_eval_dir, "Round 1")
 
     summary["rounds"].append(_round_info(1, r1_render, r1_report))
-    if r1_report:
-        candidates.append((
-            r1_report.get("overall_score", 0),
-            str(r1_render.video_path) if r1_render.video_path else None,
-            1,
-        ))
+    if r1_report and r1_render.video_path:
+        candidates.append((r1_report.get("overall_score", 0), str(r1_render.video_path), 1))
 
-    # Early exit if Round 1 passes
     if r1_report and r1_report.get("overall_passed"):
-        _log("Round 1 PASSED — done!")
+        _log("Round 1 PASSED - done!")
         summary["final_video"] = str(r1_render.video_path)
         summary["final_score"] = r1_report["overall_score"]
         summary["final_passed"] = True
@@ -282,28 +352,24 @@ def run_pipeline(
         return summary
 
     # ==================================================================
-    # Round 2 (improvement with visual feedback)
+    # Round 2
     # ==================================================================
     if not r1_render.success:
-        _log("Round 1 render failed completely — skipping Round 2")
-        summary["final_passed"] = False
-        _save_summary(run_dir, summary)
-        return summary
-
-    _log("Round 2: improving code with evaluation feedback + keyframe screenshots ...")
-
-    # Gather keyframe images so the LLM can *see* what went wrong
-    keyframes = _find_keyframes(r1_eval_dir)
-    if keyframes:
-        _log(f"  Sending {len(keyframes)} keyframe(s) to LLM for visual feedback")
-
-    feedback = r1_report or {"issues": [], "dimensions": [], "overall_score": 0}
-    code = agent.improve(
-        code,
-        feedback,
-        keyframe_paths=keyframes or None,
-        teaching_plan=teaching_plan,
-    )
+        _log("Round 2: Round 1 did not produce a video - running a render-rescue pass ...")
+        rescue_hint = r1_render.error_log or "Round 1 did not produce a completed video."
+        code = agent.fix(code, rescue_hint)
+    else:
+        _log("Round 2: improving code with evaluation feedback + keyframe screenshots ...")
+        keyframes = _find_keyframes(r1_eval_dir)
+        if keyframes:
+            _log(f"  Sending {len(keyframes)} keyframe(s) to LLM for visual feedback")
+        feedback = r1_report or {"issues": [], "dimensions": [], "overall_score": 0}
+        code = agent.improve(
+            code,
+            feedback,
+            keyframe_paths=keyframes or None,
+            teaching_plan=teaching_plan,
+        )
 
     r2_dir = run_dir / "round2"
     code, r2_render = _try_render(agent, code, r2_dir, "Round 2")
@@ -311,31 +377,35 @@ def run_pipeline(
     r2_report: Optional[Dict] = None
     r2_eval_dir = r2_dir / "eval"
     if r2_render.success and r2_render.video_path:
+        rendered_candidates.append((2, str(r2_render.video_path)))
         r2_report = _try_eval(r2_render.video_path, r2_eval_dir, "Round 2")
 
     summary["rounds"].append(_round_info(2, r2_render, r2_report))
-    if r2_report:
-        candidates.append((
-            r2_report.get("overall_score", 0),
-            str(r2_render.video_path) if r2_render.video_path else None,
-            2,
-        ))
+    if r2_report and r2_render.video_path:
+        candidates.append((r2_report.get("overall_score", 0), str(r2_render.video_path), 2))
 
     # ==================================================================
     # Pick the best round
     # ==================================================================
     if candidates:
-        candidates.sort(key=lambda t: t[0], reverse=True)
+        candidates.sort(key=lambda item: item[0], reverse=True)
         best_score, best_video, best_round = candidates[0]
         summary["final_video"] = best_video
         summary["final_score"] = best_score
-        summary["final_passed"] = any(c[0] >= 0.65 for c in candidates)
+        summary["final_passed"] = any(item[0] >= 0.65 for item in candidates)
         _log(f"Best result: Round {best_round} (score={best_score:.2f})")
+    elif rendered_candidates:
+        rendered_candidates.sort(key=lambda item: item[0], reverse=True)
+        best_round, best_video = rendered_candidates[0]
+        summary["final_video"] = best_video
+        summary["final_score"] = None
+        summary["final_passed"] = False
+        _log(f"Best available render: Round {best_round} (no eval score available)")
     else:
         summary["final_passed"] = False
 
     _add_tts(agent, code, request_text, run_dir, summary)
-    _log(f"Done — final score: {summary['final_score']}, passed: {summary['final_passed']}")
+    _log(f"Done - final score: {summary['final_score']}, passed: {summary['final_passed']}")
     _save_summary(run_dir, summary)
     return summary
 
@@ -345,23 +415,25 @@ def _add_tts(
     code: str,
     request_text: str,
     run_dir: Path,
-    summary: Dict,
+    summary: Dict[str, Any],
 ) -> None:
     """Generate fallback narration and merge it when the final video is silent."""
     if not summary.get("final_video"):
         return
+
     video_path = Path(summary["final_video"])
     if not video_path.exists():
         return
+
     if has_audio_stream(video_path):
-        _log("Final render already contains audio track — skipping fallback narration merge")
+        _log("Final render already contains audio track - skipping fallback narration merge")
         return
 
-    _log("Final render is silent — generating fallback narration with TTS ...")
+    _log("Final render is silent - generating fallback narration with TTS ...")
     try:
         script = agent.narrate(code, request_text)
         if not script:
-            _log("  Narration script empty — skipping TTS")
+            _log("  Narration script empty - skipping TTS")
             return
         _log(f"  Narration script: {len(script)} paragraphs")
 
@@ -377,12 +449,12 @@ def _add_tts(
             summary["final_video_with_audio"] = str(video_with_audio)
             _log(f"  Video+audio merged: {video_with_audio}")
         else:
-            _log("  Audio merge failed — delivering silent video")
+            _log("  Audio merge failed - delivering silent video")
     except Exception as exc:
-        _log(f"  TTS error: {exc} — delivering silent video")
+        _log(f"  TTS error: {exc} - delivering silent video")
 
 
-def _save_summary(run_dir: Path, summary: Dict) -> None:
+def _save_summary(run_dir: Path, summary: Dict[str, Any]) -> None:
     path = run_dir / "summary.json"
     path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
     _log(f"Summary saved: {path}")
@@ -392,15 +464,16 @@ def _save_summary(run_dir: Path, summary: Dict) -> None:
 # CLI
 # =====================================================================
 
+
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
         prog="agent_pipeline",
         description="Multi-agent Manim generation-evaluation loop",
     )
-    p.add_argument("request", nargs="?", default=None, help="Student request text")
-    p.add_argument("--image", type=Path, default=None, help="Optional input image")
-    p.add_argument("--run-dir", type=Path, default=None, help="Custom output directory")
-    return p.parse_args()
+    parser.add_argument("request", nargs="?", default=None, help="Student request text")
+    parser.add_argument("--image", type=Path, default=None, help="Optional input image")
+    parser.add_argument("--run-dir", type=Path, default=None, help="Custom output directory")
+    return parser.parse_args()
 
 
 def main() -> int:
@@ -411,30 +484,30 @@ def main() -> int:
         return 1
 
     if args.request is None and args.image is None:
-        print("Usage: python -m agent_pipeline \"题目描述\" [--image img.png]")
+        print('Usage: python -m agent_pipeline "request text" [--image img.png]')
         return 1
 
-    request_text = args.request or "请根据图片中的题目生成动画讲解。"
+    request_text = args.request or "Generate an animation lesson from the image."
 
     t0 = time.time()
     summary = run_pipeline(request_text, args.image, args.run_dir)
     elapsed = time.time() - t0
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  Pipeline finished in {elapsed:.0f}s")
     print(f"  Rounds: {len(summary['rounds'])}")
-    for r in summary["rounds"]:
-        rn = r["round"]
-        sc = r.get("eval_score")
-        ps = r.get("eval_passed")
-        vid = "YES" if r.get("render_success") else "NO"
-        print(f"    Round {rn}: render={vid}, score={sc}, passed={ps}")
+    for round_info in summary["rounds"]:
+        round_number = round_info["round"]
+        score = round_info.get("eval_score")
+        passed = round_info.get("eval_passed")
+        rendered = "YES" if round_info.get("render_success") else "NO"
+        print(f"    Round {round_number}: render={rendered}, score={score}, passed={passed}")
     print(f"  Final video:  {summary['final_video']}")
-    audio_vid = summary.get('final_video_with_audio')
-    if audio_vid:
-        print(f"  With audio:   {audio_vid}")
+    audio_video = summary.get("final_video_with_audio")
+    if audio_video:
+        print(f"  With audio:   {audio_video}")
     print(f"  Final score:  {summary['final_score']}")
     print(f"  Final passed: {summary['final_passed']}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
-    return 0 if summary.get("final_passed") else 1
+    return 0 if summary.get("final_video") else 1

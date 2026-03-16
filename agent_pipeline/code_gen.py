@@ -130,7 +130,7 @@ THEME & COLOR RULES (STRICTLY ENFORCED):
 - You MUST import our custom base class and any theme color constants you use
   from `colortest.ai4learning_theme`.
 - Example:
-  `from colortest.ai4learning_theme import AI4LearningBaseScene, BLUE_100, GREY_200, CYAN_400, ORANGE_500`
+  `from colortest.ai4learning_theme import AI4LearningBaseScene, BLUE_100, GREY_200, CYAN_400, YELLOW_300`
 - Your main class MUST inherit from `AI4LearningBaseScene`, NOT `Scene`.
 - NEVER use the default `WHITE` color or pure black text.
 - All colors for `Text`, `MathTex`, and shapes MUST come from our theme
@@ -138,7 +138,7 @@ THEME & COLOR RULES (STRICTLY ENFORCED):
 - BODY TEXT / FORMULA BASE may only use:
   `BLUE_100`, `GREY_200`, `GREY_400`.
 - HIGHLIGHT WORDS / HIGHLIGHTED FORMULA TERMS may only use:
-  `CYAN_400`, `GREEN_300`, `ORANGE_500`, `PURPLE_400`, `RED_500`.
+  `CYAN_400`, `GREEN_300`, `YELLOW_300`, `ORANGE_500`, `PURPLE_400`, `RED_500`.
 - STRUCTURE SHAPES / BORDERS / ARROWS / NODES may only use:
   `BLUE_300`, `BLUE_500`, `CYAN_400`, `GREEN_500`, `PURPLE_400`,
   `ORANGE_500`, `RED_500`.
@@ -152,6 +152,44 @@ THEME & COLOR RULES (STRICTLY ENFORCED):
   and 1 dominant structure color.
 - Keep the same concept the same color across text, formula, and diagram within
   a section.
+
+LOCAL ICON RULES:
+- The teaching plan may include a `selected_assets` list. Those are the ONLY
+  local icon files you may use.
+- If `selected_assets` is empty or absent, do NOT invent icons, image paths,
+  URLs, or external assets.
+- If you use a selected local icon, load it with
+  `self.load_local_icon("filename.png", height=0.9)`.
+- Do NOT write raw relative paths like `ImageMobject("icon/foo.png")`.
+- Use icons only for concrete real-world objects, tools, devices, animals,
+  money, classroom items, or application scenes.
+- Do NOT use icons for abstract concepts, pure formula derivations, generic
+  arrows, graphs, or decorative filler.
+- Use at most 1 icon in a section and at most 3 icons across the whole scene.
+- Treat icons as supporting visuals, not as the main explanation.
+
+GROUP / VGROUP / CREATE RULES:
+- Default to `Group(...)` for page layout containers and mixed-object layouts.
+- Use `VGroup(...)` ONLY when every child is guaranteed to be a `VMobject`
+  such as `Text`, `MathTex`, `Line`, `Circle`, `Polygon`, or `SVGMobject`.
+- `self.load_local_icon(...)` may return `ImageMobject`, so never place its
+  result inside `VGroup(...)`. Use `Group(...)` instead.
+- If a layout may contain both vector objects and raster icons, use `Group(...)`
+  for the outer container.
+- If a variable was already built with `Group(...)`, never pass that variable
+  into `VGroup(...)` later.
+- For page body assembly, default to `Group(...)`, not `VGroup(...)`.
+- Never call `Create(...)` on a `Group(...)`.
+- For `Group(...)`, use `FadeIn(...)` or animate the child VMobjects
+  separately.
+- Only use `Create(...)`, `Write(...)`, or `GrowArrow(...)` on actual
+  `VMobject` instances.
+- If you define a helper that returns an arrow/path pair and you want to use
+  `Create(...)` on the whole result, return `VGroup(...)` ONLY if every child
+  is a `VMobject`; otherwise animate the children separately.
+- Do not use nonexistent APIs such as `get_tangent_vector(...)` on `VMobject`.
+  For local direction on a path, use neighboring points plus
+  `angle_of_vector(...)`.
 
 LANGUAGE RULES:
 - `from manim import *` at the top.  Exactly ONE Scene subclass.
@@ -170,13 +208,13 @@ LANGUAGE RULES:
   MUST use MathTex, not Text.
 
 LAYOUT RULES (canvas is 14.2 x 8 units, safe area +/-6.0 x +/-3.3):
-- ALWAYS group ALL elements of a "page" into one VGroup and THEN:
+- ALWAYS group ALL elements of a "page" into one Group by default and THEN:
     group.arrange(DOWN, buff=0.3)  # or RIGHT for side-by-side
     if group.width > 12: group.scale_to_fit_width(12)
     if group.height > 6.5: group.scale_to_fit_height(6.5)
     group.move_to(ORIGIN)
   This guarantees nothing goes off-screen.
-- For side-by-side: use VGroup(left, right).arrange(RIGHT, buff=0.5)
+- For side-by-side: use Group(left, right).arrange(RIGHT, buff=0.5)
   then apply the same width/height check.
 - For top-down: title at top, visual in middle, formula at bottom.
 - BETWEEN CONCEPTS: use `self.clear_scene_keep_bg()` so the persistent
@@ -184,7 +222,7 @@ LAYOUT RULES (canvas is 14.2 x 8 units, safe area +/-6.0 x +/-3.3):
 - Font sizes: titles 26-32, body 18-24, formulas 24-30, labels 16-20.
   SMALLER is better than clipped!  When in doubt, reduce font size.
 - Never use `.to_edge(UP)` on its own — put the title inside the
-  VGroup so it scales together with everything else.
+  outer Group so it scales together with everything else.
 - ALWAYS reserve a dedicated title row above the content; the title must not
     overlap the graph or diagram below it.
 - But if a section already uses `self.show_section_header(...)`, do NOT create
@@ -240,6 +278,7 @@ AVAILABLE LAYOUT HELPERS (already defined on AI4LearningBaseScene):
 - `self.stack_panel(top, bottom, buff=0.18, max_width=5.4, max_height=4.8)`
 - `self.connect_side(source, target, direction=RIGHT, buff=0.12, **kwargs)`
 - `self.connect_vertical(source, target, buff=0.12, **kwargs)`
+- `self.load_local_icon("calculator.png", height=0.9)`
 Use these helpers instead of many manual `.shift()` / `.to_edge()` calls.
 For graph + explanation pages, prefer `self.make_graph_text_page(...)`.
 You do NOT need to use the same helper for every section.
@@ -408,16 +447,28 @@ guaranteed-crash patterns and fix them ALL:
   This includes `\\mathrm{中文}`, `\\text{中文}`, `\\mathrm{共同}`, etc.
   Fix: replace with `Text("中文", font_size=...)` and arrange with VGroup.
 - `VGroup(*self.mobjects)` → may crash. Use `Group(*self.mobjects)`.
+- `VGroup(...)` containing `ImageMobject` or `self.load_local_icon(...)`
+  will crash. Use `Group(...)` for mixed or icon-containing layouts.
+- If a variable was already created with `Group(...)`, passing it into
+  `VGroup(...)` will crash. Keep the outer container as `Group(...)`.
+- `Create(Group(...))` will crash. Use `FadeIn(Group(...))` or animate the
+  child VMobjects separately.
 - If the scene inherits from `AI4LearningBaseScene`, prefer
   `self.clear_scene_keep_bg()` over `FadeOut(Group(*self.mobjects))` so the
   persistent background is not removed.
 - Missing `from manim import *`.
+- If the code uses local icons, keep using
+  `self.load_local_icon("filename.png", height=...)`.
+  Do NOT switch to raw file paths, URLs, or external downloads.
 
 STEP 2 — Read the error log and fix any remaining issues:
 - Attribute errors → check Manim CE v0.18+ API.
 - Type errors → check argument types.
 - `get_tangent_line` does NOT accept `color` keyword. Create tangent manually:
     tangent = Line(start, end, color=GREEN)
+- `VMobject` does NOT provide `get_tangent_vector(...)` here. Use
+  `angle_of_vector(path.get_end() - path.point_from_proportion(0.92))`
+  or animate the path/tip separately.
 - `unexpected keyword argument` → remove the bad kwarg or replace the method.
 
 Preserve the original animation intent.
@@ -491,6 +542,18 @@ RULE #3: Never introduce new crashes
     instead of putting Chinese inside one MathTex string.
 - Use only theme palette constants from `colortest.ai4learning_theme`; do not
   hardcode hex colors for text, formulas, or shapes.
+- If the lesson includes selected local icons, only use those exact filenames
+  and load them via `self.load_local_icon(...)`.
+- Default to `Group(...)` for mixed layouts and any layout containing local
+  icons. Use `VGroup(...)` only when every child is definitely a `VMobject`.
+- If a variable was already created with `Group(...)`, do not later wrap it in
+  `VGroup(...)`. Keep page bodies and outer containers as `Group(...)`.
+- Never call `Create(...)` on a `Group(...)`; use `FadeIn(...)` for the group
+  or animate child VMobjects separately.
+- If a helper returns an arrow/path pair that will be animated with `Create`,
+  ensure it returns `VGroup(...)` only when both children are `VMobject`s.
+- Do not introduce `get_tangent_vector(...)` on `VMobject`; compute direction
+  from nearby points instead.
 - Keep body text and formula base within `BLUE_100`, `GREY_200`, `GREY_400`;
   reserve saturated colors for highlights, structure, warnings, and accents.
 - Do not use `PURPLE_900`, `BLUE_900`, `CYAN_700`, `BROWN_700`, or `GREY_800`
@@ -605,6 +668,31 @@ def _build_actionable_feedback(eval_report: Dict) -> str:
     return "\n".join(lines)
 
 
+def _build_local_asset_prompt(teaching_plan: Optional[Dict]) -> str:
+    if not teaching_plan:
+        return (
+            "## Local icons\n"
+            "No local icons were selected for this lesson. Do not invent icon "
+            "filenames, image paths, URLs, or external assets."
+        )
+
+    selected_assets = teaching_plan.get("selected_assets", [])
+    if not selected_assets:
+        return (
+            "## Local icons\n"
+            "No local icons were selected for this lesson. Do not invent icon "
+            "filenames, image paths, URLs, or external assets."
+        )
+
+    return (
+        "## Local icons selected for this lesson\n"
+        + json.dumps(selected_assets, ensure_ascii=False, indent=2)
+        + "\n\nUse only these filenames. Load them only with "
+        "`self.load_local_icon(\"filename.png\", height=...)`. "
+        "Do not invent more icons or switch to raw `ImageMobject(...)` paths."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Main class
 # ---------------------------------------------------------------------------
@@ -671,6 +759,7 @@ class CodeGenAgent:
                 "and end with key_takeaway or check_for_understanding. Use the listed misconceptions to design at least one explicit "
                 "'you may think X, but actually Y' correction moment. Use transitions so the lesson feels continuous rather than segmented."
             )
+            prompt_parts.append(_build_local_asset_prompt(teaching_plan))
         prompt_parts.append(
             "## Implementation priority\n"
             "Keep each page visually stable after it appears. Use teacher-like sequencing, "
@@ -755,6 +844,7 @@ class CodeGenAgent:
                 "## Teaching plan to preserve\n"
                 + json.dumps(teaching_plan, ensure_ascii=False, indent=2)
             )
+            prompt_parts.append(_build_local_asset_prompt(teaching_plan))
         content: list = [{
             "type": "input_text",
             "text": "\n\n".join(prompt_parts),

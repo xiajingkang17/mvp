@@ -606,11 +606,17 @@ def _find_video(media_dir: Path, scene_name: str) -> Optional[Path]:
     if not media_dir.exists():
         return None
 
-    for mp4 in media_dir.rglob("*.mp4"):
+    candidates = [
+        mp4
+        for mp4 in media_dir.rglob("*.mp4")
+        if "partial_movie_files" not in {part.lower() for part in mp4.parts}
+    ]
+
+    for mp4 in candidates:
         if scene_name in mp4.stem:
             return mp4
 
-    all_mp4 = sorted(media_dir.rglob("*.mp4"), key=lambda p: p.stat().st_mtime)
+    all_mp4 = sorted(candidates, key=lambda p: p.stat().st_mtime)
     if all_mp4:
         return all_mp4[-1]
 

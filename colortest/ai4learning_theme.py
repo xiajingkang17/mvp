@@ -16,7 +16,7 @@ A4L_PINK = "#F43F5E"
 A4L_PURPLE = "#8B5CF6"
 
 PURPLE_200 = "#B1AFCE"
-PURPLE_400 = "#8077B5"
+PURPLE_400 = "#E6BEFF"
 PURPLE_600 = "#56479C"
 PURPLE_900 = "#2C2860"
 
@@ -27,21 +27,23 @@ BLUE_700 = "#0183BB"
 BLUE_900 = "#003E52"
 
 CYAN_200 = "#A2CDD4"
-CYAN_400 = "#6ECFC9"
+CYAN_400 = "#7FDBFF"
 CYAN_700 = "#008EB3"
 
 GREEN_100 = "#F0FBC8"
-GREEN_300 = "#ACD6B4"
+GREEN_300 = "#8EFF5A"
 GREEN_500 = "#81C7BC"
 GREEN_700 = "#78BBAF"
 
+YELLOW_300 = "#FFF98A"
+
 PINK_200 = "#FFB3B3"
 RED_300 = "#FFDBD1"
-RED_500 = "#E57D80"
+RED_500 = "#FF3B30"
 RED_700 = "#ED746B"
 
 ORANGE_200 = "#FFBEA3"
-ORANGE_500 = "#F29440"
+ORANGE_500 = "#FFB703"
 BROWN_700 = "#84491F"
 
 GREY_200 = "#C8C8C8"
@@ -66,6 +68,7 @@ PALETTE = {
     "GREEN_300": GREEN_300,
     "GREEN_500": GREEN_500,
     "GREEN_700": GREEN_700,
+    "YELLOW_300": YELLOW_300,
     "PINK_200": PINK_200,
     "RED_300": RED_300,
     "RED_500": RED_500,
@@ -88,6 +91,7 @@ PALETTE_USAGE_GUIDE = {
     "highlight_text_or_formula_term": (
         "CYAN_400",
         "GREEN_300",
+        "YELLOW_300",
         "ORANGE_500",
         "PURPLE_400",
         "RED_500",
@@ -137,11 +141,11 @@ TEXT_MAIN = A4L_TEXT_MAIN
 TEXT_SUB = A4L_TEXT_SUB
 TEXT_MUTED = "#AFC0D3"
 
-HL_PRIMARY = BLUE_500
+HL_PRIMARY = CYAN_400
 HL_SECONDARY = RED_500
 HL_TERTIARY = PURPLE_400
-HL_SUCCESS = GREEN_500
-HL_ACCENT = ORANGE_500
+HL_SUCCESS = GREEN_300
+HL_ACCENT = YELLOW_300
 
 config.background_color = A4L_BG
 
@@ -150,6 +154,7 @@ class AI4LearningBaseScene(NarratedScene):
     """Shared base scene for AI4Learning videos."""
 
     default_font = "Microsoft YaHei"
+    local_icon_dir = Path(__file__).resolve().parent.parent / "icon"
 
     def _build_background(self):
         bg_path = Path(__file__).resolve().parent / "pic.png"
@@ -202,6 +207,45 @@ class AI4LearningBaseScene(NarratedScene):
         self._section_badge = None
         self._section_badge_text = None
         self.wait(wait_time)
+
+    def get_local_icon_path(self, filename):
+        requested = Path(str(filename)).name.strip()
+        if not requested:
+            raise ValueError("Local icon filename is empty")
+
+        icon_dir = Path(self.local_icon_dir)
+        exact_path = icon_dir / requested
+        if exact_path.exists():
+            return exact_path
+
+        requested_lower = requested.lower()
+        requested_stem = Path(requested).stem.lower()
+        stem_matches = []
+        for candidate in icon_dir.iterdir():
+            if not candidate.is_file():
+                continue
+            candidate_name = candidate.name.lower()
+            if candidate_name == requested_lower:
+                return candidate
+            if candidate.stem.lower() == requested_stem:
+                stem_matches.append(candidate)
+
+        if len(stem_matches) == 1:
+            return stem_matches[0]
+
+        raise FileNotFoundError(f"Local icon not found: {requested}")
+
+    def load_local_icon(self, filename, height=0.9, width=None, **kwargs):
+        path = self.get_local_icon_path(filename)
+        if path.suffix.lower() == ".svg":
+            icon = SVGMobject(str(path), **kwargs)
+        else:
+            icon = ImageMobject(str(path), **kwargs)
+        if height is not None:
+            icon.scale_to_fit_height(height)
+        if width is not None:
+            icon.scale_to_fit_width(width)
+        return icon
 
     def get_text(self, string, color=A4L_TEXT_MAIN, font_size=36, **kwargs):
         font = kwargs.pop("font", getattr(self, "default_font", "Microsoft YaHei"))

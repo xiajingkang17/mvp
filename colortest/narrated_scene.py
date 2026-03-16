@@ -245,7 +245,7 @@ class NarratedScene(Scene):
 
     def make_page(self, title, body, buff: float = 0.35):
         title = self._coerce_page_title(title)
-        page = VGroup(title, body).arrange(DOWN, buff=buff)
+        page = Group(title, body).arrange(DOWN, buff=buff)
         return self.fit_group(page, max_height=5.9)
 
     def make_two_panel_page(self, title, left, right, panel_gap: float = 0.8):
@@ -257,7 +257,7 @@ class NarratedScene(Scene):
             left.scale_to_fit_height(4.35)
         if right.height > 4.35:
             right.scale_to_fit_height(4.35)
-        body = VGroup(left, right).arrange(RIGHT, buff=panel_gap, aligned_edge=UP)
+        body = Group(left, right).arrange(RIGHT, buff=panel_gap, aligned_edge=UP)
         if body.width > 10.6:
             body.scale_to_fit_width(10.6)
         return self.make_page(title, body)
@@ -271,7 +271,7 @@ class NarratedScene(Scene):
             text_group.scale_to_fit_width(4.0)
         if text_group.height > 4.15:
             text_group.scale_to_fit_height(4.15)
-        body = VGroup(graph_group, text_group).arrange(
+        body = Group(graph_group, text_group).arrange(
             RIGHT,
             buff=panel_gap,
             aligned_edge=UP,
