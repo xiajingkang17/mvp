@@ -136,7 +136,7 @@ THEME & COLOR RULES (STRICTLY ENFORCED):
 - All colors for `Text`, `MathTex`, and shapes MUST come from our theme
   palette constants. Do NOT hardcode hex colors.
 - BODY TEXT / FORMULA BASE may only use:
-  `BLUE_100`, `GREY_200`, `GREY_400`.
+  `BLUE_100`, `GREY_200`.
 - HIGHLIGHT WORDS / HIGHLIGHTED FORMULA TERMS may only use:
   `CYAN_400`, `GREEN_300`, `YELLOW_300`, `ORANGE_500`, `PURPLE_400`, `RED_500`.
 - STRUCTURE SHAPES / BORDERS / ARROWS / NODES may only use:
@@ -144,6 +144,8 @@ THEME & COLOR RULES (STRICTLY ENFORCED):
   `ORANGE_500`, `RED_500`.
 - SOFT NOTES / SECONDARY LABELS / ANNOTATIONS may only use:
   `GREY_400`, `GREY_600`, `CYAN_200`, `GREEN_100`, `RED_300`, `ORANGE_200`.
+- Do NOT use `GREY_400` for large body text or conclusion sentences. Reserve it
+  for secondary labels and muted notes.
 - These colors must NOT be used for large body text or default formula color:
   `PURPLE_900`, `BLUE_900`, `CYAN_700`, `BROWN_700`, `GREY_800`.
 - Reserve those deep colors for dark strokes, local decoration, deep borders,
@@ -165,7 +167,8 @@ LOCAL ICON RULES:
   money, classroom items, or application scenes.
 - Do NOT use icons for abstract concepts, pure formula derivations, generic
   arrows, graphs, or decorative filler.
-- Use at most 1 icon in a section and at most 3 icons across the whole scene.
+- Keep icon usage modest. Do not overload the lesson with too many icons.
+- Only place icons where they clearly help understanding.
 - Treat icons as supporting visuals, not as the main explanation.
 
 GROUP / VGROUP / CREATE RULES:

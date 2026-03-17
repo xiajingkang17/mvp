@@ -59,7 +59,6 @@ def _int_env(name: str, default: int) -> int:
         return default
 
 
-LOCAL_ICON_MAX_ASSETS = max(0, _int_env("A4L_LOCAL_ICON_MAX_ASSETS", 3))
 SYNTAX_FIX_MAX_ATTEMPTS = max(1, _int_env("A4L_SYNTAX_FIX_MAX_ATTEMPTS", 4))
 RENDER_FIX_MAX_ATTEMPTS = max(1, _int_env("A4L_RENDER_FIX_MAX_ATTEMPTS", 4))
 MANIM_TIMEOUT_SEC = max(300, _int_env("MANIM_TIMEOUT_SEC", 1200))
@@ -276,7 +275,7 @@ def run_pipeline(
         "available_icon_count": 0,
         "selected_assets": [],
     }
-    if USE_LOCAL_ICONS and LOCAL_ICON_MAX_ASSETS > 0:
+    if USE_LOCAL_ICONS:
         _log("Asset resolver: selecting local icons ...")
         try:
             assets_info = resolve_local_assets(
@@ -285,7 +284,6 @@ def run_pipeline(
                 api_key=API_KEY,
                 base_url=BASE_URL,
                 model=MODEL,
-                max_assets=LOCAL_ICON_MAX_ASSETS,
             )
             selected_assets = assets_info.get("selected_assets", [])
             teaching_plan["selected_assets"] = selected_assets

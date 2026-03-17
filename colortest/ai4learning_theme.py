@@ -20,7 +20,7 @@ PURPLE_400 = "#E6BEFF"
 PURPLE_600 = "#56479C"
 PURPLE_900 = "#2C2860"
 
-BLUE_100 = "#D6E2EE"
+BLUE_100 = "#E6F1FF"
 BLUE_300 = "#7DC7DB"
 BLUE_500 = "#4CA4D0"
 BLUE_700 = "#0183BB"
@@ -46,8 +46,8 @@ ORANGE_200 = "#FFBEA3"
 ORANGE_500 = "#FFB703"
 BROWN_700 = "#84491F"
 
-GREY_200 = "#C8C8C8"
-GREY_400 = "#9799AA"
+GREY_200 = "#CDDCEE"
+GREY_400 = "#A6B8CC"
 GREY_600 = "#8A7A95"
 GREY_800 = "#6890A5"
 
@@ -86,7 +86,6 @@ PALETTE_USAGE_GUIDE = {
     "body_or_formula_base": (
         "BLUE_100",
         "GREY_200",
-        "GREY_400",
     ),
     "highlight_text_or_formula_term": (
         "CYAN_400",

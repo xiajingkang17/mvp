@@ -24,7 +24,7 @@ def _env_enabled(name: str, default: bool = True) -> bool:
 _SYSTEM_SELECT_ASSETS = """\
 You are selecting local icon files for an educational animation pipeline.
 
-Your job is to choose at most 3 useful icon filenames from the provided local icon
+Your job is to choose useful icon filenames from the provided local icon
 directory. The selected icons must help explain concrete real-world objects or
 recognizable devices in the lesson. If icons would not clearly help, return an
 empty list.
@@ -36,8 +36,8 @@ Selection rules:
   money, scientific equipment, or everyday objects.
 - Do NOT choose icons for abstract concepts, formulas, graphs, arrows, generic
   geometric shapes, or purely symbolic math ideas.
-- Do NOT choose more than 1 asset per section.
-- Do NOT choose more than 3 assets total.
+- Keep icon usage modest. Choose only the icons that clearly help teaching.
+- Avoid clutter from selecting too many icons for one lesson.
 
 Return ONLY valid JSON in this exact shape:
 {
@@ -167,7 +167,6 @@ def _validate_selected_assets(
     available_icons: List[str],
     teaching_plan: Dict[str, Any],
     icon_dir: Path,
-    max_assets: int,
 ) -> List[Dict[str, str]]:
     if not isinstance(raw_assets, list):
         return []
@@ -179,7 +178,6 @@ def _validate_selected_assets(
     }
     available_set = set(available_icons)
     validated: List[Dict[str, str]] = []
-    used_sections: set[str] = set()
     used_filenames: set[str] = set()
 
     for item in raw_assets:
@@ -189,7 +187,7 @@ def _validate_selected_assets(
         section_id = str(item.get("section_id", "")).strip()
         if filename not in available_set or section_id not in section_titles:
             continue
-        if filename in used_filenames or section_id in used_sections:
+        if filename in used_filenames:
             continue
 
         validated.append(
@@ -203,9 +201,6 @@ def _validate_selected_assets(
             }
         )
         used_filenames.add(filename)
-        used_sections.add(section_id)
-        if len(validated) >= max_assets:
-            break
 
     return validated
 
@@ -218,7 +213,6 @@ def resolve_local_assets(
     base_url: str,
     model: str,
     icon_dir: Path = ICON_DIR,
-    max_assets: int = 3,
 ) -> Dict[str, Any]:
     available_icons = list_local_icons(icon_dir)
     raw = _call_asset_selector(
@@ -234,7 +228,6 @@ def resolve_local_assets(
         available_icons=available_icons,
         teaching_plan=teaching_plan,
         icon_dir=icon_dir,
-        max_assets=max_assets,
     )
 
     return {
