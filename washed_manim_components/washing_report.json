@@ -1,0 +1,32 @@
+{
+  "total": 5,
+  "success": 5,
+  "failed": 0,
+  "components": [
+    {
+      "name": "Square",
+      "file": "/Users/chenshutong/Desktop/3b1b/extracted_core/mobject/Square.py",
+      "status": "success"
+    },
+    {
+      "name": "Circle",
+      "file": "/Users/chenshutong/Desktop/3b1b/extracted_core/mobject/Circle.py",
+      "status": "success"
+    },
+    {
+      "name": "Dot",
+      "file": "/Users/chenshutong/Desktop/3b1b/extracted_core/mobject/Dot.py",
+      "status": "success"
+    },
+    {
+      "name": "Tex",
+      "file": "/Users/chenshutong/Desktop/3b1b/extracted_core/mobject/tex_mobject.py",
+      "status": "success"
+    },
+    {
+      "name": "Text",
+      "file": "/Users/chenshutong/Desktop/3b1b/extracted_core/mobject/text_mobject.py",
+      "status": "success"
+    }
+  ]
+}
